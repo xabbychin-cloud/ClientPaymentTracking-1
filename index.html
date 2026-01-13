@@ -15,7 +15,84 @@
     .status-outstanding { background: #fff8e6; }
     .status-paid { background: #eef9f1; }
   </style>
+</head>
+<body>
+  <h1>Client Payment Tracker</h1>
 
+  <!-- Add Charge -->
+  <form id="chargeForm">
+    <h3>Add Charge</h3>
+    <input type="text" id="chargeClientId" placeholder="Client ID" required>
+    <input type="text" id="chargeFirstName" placeholder="First name (if new)">
+    <input type="text" id="chargeLastName" placeholder="Surname (if new)">
+    <input type="number" id="chargeAmount" placeholder="Charge Amount" required>
+    <input type="text" id="chargeRemarks" placeholder="Remarks (optional)">
+    <button type="submit">Add Charge</button>
+  </form>
+
+  <!-- Add Payment -->
+  <form id="paymentForm">
+    <h3>Add Payment</h3>
+    <input type="text" id="clientId" placeholder="Client ID" required>
+    <input type="text" id="firstName" placeholder="First name" required>
+    <input type="text" id="lastName" placeholder="Surname" required>
+    <input type="number" id="amount" placeholder="Payment Amount" required>
+    <select id="method">
+      <option value="cash">Cash</option>
+      <option value="bank">Bank Transfer</option>
+    </select>
+    <input type="text" id="remarks" placeholder="Remarks (optional)">
+    <button type="submit">Add Payment</button>
+  </form>
+
+  <!-- Filters -->
+  <div class="filters">
+    <button id="filterAll" type="button">Show All</button>
+    <button id="filterOutstanding" type="button">Show Outstanding</button>
+    <button id="filterPaid" type="button">Show Paid</button>
+  </div>
+
+  <!-- Clients summary -->
+  <table id="clientsTable">
+    <thead>
+      <tr>
+        <th>Client ID</th>
+        <th>Name</th>
+        <th>Total Charges</th>
+        <th>Total Payments</th>
+        <th>Balance</th>
+        <th>Status</th>
+        <th>Last Date Added</th>
+        <th>Last Remarks</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- Search -->
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Search by ID, first name, or surname">
+    <button id="searchBtn" type="button">View record(s)</button>
+    <button id="viewAllBtn" type="button">View ALL records</button>
+  </div>
+
+  <!-- History -->
+  <table id="historyTable">
+    <thead>
+      <tr>
+        <th>Client ID</th>
+        <th>Name</th>
+        <th>Date Added</th>
+        <th>Debit</th>
+        <th>Credit</th>
+        <th>Method</th>
+        <th>Remarks</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <!-- Firebase + App Logic -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
     import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection } 
@@ -26,7 +103,7 @@
       apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
       authDomain: "client-payment-tracker-3572b.firebaseapp.com",
       projectId: "client-payment-tracker-3572b",
-      storageBucket: "client-payment-tracker-3572b.appspot.com",
+      storageBucket: "client-payment-tracker-3572b.appspot.com",  // corrected
       messagingSenderId: "151091330895",
       appId: "1:151091330895:web:d23440ad57a386da720f3a",
       measurementId: "G-NH7D18261Q"
@@ -38,58 +115,67 @@
     let clients = {};
     let currentFilter = 'all';
 
-    function computeBalance(c){ return (Number(c.debit)||0) - (Number(c.credit)||0); }
+    function computeBalance(c){ return (c.debit||0) - (c.credit||0); }
 
-    async function ensureClient(id, firstName='', lastName='') {
+    // Add a charge
+    async function addCharge(id, firstName, lastName, amount, remarks) {
       const ref = doc(db, "clients", id);
       const snap = await getDoc(ref);
       if (!snap.exists()) {
         await setDoc(ref, { firstName, lastName, debit: 0, credit: 0, history: [] });
-      } else {
-        const data = snap.data();
-        const updates = {};
-        if (firstName && firstName !== data.firstName) updates.firstName = firstName;
-        if (lastName && lastName !== data.lastName) updates.lastName = lastName;
-        if (Object.keys(updates).length) await updateDoc(ref, updates);
       }
-    }
-
-    async function addCharge(id, firstName, lastName, amount, remarks) {
-      if (!id || isNaN(amount) || amount <= 0) { alert('Invalid charge'); return; }
-      await ensureClient(id, firstName, lastName);
-      const ref = doc(db, "clients", id);
-      const snap = await getDoc(ref);
-      const c = snap.data();
+      const c = snap.exists() ? snap.data() : { firstName, lastName, debit: 0, credit: 0, history: [] };
       const newHistory = [...(c.history||[]), {
         date: new Date().toLocaleString(),
-        debit: amount, credit: 0, method: 'charge', remarks: remarks||''
+        debit: amount,
+        credit: 0,
+        method: "charge",
+        remarks
       }];
-      await updateDoc(ref, {
+      await setDoc(ref, {
+        ...c,
         debit: (c.debit||0) + amount,
         history: newHistory
       });
-      alert(`Charge added successfully for ${c.firstName||firstName||''} ${c.lastName||lastName||''} (ID: ${id})`);
+      alert(`Charge added successfully for ${firstName} ${lastName} (ID:${id})`);
     }
 
+    // Add a payment
     async function addPayment(id, firstName, lastName, amount, method, remarks) {
-      if (!id || !firstName || !lastName || isNaN(amount) || amount <= 0) { alert('Invalid payment'); return; }
-      await ensureClient(id, firstName, lastName);
       const ref = doc(db, "clients", id);
       const snap = await getDoc(ref);
-      const c = snap.data();
+      if (!snap.exists()) {
+        await setDoc(ref, { firstName, lastName, debit: 0, credit: 0, history: [] });
+      }
+      const c = snap.exists() ? snap.data() : { firstName, lastName, debit: 0, credit: 0, history: [] };
       const newHistory = [...(c.history||[]), {
         date: new Date().toLocaleString(),
-        debit: 0, credit: amount, method: method||'cash', remarks: remarks||''
+        debit: 0,
+        credit: amount,
+        method,
+        remarks
       }];
-      await updateDoc(ref, {
-        firstName, lastName,
+      await setDoc(ref, {
+        ...c,
+        firstName,
+        lastName,
         credit: (c.credit||0) + amount,
         history: newHistory
       });
-      alert(`Payment added successfully for ${firstName} ${lastName} (ID: ${id})`);
+      alert(`Payment added successfully for ${firstName} ${lastName} (ID:${id})`);
     }
 
-    function renderSummary() {
+    // Real-time sync
+    onSnapshot(collection(db, "clients"), (snap) => {
+      clients = {};
+      snap.forEach(docSnap => {
+        clients[docSnap.id] = docSnap.data();
+      });
+      renderTable(); // refresh summary table
+    });
+
+    // Render summary table
+    function renderTable() {
       const tbody = document.querySelector('#clientsTable tbody');
       tbody.innerHTML = '';
       Object.keys(clients).forEach(id => {
@@ -117,57 +203,5 @@
       });
     }
 
+    // Populate history table
     function populateHistory(matches){
-      const tbody=document.querySelector('#historyTable tbody');
-      tbody.innerHTML='';
-      matches.forEach(({id,client})=>{
-        if(!client.history||client.history.length===0){
-          tbody.insertAdjacentHTML('beforeend',`
-            <tr><td>${id}</td><td>${client.firstName||''} ${client.lastName||''}</td>
-            <td colspan="5" style="text-align:center;">No transactions recorded yet</td></tr>`);
-        } else {
-          client.history.forEach(p=>{
-            tbody.insertAdjacentHTML('beforeend',`
-              <tr>
-                <td>${id}</td>
-                <td>${client.firstName||''} ${client.lastName||''}</td>
-                <td>${p.date}</td>
-                <td>${(p.debit||0).toFixed(2)}</td>
-                <td>${(p.credit||0).toFixed(2)}</td>
-                <td>${p.method||''}</td>
-                <td>${p.remarks||''}</td>
-              </tr>
-            `);
-          });
-        }
-      });
-    }
-
-    function viewClientRecord(term){
-      const t=(term||'').trim();
-      if(!t){alert('Enter a client ID, first name, or surname.');return;}
-      const lower=t.toLowerCase();
-      const matches=Object.keys(clients)
-        .filter(id=>id.toLowerCase()===lower||
-          (clients[id].firstName||'').toLowerCase().includes(lower)||
-          (clients[id].lastName||'').toLowerCase().includes(lower))
-        .map(id=>({id,client:clients[id]}));
-      if(matches.length===0){alert('No matching client found.');return;}
-      populateHistory(matches);
-    }
-
-    // Real-time sync
-    onSnapshot(collection(db,"clients"),(snap)=>{
-      clients={};
-      snap.forEach(docSnap=>{
-        clients[docSnap.id]=docSnap.data();
-      });
-      renderSummary();
-    });
-
-    // Wire UI
-    window.addEventListener('DOMContentLoaded',()=>{
-      document.getElementById('filterAll').addEventListener('click',()=>{currentFilter='all';renderSummary();});
-      document.getElementById('filterOutstanding').addEventListener('click',()=>{currentFilter='outstanding';renderSummary();});
-      document.getElementById('filterPaid').addEventListener('click',()=>{currentFilter='paid';renderSummary();});
-      document.getElementById('searchBtn').addEventListener('click',()=>viewClientRecord(document.getElementById('searchInput
