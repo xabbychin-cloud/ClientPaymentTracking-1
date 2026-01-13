@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <title>Client Payment Tracker</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
+  <link rel="manifest" href="/manifest.json">
+  <meta name="theme-color" content="#0b5ed7">
   <style>
     body { font-family: system-ui, Arial, sans-serif; margin: 20px; }
     form { margin-bottom: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; }
@@ -91,25 +93,26 @@
     </thead>
     <tbody></tbody>
   </table>
+
+  <!-- Register Service Worker -->
   <script>
-  if ("serviceWorker" in navigator) {
-    navigator.serviceWorker.register("/service-worker.js")
-      .then(() => console.log("Service Worker registered"));
-  }
-</script>
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/service-worker.js")
+        .then(() => console.log("Service Worker registered"));
+    }
+  </script>
 
   <!-- Firebase + App Logic -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection } 
+    import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection } 
       from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-    // 🔑 Your Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
       authDomain: "client-payment-tracker-3572b.firebaseapp.com",
       projectId: "client-payment-tracker-3572b",
-      storageBucket: "client-payment-tracker-3572b.appspot.com",  // corrected
+      storageBucket: "client-payment-tracker-3572b.appspot.com",
       messagingSenderId: "151091330895",
       appId: "1:151091330895:web:d23440ad57a386da720f3a",
       measurementId: "G-NH7D18261Q"
@@ -123,64 +126,30 @@
 
     function computeBalance(c){ return (c.debit||0) - (c.credit||0); }
 
-    // Add a charge
     async function addCharge(id, firstName, lastName, amount, remarks) {
       const ref = doc(db, "clients", id);
       const snap = await getDoc(ref);
-      if (!snap.exists()) {
-        await setDoc(ref, { firstName, lastName, debit: 0, credit: 0, history: [] });
-      }
-      const c = snap.exists() ? snap.data() : { firstName, lastName, debit: 0, credit: 0, history: [] };
-      const newHistory = [...(c.history||[]), {
-        date: new Date().toLocaleString(),
-        debit: amount,
-        credit: 0,
-        method: "charge",
-        remarks
-      }];
-      await setDoc(ref, {
-        ...c,
-        debit: (c.debit||0) + amount,
-        history: newHistory
-      });
+      let c = snap.exists() ? snap.data() : { firstName, lastName, debit: 0, credit: 0, history: [] };
+      const newHistory = [...(c.history||[]), { date: new Date().toLocaleString(), debit: amount, credit: 0, method: "charge", remarks }];
+      await setDoc(ref, { ...c, firstName, lastName, debit: (c.debit||0)+amount, history: newHistory });
       alert(`Charge added successfully for ${firstName} ${lastName} (ID:${id})`);
     }
 
-    // Add a payment
     async function addPayment(id, firstName, lastName, amount, method, remarks) {
       const ref = doc(db, "clients", id);
       const snap = await getDoc(ref);
-      if (!snap.exists()) {
-        await setDoc(ref, { firstName, lastName, debit: 0, credit: 0, history: [] });
-      }
-      const c = snap.exists() ? snap.data() : { firstName, lastName, debit: 0, credit: 0, history: [] };
-      const newHistory = [...(c.history||[]), {
-        date: new Date().toLocaleString(),
-        debit: 0,
-        credit: amount,
-        method,
-        remarks
-      }];
-      await setDoc(ref, {
-        ...c,
-        firstName,
-        lastName,
-        credit: (c.credit||0) + amount,
-        history: newHistory
-      });
+      let c = snap.exists() ? snap.data() : { firstName, lastName, debit: 0, credit: 0, history: [] };
+      const newHistory = [...(c.history||[]), { date: new Date().toLocaleString(), debit: 0, credit: amount, method, remarks }];
+      await setDoc(ref, { ...c, firstName, lastName, credit: (c.credit||0)+amount, history: newHistory });
       alert(`Payment added successfully for ${firstName} ${lastName} (ID:${id})`);
     }
 
-    // Real-time sync
     onSnapshot(collection(db, "clients"), (snap) => {
       clients = {};
-      snap.forEach(docSnap => {
-        clients[docSnap.id] = docSnap.data();
-      });
-      renderTable(); // refresh summary table
+      snap.forEach(docSnap => { clients[docSnap.id] = docSnap.data(); });
+      renderTable();
     });
 
-    // Render summary table
     function renderTable() {
       const tbody = document.querySelector('#clientsTable tbody');
       tbody.innerHTML = '';
@@ -209,6 +178,8 @@
       });
     }
 
-    // Populate history table
     function populateHistory(matches){
-
+      const tbody=document.querySelector('#historyTable tbody');
+      tbody.innerHTML='';
+      matches.forEach(({id,client})=>{
+        client.history.forEach(p=>{
