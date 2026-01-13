@@ -16,14 +16,12 @@
     .status-paid { background: #eef9f1; }
   </style>
 
-  <!-- Firebase SDKs -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { 
-      getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection 
-    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection } 
+      from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-    // 🔑 Your Firebase config (paste yours here)
+    // 🔑 Your Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
       authDomain: "client-payment-tracker-3572b.firebaseapp.com",
@@ -37,11 +35,9 @@
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
 
-    // ---------- State ----------
     let clients = {};
     let currentFilter = 'all';
 
-    // ---------- Helpers ----------
     function computeBalance(c){ return (Number(c.debit)||0) - (Number(c.credit)||0); }
 
     async function ensureClient(id, firstName='', lastName='') {
@@ -93,7 +89,6 @@
       alert(`Payment added successfully for ${firstName} ${lastName} (ID: ${id})`);
     }
 
-    // ---------- Rendering ----------
     function renderSummary() {
       const tbody = document.querySelector('#clientsTable tbody');
       tbody.innerHTML = '';
@@ -161,7 +156,7 @@
       populateHistory(matches);
     }
 
-    // ---------- Real-time sync ----------
+    // Real-time sync
     onSnapshot(collection(db,"clients"),(snap)=>{
       clients={};
       snap.forEach(docSnap=>{
@@ -170,14 +165,9 @@
       renderSummary();
     });
 
-    // ---------- Wire UI ----------
+    // Wire UI
     window.addEventListener('DOMContentLoaded',()=>{
       document.getElementById('filterAll').addEventListener('click',()=>{currentFilter='all';renderSummary();});
       document.getElementById('filterOutstanding').addEventListener('click',()=>{currentFilter='outstanding';renderSummary();});
       document.getElementById('filterPaid').addEventListener('click',()=>{currentFilter='paid';renderSummary();});
-      document.getElementById('searchBtn').addEventListener('click',()=>viewClientRecord(document.getElementById('searchInput').value));
-      document.getElementById('viewAllBtn').addEventListener('click',()=>{
-        const matches=Object.keys(clients).map(id=>({id,client:clients[id]}));
-        populateHistory(matches);
-      });
-      document.getElementById('chargeForm').addEventListener('submit',async(e
+      document.getElementById('searchBtn').addEventListener('click',()=>viewClientRecord(document.getElementById('searchInput
