@@ -3,197 +3,181 @@
 <head>
   <meta charset="UTF-8">
   <title>Client Payment Tracker</title>
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <h1>Client Payment Tracker</h1>
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <style>
+    body { font-family: system-ui, Arial, sans-serif; margin: 20px; }
+    form { margin-bottom: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; }
+    h3 { margin: 0 0 10px; }
+    input, select, button { margin: 4px; padding: 8px; }
+    table { width: 100%; border-collapse: collapse; margin: 14px 0; }
+    th, td { border: 1px solid #ddd; padding: 8px; }
+    .filters, .search-bar { margin: 10px 0; }
+    .status-outstanding { background: #fff8e6; }
+    .status-paid { background: #eef9f1; }
+  </style>
 
-  <!-- Add Charge -->
-  <form id="chargeForm">
-    <h3>Add Charge</h3>
-    <input type="text" id="chargeClientId" placeholder="Client ID" required>
-    <input type="text" id="chargeFirstName" placeholder="First name (if new)">
-    <input type="text" id="chargeLastName" placeholder="Surname (if new)">
-    <input type="number" id="chargeAmount" placeholder="Charge Amount" required>
-    <input type="text" id="chargeRemarks" placeholder="Remarks (optional)">
-    <button type="submit">Add Charge</button>
-  </form>
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { 
+      getFirestore, doc, getDoc, setDoc, updateDoc, onSnapshot, collection 
+    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-  <!-- Add Payment -->
-  <form id="paymentForm">
-    <h3>Add Payment</h3>
-    <input type="text" id="clientId" placeholder="Client ID" required>
-    <input type="text" id="firstName" placeholder="First name" required>
-    <input type="text" id="lastName" placeholder="Surname" required>
-    <input type="number" id="amount" placeholder="Payment Amount" required>
-    <select id="method">
-      <option value="cash">Cash</option>
-      <option value="bank">Bank Transfer</option>
-    </select>
-    <input type="text" id="remarks" placeholder="Remarks (optional)">
-    <button type="submit">Add Payment</button>
-  </form>
+    // 🔑 Your Firebase config (paste yours here)
+    const firebaseConfig = {
+      apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
+      authDomain: "client-payment-tracker-3572b.firebaseapp.com",
+      projectId: "client-payment-tracker-3572b",
+      storageBucket: "client-payment-tracker-3572b.appspot.com",
+      messagingSenderId: "151091330895",
+      appId: "1:151091330895:web:d23440ad57a386da720f3a",
+      measurementId: "G-NH7D18261Q"
+    };
 
-  <!-- Filters -->
-  <div class="filters">
-    <button id="filterAll" type="button">Show All</button>
-    <button id="filterOutstanding" type="button">Show Outstanding</button>
-    <button id="filterPaid" type="button">Show Paid</button>
-  </div>
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
 
-  <!-- Clients summary -->
-  <table id="clientsTable">
-    <thead>
-      <tr>
-        <th>Client ID</th>
-        <th>Name</th>
-        <th>Total Charges</th>
-        <th>Total Payments</th>
-        <th>Balance</th>
-        <th>Status</th>
-        <th>Last Date Added</th>
-        <th>Last Remarks</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
+    // ---------- State ----------
+    let clients = {};
+    let currentFilter = 'all';
 
-  <!-- Search -->
-  <div class="search-bar">
-    <input type="text" id="searchInput" placeholder="Search by ID, first name, or surname">
-    <button id="searchBtn" type="button">View record(s)</button>
-    <button id="viewAllBtn" type="button">View ALL records</button>
-  </div>
+    // ---------- Helpers ----------
+    function computeBalance(c){ return (Number(c.debit)||0) - (Number(c.credit)||0); }
 
-  <!-- History -->
-  <table id="historyTable">
-    <thead>
-      <tr>
-        <th>Client ID</th>
-        <th>Name</th>
-        <th>Date Added</th>
-        <th>Debit</th>
-        <th>Credit</th>
-        <th>Method</th>
-        <th>Remarks</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
-<script>
-let clients = JSON.parse(localStorage.getItem('clients')) || {};
-let currentFilter = 'all';
-
-function save(){ localStorage.setItem('clients', JSON.stringify(clients)); }
-function computeBalance(c){ return (c.debit||0) - (c.credit||0); }
-
-function renderTable(){
-  const tbody=document.querySelector('#clientsTable tbody');
-  tbody.innerHTML='';
-  Object.keys(clients).forEach(id=>{
-    const c=clients[id];
-    const balance=computeBalance(c);
-    const status=balance>0?'Outstanding':'Paid';
-    if(currentFilter!=='all' && status.toLowerCase()!==currentFilter) return;
-    let lastDate='', lastRemarks='';
-    if(c.history && c.history.length>0){
-      const last=c.history[c.history.length-1];
-      lastDate=last.date; lastRemarks=last.remarks||'';
+    async function ensureClient(id, firstName='', lastName='') {
+      const ref = doc(db, "clients", id);
+      const snap = await getDoc(ref);
+      if (!snap.exists()) {
+        await setDoc(ref, { firstName, lastName, debit: 0, credit: 0, history: [] });
+      } else {
+        const data = snap.data();
+        const updates = {};
+        if (firstName && firstName !== data.firstName) updates.firstName = firstName;
+        if (lastName && lastName !== data.lastName) updates.lastName = lastName;
+        if (Object.keys(updates).length) await updateDoc(ref, updates);
+      }
     }
-    tbody.insertAdjacentHTML('beforeend',`
-      <tr>
-        <td>${id}</td>
-        <td>${c.firstName||''} ${c.lastName||''}</td>
-        <td>${(c.debit||0).toFixed(2)}</td>
-        <td>${(c.credit||0).toFixed(2)}</td>
-        <td>${balance.toFixed(2)}</td>
-        <td>${status}</td>
-        <td>${lastDate}</td>
-        <td>${lastRemarks}</td>
-      </tr>
-    `);
-  });
-}
 
-function populateHistory(matches){
-  const tbody=document.querySelector('#historyTable tbody');
-  tbody.innerHTML='';
-  matches.forEach(({id,client})=>{
-    if(!client.history||client.history.length===0){
-      tbody.insertAdjacentHTML('beforeend',`
-        <tr><td>${id}</td><td>${client.firstName||''} ${client.lastName||''}</td>
-        <td colspan="5" style="text-align:center;">No transactions recorded yet</td></tr>`);
-    } else {
-      client.history.forEach(p=>{
+    async function addCharge(id, firstName, lastName, amount, remarks) {
+      if (!id || isNaN(amount) || amount <= 0) { alert('Invalid charge'); return; }
+      await ensureClient(id, firstName, lastName);
+      const ref = doc(db, "clients", id);
+      const snap = await getDoc(ref);
+      const c = snap.data();
+      const newHistory = [...(c.history||[]), {
+        date: new Date().toLocaleString(),
+        debit: amount, credit: 0, method: 'charge', remarks: remarks||''
+      }];
+      await updateDoc(ref, {
+        debit: (c.debit||0) + amount,
+        history: newHistory
+      });
+      alert(`Charge added successfully for ${c.firstName||firstName||''} ${c.lastName||lastName||''} (ID: ${id})`);
+    }
+
+    async function addPayment(id, firstName, lastName, amount, method, remarks) {
+      if (!id || !firstName || !lastName || isNaN(amount) || amount <= 0) { alert('Invalid payment'); return; }
+      await ensureClient(id, firstName, lastName);
+      const ref = doc(db, "clients", id);
+      const snap = await getDoc(ref);
+      const c = snap.data();
+      const newHistory = [...(c.history||[]), {
+        date: new Date().toLocaleString(),
+        debit: 0, credit: amount, method: method||'cash', remarks: remarks||''
+      }];
+      await updateDoc(ref, {
+        firstName, lastName,
+        credit: (c.credit||0) + amount,
+        history: newHistory
+      });
+      alert(`Payment added successfully for ${firstName} ${lastName} (ID: ${id})`);
+    }
+
+    // ---------- Rendering ----------
+    function renderSummary() {
+      const tbody = document.querySelector('#clientsTable tbody');
+      tbody.innerHTML = '';
+      Object.keys(clients).forEach(id => {
+        const c = clients[id];
+        const balance = computeBalance(c);
+        const status = balance > 0 ? 'Outstanding' : 'Paid';
+        if (currentFilter !== 'all' && status.toLowerCase() !== currentFilter) return;
+        let lastDate='', lastRemarks='';
+        if (c.history && c.history.length>0) {
+          const last=c.history[c.history.length-1];
+          lastDate=last.date; lastRemarks=last.remarks||'';
+        }
         tbody.insertAdjacentHTML('beforeend',`
-          <tr>
+          <tr class="${status==='Outstanding'?'status-outstanding':'status-paid'}">
             <td>${id}</td>
-            <td>${client.firstName||''} ${client.lastName||''}</td>
-            <td>${p.date}</td>
-            <td>${(p.debit||0).toFixed(2)}</td>
-            <td>${(p.credit||0).toFixed(2)}</td>
-            <td>${p.method||''}</td>
-            <td>${p.remarks||''}</td>
+            <td>${c.firstName||''} ${c.lastName||''}</td>
+            <td>${(c.debit||0).toFixed(2)}</td>
+            <td>${(c.credit||0).toFixed(2)}</td>
+            <td>${balance.toFixed(2)}</td>
+            <td>${status}</td>
+            <td>${lastDate}</td>
+            <td>${lastRemarks}</td>
           </tr>
         `);
       });
     }
-  });
-}
 
-function viewClientRecord(term){
-  const t=(term||'').trim();
-  if(!t){alert('Enter a client ID, first name, or surname.');return;}
-  const lower=t.toLowerCase();
-  let matches=[];
-  if(clients[t]) matches=[{id:t,client:clients[t]}];
-  else matches=Object.keys(clients).map(id=>({id,client:clients[id]}))
-    .filter(({client})=>(client.firstName||'').toLowerCase().includes(lower)||(client.lastName||'').toLowerCase().includes(lower));
-  if(matches.length===0){alert('No matching client found.');return;}
-  populateHistory(matches);
-}
+    function populateHistory(matches){
+      const tbody=document.querySelector('#historyTable tbody');
+      tbody.innerHTML='';
+      matches.forEach(({id,client})=>{
+        if(!client.history||client.history.length===0){
+          tbody.insertAdjacentHTML('beforeend',`
+            <tr><td>${id}</td><td>${client.firstName||''} ${client.lastName||''}</td>
+            <td colspan="5" style="text-align:center;">No transactions recorded yet</td></tr>`);
+        } else {
+          client.history.forEach(p=>{
+            tbody.insertAdjacentHTML('beforeend',`
+              <tr>
+                <td>${id}</td>
+                <td>${client.firstName||''} ${client.lastName||''}</td>
+                <td>${p.date}</td>
+                <td>${(p.debit||0).toFixed(2)}</td>
+                <td>${(p.credit||0).toFixed(2)}</td>
+                <td>${p.method||''}</td>
+                <td>${p.remarks||''}</td>
+              </tr>
+            `);
+          });
+        }
+      });
+    }
 
-function viewAllRecords(){
-  const matches=Object.keys(clients).map(id=>({id,client:clients[id]}));
-  populateHistory(matches);
-}
+    function viewClientRecord(term){
+      const t=(term||'').trim();
+      if(!t){alert('Enter a client ID, first name, or surname.');return;}
+      const lower=t.toLowerCase();
+      const matches=Object.keys(clients)
+        .filter(id=>id.toLowerCase()===lower||
+          (clients[id].firstName||'').toLowerCase().includes(lower)||
+          (clients[id].lastName||'').toLowerCase().includes(lower))
+        .map(id=>({id,client:clients[id]}));
+      if(matches.length===0){alert('No matching client found.');return;}
+      populateHistory(matches);
+    }
 
-// Events
-document.addEventListener('DOMContentLoaded',()=>{
-  renderTable();
-  document.getElementById('filterAll').addEventListener('click',()=>{currentFilter='all';renderTable();});
-  document.getElementById('filterOutstanding').addEventListener('click',()=>{currentFilter='outstanding';renderTable();});
-  document.getElementById('filterPaid').addEventListener('click',()=>{currentFilter='paid';renderTable();});
-  document.getElementById('searchBtn').addEventListener('click',()=>viewClientRecord(document.getElementById('searchInput').value));
-  document.getElementById('viewAllBtn').addEventListener('click',viewAllRecords);
-});
+    // ---------- Real-time sync ----------
+    onSnapshot(collection(db,"clients"),(snap)=>{
+      clients={};
+      snap.forEach(docSnap=>{
+        clients[docSnap.id]=docSnap.data();
+      });
+      renderSummary();
+    });
 
-// Add Charge
-document.getElementById('chargeForm').addEventListener('submit',function(e){
-  e.preventDefault();
-  const id=document.getElementById('chargeClientId').value.trim();
-  const fn=document.getElementById('chargeFirstName').value.trim();
-  const ln=document.getElementById('chargeLastName').value.trim();
-  const amt=parseFloat(document.getElementById('chargeAmount').value);
-  const remarks=document.getElementById('chargeRemarks').value.trim();
-  if(!id||isNaN(amt)||amt<=0){alert('Invalid charge');return;}
-  if(!clients[id]) clients[id]={firstName:fn,lastName:ln,debit:0,credit:0,history:[]};
-  else {if(fn)clients[id].firstName=fn;if(ln)clients[id].lastName=ln;}
-  clients[id].debit+=amt;
-  clients[id].history.push({date:new Date().toLocaleString(),debit:amt,credit:0,method:'charge',remarks});
-  save();renderTable();
-  alert(`Charge added successfully for ${clients[id].firstName||''} ${clients[id].lastName||''} (ID:${id})`);
-  this.reset();
-});
-
-// Add Payment
-document.getElementById('paymentForm').addEventListener('submit',function(e){
-  e.preventDefault();
-  const id=document.getElementById('clientId').value.trim();
-  const fn=document.getElementById('firstName').value.trim();
-  const ln=document.getElementById('lastName').value.trim();
-  const amt=parseFloat(document.getElementById('amount').value);
-  const method=document.getElementById('method').value;
-  const remarks=document.getElementById('remarks').value.trim();
-  if(!id||!fn||!ln||isNaN(amt
+    // ---------- Wire UI ----------
+    window.addEventListener('DOMContentLoaded',()=>{
+      document.getElementById('filterAll').addEventListener('click',()=>{currentFilter='all';renderSummary();});
+      document.getElementById('filterOutstanding').addEventListener('click',()=>{currentFilter='outstanding';renderSummary();});
+      document.getElementById('filterPaid').addEventListener('click',()=>{currentFilter='paid';renderSummary();});
+      document.getElementById('searchBtn').addEventListener('click',()=>viewClientRecord(document.getElementById('searchInput').value));
+      document.getElementById('viewAllBtn').addEventListener('click',()=>{
+        const matches=Object.keys(clients).map(id=>({id,client:clients[id]}));
+        populateHistory(matches);
+      });
+      document.getElementById('chargeForm').addEventListener('submit',async(e
