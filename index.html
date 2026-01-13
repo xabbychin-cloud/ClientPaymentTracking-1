@@ -91,6 +91,12 @@
     </thead>
     <tbody></tbody>
   </table>
+  <script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/service-worker.js")
+      .then(() => console.log("Service Worker registered"));
+  }
+</script>
 
   <!-- Firebase + App Logic -->
   <script type="module">
@@ -205,3 +211,4 @@
 
     // Populate history table
     function populateHistory(matches){
+
