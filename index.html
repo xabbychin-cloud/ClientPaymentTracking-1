@@ -202,3 +202,31 @@
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
         navigator
+
+async function addCharge(id, first, last, amount, remarks) {
+  const ref = doc(db, "clients", id);
+  try {
+    const snap = await getDoc(ref);
+    const c = snap.exists() ? snap.data() : { firstName: first, lastName: last, debit: 0, credit: 0, history: [] };
+    c.history.push({ date: new Date().toLocaleString(), debit: amount, credit: 0, method: "charge", remarks });
+    await setDoc(ref, { ...c, firstName: first, lastName: last, debit: (c.debit || 0) + amount });
+    alert(`✅ Charge of ${amount} added for ${first} ${last} (Client ID: ${id})`);
+  } catch (err) {
+    console.error("Error adding charge:", err);
+    alert("⚠️ Failed to add charge. Check if you are offline or if Firestore rules block writes.");
+  }
+}
+
+async function addPayment(id, first, last, amount, method, remarks) {
+  const ref = doc(db, "clients", id);
+  try {
+    const snap = await getDoc(ref);
+    const c = snap.exists() ? snap.data() : { firstName: first, lastName: last, debit: 0, credit: 0, history: [] };
+    c.history.push({ date: new Date().toLocaleString(), debit: 0, credit: amount, method, remarks });
+    await setDoc(ref, { ...c, firstName: first, lastName: last, credit: (c.credit || 0) + amount });
+    alert(`✅ Payment of ${amount} recorded for ${first} ${last} (Client ID: ${id})`);
+  } catch (err) {
+    console.error("Error adding payment:", err);
+    alert("⚠️ Failed to add payment. Check if you are offline or if Firestore rules block writes.");
+  }
+}
