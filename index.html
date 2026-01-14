@@ -23,15 +23,12 @@ document.addEventListener("DOMContentLoaded", () => {
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // DOM REFERENCES (SAFE NOW)
+  // DOM REFERENCES
   const chargeForm = document.getElementById("chargeForm");
   const paymentForm = document.getElementById("paymentForm");
   const filterAll = document.getElementById("filterAll");
   const filterOutstanding = document.getElementById("filterOutstanding");
   const filterPaid = document.getElementById("filterPaid");
-  const searchBtn = document.getElementById("searchBtn");
-  const viewAllBtn = document.getElementById("viewAllBtn");
-  const searchInput = document.getElementById("searchInput");
 
   let clients = {};
   let currentFilter = "all";
@@ -55,8 +52,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     await setDoc(ref, {
       ...c,
-      firstName: first,
-      lastName: last,
       debit: (c.debit || 0) + amount
     });
 
@@ -80,8 +75,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     await setDoc(ref, {
       ...c,
-      firstName: first,
-      lastName: last,
       credit: (c.credit || 0) + amount
     });
 
@@ -99,12 +92,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (!tbody) return;
 
     tbody.innerHTML = "";
+
     Object.entries(clients).forEach(([id, c]) => {
       const balance = balanceOf(c);
       const status = balance > 0 ? "Outstanding" : "Paid";
       if (currentFilter !== "all" && status.toLowerCase() !== currentFilter) return;
-
-      const last = c.history?.[c.history.length - 1] || {};
 
       tbody.insertAdjacentHTML("beforeend", `
         <tr>
@@ -114,14 +106,11 @@ document.addEventListener("DOMContentLoaded", () => {
           <td>${(c.credit || 0).toFixed(2)}</td>
           <td>${balance.toFixed(2)}</td>
           <td>${status}</td>
-          <td>${last.date || ""}</td>
-          <td>${last.remarks || ""}</td>
         </tr>
       `);
     });
   }
 
-  // EVENTS (SAFE NOW)
   chargeForm?.addEventListener("submit", e => {
     e.preventDefault();
     addCharge(
@@ -150,5 +139,6 @@ document.addEventListener("DOMContentLoaded", () => {
   filterAll.onclick = () => { currentFilter = "all"; renderClients(); };
   filterOutstanding.onclick = () => { currentFilter = "outstanding"; renderClients(); };
   filterPaid.onclick = () => { currentFilter = "paid"; renderClients(); };
+
 });
 </script>
