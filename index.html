@@ -6,6 +6,44 @@
   <title>Client Payment Tracker</title>
   <link rel="manifest" href="./manifest.json">
   <link rel="stylesheet" href="./style.css">
+  <style>
+    /* Basic modal styles */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 1;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgb(0,0,0);
+      background-color: rgba(0,0,0,0.4);
+    }
+    .modal-content {
+      background-color: #fefefe;
+      margin: 15% auto;
+      padding: 20px;
+      border: 1px solid #888;
+      width: 80%;
+      max-width: 600px;
+    }
+    .close {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+    }
+    .close:hover,
+    .close:focus {
+      color: black;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    mark {
+      background-color: yellow;
+    }
+  </style>
 </head>
 <body>
   <h1>Client Payment Tracker</h1>
@@ -54,6 +92,15 @@
     </thead>
     <tbody></tbody>
   </table>
+
+  <!-- Modal for Viewing Client Records -->
+  <div id="viewModal" class="modal">
+    <div class="modal-content">
+      <span class="close" id="closeModal">&times;</span>
+      <h2 id="modalTitle">Client Records</h2>
+      <pre id="modalHistory"></pre>
+    </div>
+  </div>
 
   <!-- Firebase & Script -->
   <script type="module">
@@ -152,17 +199,23 @@
       }
     }
 
-    // --- View Client Records ---
+    // --- View Client Records (Modal) ---
     async function viewClient(id) {
       const ref = doc(db, "clients", id);
       try {
         const snap = await getDoc(ref);
         if (snap.exists()) {
           const c = snap.data();
-          let historyText = c.history.map(h => 
+          const modal = document.getElementById("viewModal");
+          const modalTitle = document.getElementById("modalTitle");
+          const modalHistory = document.getElementById("modalHistory");
+
+          modalTitle.textContent = `Records for ${c.firstName} ${c.lastName} (ID: ${id})`;
+          modalHistory.textContent = c.history.map(h => 
             `${h.date} | Debit: ${h.debit} | Credit: ${h.credit} | Method: ${h.method} | Remarks: ${h.remarks}`
           ).join("\n");
-          alert(`📋 Records for ${c.firstName} ${c.lastName} (ID: ${id}):\n\n${historyText}`);
+
+          modal.style.display = "block";
         } else {
           alert("No records found for this client.");
         }
@@ -182,6 +235,13 @@
       renderClients();
     });
 
+    // Function to highlight text
+    function highlightText(text, query) {
+      if (!query) return text;
+      const regex = new RegExp(`(${query})`, 'gi');
+      return text.replace(regex, '<mark>$1</mark>');
+    }
+
     function renderClients() {
       const tbody = document.querySelector("#clientsTable tbody");
       if (!tbody) return;
@@ -197,10 +257,13 @@
         if (searchQuery && !fullName.includes(searchQuery) && !remarksText.includes(searchQuery)) return;
         if (currentFilter !== "all" && status.toLowerCase() !== currentFilter) return;
 
+        // Highlight the name if it matches the search query
+        const highlightedName = highlightText(`${c.firstName || ""} ${c.lastName || ""}`, searchQuery);
+
         tbody.insertAdjacentHTML("beforeend", `
           <tr class="${status.toLowerCase()}">
             <td>${id}</td>
-            <td>${c.firstName || ""} ${c.lastName || ""}</td>
+            <td>${highlightedName}</td>
             <td>${(c.debit || 0).toFixed(2)}</td>
             <td>${(c.credit || 0).toFixed(2)}</td>
             <td>${balance.toFixed(2)}</td>
@@ -259,6 +322,19 @@
     document.getElementById("searchBox").addEventListener("input", e => {
       searchQuery = e.target.value.toLowerCase();
       renderClients();
+    });
+
+    // --- Modal Close Listener ---
+    document.getElementById("closeModal").addEventListener("click", () => {
+      document.getElementById("viewModal").style.display = "none";
+    });
+
+    // Close modal when clicking outside
+    window.addEventListener("click", e => {
+      const modal = document.getElementById("viewModal");
+      if (e.target === modal) {
+        modal.style.display = "none";
+      }
     });
   </script>
 </body>
