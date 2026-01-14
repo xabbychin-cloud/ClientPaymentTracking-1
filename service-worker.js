@@ -1,5 +1,7 @@
 const CACHE_NAME = "payment-tracker-cache-v1";
-const urlsToCache = [
+
+const FILES_TO_CACHE = [
+  "/",
   "/index.html",
   "/style.css",
   "/manifest.json",
@@ -7,30 +9,39 @@ const urlsToCache = [
   "/icon-512.png"
 ];
 
-// Install: cache core files
-self.addEventListener("install", event => {
+// INSTALL
+self.addEventListener("install", (event) => {
   event.waitUntil(
-    caches.open(CACHE_NAME).then(cache => cache.addAll(urlsToCache))
+    caches.open(CACHE_NAME).then((cache) => cache.addAll(FILES_TO_CACHE))
   );
-  self.skipWaiting(); // activate immediately
+  self.skipWaiting();
 });
 
-// Activate: clean up old caches
-self.addEventListener("activate", event => {
+// ACTIVATE
+self.addEventListener("activate", (event) => {
   event.waitUntil(
-    caches.keys().then(keys =>
+    caches.keys().then((keys) =>
       Promise.all(
-        keys.filter(key => key !== CACHE_NAME).map(key => caches.delete(key))
+        keys.map((key) => {
+          if (key !== CACHE_NAME) {
+            return caches.delete(key);
+          }
+        })
       )
     )
   );
   self.clients.claim();
 });
 
-// Fetch: serve cached files, fallback to network
-self.addEventListener("fetch", event => {
+// FETCH
+self.addEventListener("fetch", (event) => {
+  // ❗ Do NOT cache Firebase or Firestore requests
+  if (event.request.url.includes("firebase")) {
+    return;
+  }
+
   event.respondWith(
-    caches.match(event.request).then(response => {
+    caches.match(event.request).then((response) => {
       return response || fetch(event.request);
     })
   );
