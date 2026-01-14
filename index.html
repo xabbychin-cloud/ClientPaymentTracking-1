@@ -4,19 +4,9 @@
   <meta charset="UTF-8">
   <title>Client Payment Tracker</title>
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="manifest" href="/manifest.json">
+  <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#0b5ed7">
-  <style>
-    body { font-family: system-ui, Arial, sans-serif; margin: 20px; }
-    form { margin-bottom: 16px; padding: 12px; border: 1px solid #ddd; border-radius: 6px; }
-    h3 { margin: 0 0 10px; }
-    input, select, button { margin: 4px; padding: 8px; }
-    table { width: 100%; border-collapse: collapse; margin: 14px 0; }
-    th, td { border: 1px solid #ddd; padding: 8px; }
-    .filters, .search-bar { margin: 10px 0; }
-    .status-outstanding { background: #fff8e6; }
-    .status-paid { background: #eef9f1; }
-  </style>
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <h1>Client Payment Tracker</h1>
@@ -97,7 +87,7 @@
   <!-- Register Service Worker -->
   <script>
     if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("/service-worker.js")
+      navigator.serviceWorker.register("service-worker.js")
         .then(() => console.log("Service Worker registered"));
     }
   </script>
@@ -108,11 +98,12 @@
     import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection } 
       from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
+    // ✅ Your Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
       authDomain: "client-payment-tracker-3572b.firebaseapp.com",
       projectId: "client-payment-tracker-3572b",
-      storageBucket: "client-payment-tracker-3572b.appspot.com",
+      storageBucket: "client-payment-tracker-3572b.firebasestorage.app",
       messagingSenderId: "151091330895",
       appId: "1:151091330895:web:d23440ad57a386da720f3a",
       measurementId: "G-NH7D18261Q"
@@ -164,7 +155,7 @@
           lastDate=last.date; lastRemarks=last.remarks||'';
         }
         tbody.insertAdjacentHTML('beforeend',`
-          <tr class="${status==='Outstanding'?'status-outstanding':'status-paid'}">
+          <tr class="${status==='Outstanding'?'outstanding':'paid'}">
             <td>${id}</td>
             <td>${c.firstName||''} ${c.lastName||''}</td>
             <td>${(c.debit||0).toFixed(2)}</td>
@@ -183,4 +174,26 @@
       tbody.innerHTML='';
       matches.forEach(({id,client})=>{
         client.history.forEach(p=>{
+          tbody.insertAdjacentHTML('beforeend',`
+            <tr>
+              <td>${id}</td>
+              <td>${client.firstName||''} ${client.lastName||''}</td>
+              <td>${p.date}</td>
+              <td>${p.debit.toFixed(2)}</td>
+              <td>${p.credit.toFixed(2)}</td>
+              <td>${p.method}</td>
+              <td>${p.remarks||''}</td>
+            </tr>
+          `);
+        });
+      });
+    }
 
+    // Event listeners
+    document.getElementById('chargeForm').addEventListener('submit', e=>{
+      e.preventDefault();
+      addCharge(
+        document.getElementById('chargeClientId').value,
+        document.getElementById('chargeFirstName').value,
+        document.getElementById('chargeLastName').value,
+        parseFloat(document.getElementById('chargeAmount
