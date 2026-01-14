@@ -83,9 +83,17 @@
       color: white;
       border: none;
       cursor: pointer;
+      margin-bottom: 10px;
     }
     .auth-form button:hover {
       background-color: #45a049;
+    }
+    .google-btn {
+      background-color: #4285F4;
+      color: white;
+    }
+    .google-btn:hover {
+      background-color: #3367D6;
     }
     .toggle-auth {
       text-align: center;
@@ -101,6 +109,8 @@
   <div id="authContainer">
     <div id="loginForm" class="auth-form">
       <h2>Login</h2>
+      <button id="googleSignInBtn" class="google-btn">Sign in with Google</button>
+      <hr style="margin: 20px 0;">
       <input id="loginEmail" type="email" placeholder="Email" required>
       <input id="loginPassword" type="password" placeholder="Password" required>
       <button id="loginBtn">Login</button>
@@ -199,7 +209,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
     import { 
-      getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged 
+      getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup 
     } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
     import { 
       getFirestore, doc, getDoc, setDoc, onSnapshot, collection,
@@ -218,6 +228,7 @@
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
+    const provider = new GoogleAuthProvider();
 
     // ✅ Enable offline persistence
     enableIndexedDbPersistence(db).catch((err) => {
@@ -248,6 +259,16 @@
       document.getElementById("authContainer").style.display = "none";
       document.getElementById("appContainer").style.display = "block";
     }
+
+    // Google Sign-In
+    document.getElementById("googleSignInBtn").addEventListener("click", async () => {
+      try {
+        await signInWithPopup(auth, provider);
+        alert("Signed in with Google successfully!");
+      } catch (err) {
+        alert("Google sign-in failed: " + err.message);
+      }
+    });
 
     // Login
     document.getElementById("loginBtn").addEventListener("click", async () => {
@@ -449,4 +470,4 @@
         const remarksText = (c.history || []).map(h => h.remarks || "").join(" ").toLowerCase();
 
         if (searchQuery && !fullName.includes(searchQuery) && !remarksText.includes(searchQuery)) return;
-        if (currentFilter !== "all"
+        if (currentFilter !== "all" && status.toLowerCase() !== current
