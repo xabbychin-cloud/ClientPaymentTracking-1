@@ -62,7 +62,7 @@
         apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
         authDomain: "client-payment-tracker-3572b.firebaseapp.com",
         projectId: "client-payment-tracker-3572b",
-        storageBucket: "client-payment-tracker-3572b.firebasestorage.app",
+        storageBucket: "client-payment-tracker-3572b.appspot.com",   // ✅ FIXED
         messagingSenderId: "151091330895",
         appId: "1:151091330895:web:d23440ad57a386da720f3a"
       };
@@ -70,8 +70,22 @@
       const app = initializeApp(firebaseConfig);
       const db = getFirestore(app);
 
+      // ✅ Properly reference form inputs
       const chargeForm = document.getElementById("chargeForm");
+      const chargeClientId = document.getElementById("chargeClientId");
+      const chargeFirstName = document.getElementById("chargeFirstName");
+      const chargeLastName = document.getElementById("chargeLastName");
+      const chargeAmount = document.getElementById("chargeAmount");
+      const chargeRemarks = document.getElementById("chargeRemarks");
+
       const paymentForm = document.getElementById("paymentForm");
+      const clientId = document.getElementById("clientId");
+      const firstName = document.getElementById("firstName");
+      const lastName = document.getElementById("lastName");
+      const amount = document.getElementById("amount");
+      const method = document.getElementById("method");
+      const remarks = document.getElementById("remarks");
+
       const filterAll = document.getElementById("filterAll");
       const filterOutstanding = document.getElementById("filterOutstanding");
       const filterPaid = document.getElementById("filterPaid");
