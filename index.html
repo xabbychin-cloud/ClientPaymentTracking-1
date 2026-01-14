@@ -26,7 +26,9 @@
       padding: 20px;
       border: 1px solid #888;
       width: 80%;
-      max-width: 600px;
+      max-width: 800px;
+      max-height: 80vh;
+      overflow-y: auto;
     }
     .close {
       color: #aaa;
@@ -43,6 +45,18 @@
     mark {
       background-color: yellow;
     }
+    .history-table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    .history-table th, .history-table td {
+      border: 1px solid #ddd;
+      padding: 8px;
+      text-align: left;
+    }
+    .history-table th {
+      background-color: #f2f2f2;
+    }
   </style>
 </head>
 <body>
@@ -50,7 +64,6 @@
 
   <!-- Charge Form -->
   <form id="chargeForm">
-    <input id="chargeClientId" placeholder="Client ID" required>
     <input id="chargeFirstName" placeholder="First Name" required>
     <input id="chargeLastName" placeholder="Last Name" required>
     <input id="chargeAmount" type="number" placeholder="Amount" required>
@@ -60,7 +73,6 @@
 
   <!-- Payment Form -->
   <form id="paymentForm">
-    <input id="clientId" placeholder="Client ID" required>
     <input id="firstName" placeholder="First Name" required>
     <input id="lastName" placeholder="Last Name" required>
     <input id="amount" type="number" placeholder="Amount" required>
@@ -98,7 +110,25 @@
     <div class="modal-content">
       <span class="close" id="closeModal">&times;</span>
       <h2 id="modalTitle">Client Records</h2>
-      <pre id="modalHistory"></pre>
+      <div id="modalSummary">
+        <p><strong>Total Debit:</strong> <span id="totalDebit"></span></p>
+        <p><strong>Total Credit:</strong> <span id="totalCredit"></span></p>
+        <p><strong>Balance:</strong> <span id="balance"></span></p>
+        <p><strong>Status:</strong> <span id="status"></span></p>
+      </div>
+      <h3>Transaction History</h3>
+      <table class="history-table" id="historyTable">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Debit</th>
+            <th>Credit</th>
+            <th>Method</th>
+            <th>Remarks</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
     </div>
   </div>
 
@@ -135,8 +165,14 @@
     let currentFilter = "all";
     let searchQuery = "";
 
+    // Function to generate client ID based on name (assuming unique names)
+    function generateClientId(first, last) {
+      return `${first}_${last}`.replace(/\s+/g, '_').toLowerCase();
+    }
+
     // --- Add Charge ---
-    async function addCharge(id, first, last, amount, remarks) {
+    async function addCharge(first, last, amount, remarks) {
+      const id = generateClientId(first, last);
       const ref = doc(db, "clients", id);
       try {
         const snap = await getDoc(ref);
@@ -168,7 +204,8 @@
     }
 
     // --- Add Payment ---
-    async function addPayment(id, first, last, amount, method, remarks) {
+    async function addPayment(first, last, amount, method, remarks) {
+      const id = generateClientId(first, last);
       const ref = doc(db, "clients", id);
       try {
         const snap = await getDoc(ref);
@@ -208,12 +245,31 @@
           const c = snap.data();
           const modal = document.getElementById("viewModal");
           const modalTitle = document.getElementById("modalTitle");
-          const modalHistory = document.getElementById("modalHistory");
+          const totalDebit = document.getElementById("totalDebit");
+          const totalCredit = document.getElementById("totalCredit");
+          const balance = document.getElementById("balance");
+          const status = document.getElementById("status");
+          const historyBody = document.getElementById("historyBody");
 
           modalTitle.textContent = `Records for ${c.firstName} ${c.lastName} (ID: ${id})`;
-          modalHistory.textContent = c.history.map(h => 
-            `${h.date} | Debit: ${h.debit} | Credit: ${h.credit} | Method: ${h.method} | Remarks: ${h.remarks}`
-          ).join("\n");
+          totalDebit.textContent = (c.debit || 0).toFixed(2);
+          totalCredit.textContent = (c.credit || 0).toFixed(2);
+          const bal = (c.debit || 0) - (c.credit || 0);
+          balance.textContent = bal.toFixed(2);
+          status.textContent = bal > 0 ? "Outstanding" : "Paid";
+
+          historyBody.innerHTML = "";
+          c.history.forEach(h => {
+            historyBody.insertAdjacentHTML("beforeend", `
+              <tr>
+                <td>${h.date}</td>
+                <td>${h.debit.toFixed(2)}</td>
+                <td>${h.credit.toFixed(2)}</td>
+                <td>${h.method}</td>
+                <td>${h.remarks}</td>
+              </tr>
+            `);
+          });
 
           modal.style.display = "block";
         } else {
@@ -279,7 +335,6 @@
     chargeForm?.addEventListener("submit", e => {
       e.preventDefault();
       addCharge(
-        document.getElementById("chargeClientId").value,
         document.getElementById("chargeFirstName").value,
         document.getElementById("chargeLastName").value,
         parseFloat(document.getElementById("chargeAmount").value),
@@ -292,7 +347,6 @@
     paymentForm?.addEventListener("submit", e => {
       e.preventDefault();
       addPayment(
-        document.getElementById("clientId").value,
         document.getElementById("firstName").value,
         document.getElementById("lastName").value,
         parseFloat(document.getElementById("amount").value),
