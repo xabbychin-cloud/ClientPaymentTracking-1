@@ -267,15 +267,14 @@
       }
     }).catch((error) => {
       console.error("Redirect sign-in error:", error);
-      alert("Google sign-in failed: " + error.message);
     });
 
     // Google Sign-In (Redirect)
     document.getElementById("googleSignInBtn").addEventListener("click", async () => {
       try {
         await signInWithRedirect(auth, provider);
+        // No need for alert here; the redirect will handle it
       } catch (err) {
-        console.error("Google sign-in error:", err);
         alert("Google sign-in failed: " + err.message);
       }
     });
@@ -325,6 +324,7 @@
       if (user) {
         currentUser = user;
         showAppContainer();
+        // Load user-specific data
         loadClients();
       } else {
         currentUser = null;
@@ -460,9 +460,6 @@
     }
 
     // Function to highlight text
-    function
-
-    // Function to highlight text
     function highlightText(text, query) {
       if (!query) return text;
       const regex = new RegExp(`(${query})`, 'gi');
@@ -482,6 +479,7 @@
 
         if (searchQuery && !fullName.includes(searchQuery) && !remarksText.includes(searchQuery)) return;
         if (currentFilter !== "all" && status.toLowerCase() !== current
+
 
 
 
