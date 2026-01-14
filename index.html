@@ -88,35 +88,15 @@
     .auth-form button:hover {
       background-color: #45a049;
     }
-    .toggle-auth {
-      text-align: center;
-      margin-top: 10px;
-    }
-    .toggle-auth a {
-      color: #007BFF;
-      cursor: pointer;
-    }
   </style>
 </head>
 <body>
   <div id="authContainer">
-    <div id="loginForm" class="auth-form">
-      <h2>Login</h2>
-      <input id="loginEmail" type="email" placeholder="Username" required>  <!-- Changed to Username -->
-      <input id="loginPassword" type="password" placeholder="Password" required>
-      <button id="loginBtn">Login</button>
-      <div class="toggle-auth">
-        <a id="showSignup">Don't have an account? Sign up</a>
-      </div>
-    </div>
-    <div id="signupForm" class="auth-form" style="display: none;">
-      <h2>Sign Up</h2>
-      <input id="signupEmail" type="email" placeholder="Username" required>  <!-- Changed to Username -->
+    <div id="signupForm" class="auth-form">
+      <h2>Create Account</h2>
+      <input id="signupEmail" type="email" placeholder="Username" required>
       <input id="signupPassword" type="password" placeholder="Password" required>
-      <button id="signupBtn">Sign Up</button>
-      <div class="toggle-auth">
-        <a id="showLogin">Already have an account? Login</a>
-      </div>
+      <button id="signupBtn">Create Account</button>
     </div>
   </div>
 
@@ -193,14 +173,14 @@
       </div>
     </div>
 
-    <button id="logoutBtn">Logout</button>  <!-- Already included -->
+    <button id="logoutBtn">Logout</button>
   </div>
 
   <!-- Firebase & Script -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
     import { 
-      getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged
+      getAuth, createUserWithEmailAndPassword, signOut, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
     import { 
       getFirestore, doc, getDoc, setDoc, onSnapshot, collection,
@@ -251,21 +231,9 @@
       document.getElementById("appContainer").style.display = "block";
     }
 
-    // Login
-    document.getElementById("loginBtn").addEventListener("click", async () => {
-      const email = document.getElementById("loginEmail").value;  // Still uses email for Firebase
-      const password = document.getElementById("loginPassword").value;
-      try {
-        await signInWithEmailAndPassword(auth, email, password);
-        alert("Logged in successfully!");
-      } catch (err) {
-        alert("Login failed: " + err.message);
-      }
-    });
-
-    // Signup
+    // Signup (only auth method now)
     document.getElementById("signupBtn").addEventListener("click", async () => {
-      const email = document.getElementById("signupEmail").value;  // Still uses email for Firebase
+      const email = document.getElementById("signupEmail").value;
       const password = document.getElementById("signupPassword").value;
       try {
         await createUserWithEmailAndPassword(auth, email, password);
@@ -275,23 +243,13 @@
       }
     });
 
-    // Toggle forms
-    document.getElementById("showSignup").addEventListener("click", () => {
-      document.getElementById("loginForm").style.display = "none";
-      document.getElementById("signupForm").style.display = "block";
-    });
-    document.getElementById("showLogin").addEventListener("click", () => {
-      document.getElementById("signupForm").style.display = "none";
-      document.getElementById("loginForm").style.display = "block";
-    });
-
     // Logout
     document.getElementById("logoutBtn").addEventListener("click", async () => {
       await signOut(auth);
       alert("Logged out!");
     });
 
-    // Auth state listener
+    // Auth state listener (shows app if signed in)
     onAuthStateChanged(auth, (user) => {
       if (user) {
         console.log("User signed in:", user.email);
@@ -468,5 +426,51 @@
     }
 
     // --- Event Listeners for Forms ---
-    document.getElementBy
+    document.getElementById("chargeForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const first = document.getElementById("chargeFirstName").value;
+      const last = document.getElementById("chargeLastName").value;
+      const amount = parseFloat(document.getElementById("chargeAmount").value);
+      const remarks = document.getElementById("chargeRemarks").value;
+      addCharge(first, last, amount, remarks);
+      e.target.reset();
+    });
 
+    document.getElementById("paymentForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const first = document.getElementById("firstName").value;
+      const last = document.getElementById("lastName").value;
+      const amount = parseFloat(document.getElementById("amount").value);
+      const method = document.getElementById("method").value;
+      const remarks = document.getElementById("remarks").value;
+      addPayment(first, last, amount, method, remarks);
+      e.target.reset();
+    });
+
+    // Filter buttons
+    document.getElementById("filterAll").addEventListener("click", () => {
+      currentFilter = "all";
+      renderClients();
+    });
+    document.getElementById("filterOutstanding").addEventListener("click", () => {
+      currentFilter = "outstanding";
+      renderClients();
+    });
+    document.getElementById("filterPaid").addEventListener("click", () => {
+      currentFilter = "paid";
+      renderClients();
+    });
+
+    // Search
+    document.getElementById("searchBox").addEventListener("input", (e) => {
+      searchQuery = e.target.value.toLowerCase();
+      renderClients();
+    });
+
+    // Close modal
+    document.getElementById("closeModal").addEventListener("click", () => {
+      document.getElementById("viewModal").style.display = "none";
+    });
+  </script>
+</body>
+</html>
