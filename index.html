@@ -60,14 +60,16 @@
       enableIndexedDbPersistence 
     } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "client-payment-tracker-3572b.firebaseapp.com",
-      projectId: "client-payment-tracker-3572b",
-      storageBucket: "client-payment-tracker-3572b.appspot.com",
-      messagingSenderId: "151091330895",
-      appId: "1:151091330895:web:d23440ad57a386da720f3a"
-    };
+   // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
+  authDomain: "client-payment-tracker-3572b.firebaseapp.com",
+  projectId: "client-payment-tracker-3572b",
+  storageBucket: "client-payment-tracker-3572b.firebasestorage.app",
+  messagingSenderId: "151091330895",
+  appId: "1:151091330895:web:d23440ad57a386da720f3a",
+  measurementId: "G-NH7D18261Q"
+};
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
@@ -218,3 +220,4 @@
   </script>
 </body>
 </html>
+
