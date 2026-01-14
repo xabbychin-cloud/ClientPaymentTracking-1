@@ -11,7 +11,7 @@
 
   <h1>Client Payment Tracker</h1>
 
-  <!-- Example Charge Form -->
+  <!-- Charge Form -->
   <form id="chargeForm">
     <input id="chargeClientId" placeholder="Client ID" required>
     <input id="chargeFirstName" placeholder="First Name" required>
@@ -21,7 +21,7 @@
     <button type="submit">Add Charge</button>
   </form>
 
-  <!-- Example Payment Form -->
+  <!-- Payment Form -->
   <form id="paymentForm">
     <input id="clientId" placeholder="Client ID" required>
     <input id="firstName" placeholder="First Name" required>
@@ -55,17 +55,9 @@
   <!-- Firebase & Script -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import {
-      getFirestore,
-      doc,
-      getDoc,
-      setDoc,
-      onSnapshot,
-      collection
-    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+    import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
     document.addEventListener("DOMContentLoaded", () => {
-
       const firebaseConfig = {
         apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
         authDomain: "client-payment-tracker-3572b.firebaseapp.com",
@@ -78,7 +70,6 @@
       const app = initializeApp(firebaseConfig);
       const db = getFirestore(app);
 
-      // DOM REFERENCES
       const chargeForm = document.getElementById("chargeForm");
       const paymentForm = document.getElementById("paymentForm");
       const filterAll = document.getElementById("filterAll");
@@ -94,22 +85,8 @@
         const ref = doc(db, "clients", id);
         const snap = await getDoc(ref);
         const c = snap.exists() ? snap.data() : { firstName: first, lastName: last, debit: 0, credit: 0, history: [] };
-
-        c.history.push({
-          date: new Date().toLocaleString(),
-          debit: amount,
-          credit: 0,
-          method: "charge",
-          remarks
-        });
-
-        await setDoc(ref, {
-          ...c,
-          firstName: first,
-          lastName: last,
-          debit: (c.debit || 0) + amount
-        });
-
+        c.history.push({ date: new Date().toLocaleString(), debit: amount, credit: 0, method: "charge", remarks });
+        await setDoc(ref, { ...c, firstName: first, lastName: last, debit: (c.debit || 0) + amount });
         alert("Charge added");
       }
 
@@ -117,22 +94,8 @@
         const ref = doc(db, "clients", id);
         const snap = await getDoc(ref);
         const c = snap.exists() ? snap.data() : { firstName: first, lastName: last, debit: 0, credit: 0, history: [] };
-
-        c.history.push({
-          date: new Date().toLocaleString(),
-          debit: 0,
-          credit: amount,
-          method,
-          remarks
-        });
-
-        await setDoc(ref, {
-          ...c,
-          firstName: first,
-          lastName: last,
-          credit: (c.credit || 0) + amount
-        });
-
+        c.history.push({ date: new Date().toLocaleString(), debit: 0, credit: amount, method, remarks });
+        await setDoc(ref, { ...c, firstName: first, lastName: last, credit: (c.credit || 0) + amount });
         alert("Payment added");
       }
 
@@ -146,12 +109,10 @@
         const tbody = document.querySelector("#clientsTable tbody");
         if (!tbody) return;
         tbody.innerHTML = "";
-
         Object.entries(clients).forEach(([id, c]) => {
           const balance = balanceOf(c);
           const status = balance > 0 ? "Outstanding" : "Paid";
           if (currentFilter !== "all" && status.toLowerCase() !== currentFilter) return;
-
           tbody.insertAdjacentHTML("beforeend", `
             <tr class="${status.toLowerCase()}">
               <td>${id}</td>
@@ -167,37 +128,23 @@
 
       chargeForm?.addEventListener("submit", e => {
         e.preventDefault();
-        addCharge(
-          chargeClientId.value,
-          chargeFirstName.value,
-          chargeLastName.value,
-          parseFloat(chargeAmount.value),
-          chargeRemarks.value
-        );
+        addCharge(chargeClientId.value, chargeFirstName.value, chargeLastName.value, parseFloat(chargeAmount.value), chargeRemarks.value);
         chargeForm.reset();
       });
 
       paymentForm?.addEventListener("submit", e => {
         e.preventDefault();
-        addPayment(
-          clientId.value,
-          firstName.value,
-          lastName.value,
-          parseFloat(amount.value),
-          method.value,
-          remarks.value
-        );
+        addPayment(clientId.value, firstName.value, lastName.value, parseFloat(amount.value), method.value, remarks.value);
         paymentForm.reset();
       });
 
       filterAll.onclick = () => { currentFilter = "all"; renderClients(); };
       filterOutstanding.onclick = () => { currentFilter = "outstanding"; renderClients(); };
       filterPaid.onclick = () => { currentFilter = "paid"; renderClients(); };
-
     });
   </script>
 
-  <!-- Service Worker Registration -->
+  <!-- Service Worker -->
   <script>
     if ("serviceWorker" in navigator) {
       window.addEventListener("load", () => {
@@ -208,5 +155,6 @@
       });
     }
   </script>
+
 </body>
 </html>
