@@ -84,6 +84,56 @@
     let clients = {};
     let currentFilter = "all";
 
+    // --- Add Charge ---
+    async function addCharge(id, first, last, amount, remarks) {
+      const ref = doc(db, "clients", id);
+      try {
+        const snap = await getDoc(ref);
+        const c = snap.exists() 
+          ? snap.data() 
+          : { firstName: first, lastName: last, debit: 0, credit: 0, history: [] };
+
+        c.history.push({
+          date: new Date().toLocaleString(),
+          debit: amount,
+          credit: 0,
+          method: "charge",
+          remarks
+        });
+
+        await setDoc(ref, { ...c, debit: (c.debit || 0) + amount });
+        alert(`✅ Charge of ${amount} added for ${first} ${last} (Client ID: ${id})`);
+      } catch (err) {
+        console.error("Firestore write failed:", err);
+        alert("⚠️ Failed to save client record: " + err.message);
+      }
+    }
+
+    // --- Add Payment ---
+    async function addPayment(id, first, last, amount, method, remarks) {
+      const ref = doc(db, "clients", id);
+      try {
+        const snap = await getDoc(ref);
+        const c = snap.exists() 
+          ? snap.data() 
+          : { firstName: first, lastName: last, debit: 0, credit: 0, history: [] };
+
+        c.history.push({
+          date: new Date().toLocaleString(),
+          debit: 0,
+          credit: amount,
+          method,
+          remarks
+        });
+
+        await setDoc(ref, { ...c, credit: (c.credit || 0) + amount });
+        alert(`✅ Payment of ${amount} recorded for ${first} ${last} (Client ID: ${id})`);
+      } catch (err) {
+        console.error("Firestore write failed:", err);
+        alert("⚠️ Failed to save client record: " + err.message);
+      }
+    }
+
     // --- View Client Records ---
     async function viewClient(id) {
       const ref = doc(db, "clients", id);
@@ -166,63 +216,5 @@
     document.getElementById("filterOutstanding").onclick = () => { currentFilter = "outstanding"; renderClients(); };
     document.getElementById("filterPaid").onclick = () => { currentFilter = "paid"; renderClients(); };
   </script>
-
-  <!-- Service Worker -->
-  <script>
-    if ("serviceWorker" in navigator) {
-      window.addEventListener("load", () => {
-        navigator
-
-async function addCharge(id, first, last, amount, remarks) {
-  const ref = doc(db, "clients", id);
-
-  // build client object
-  const snap = await getDoc(ref);
-  const c = snap.exists() 
-    ? snap.data() 
-    : { firstName: first, lastName: last, debit: 0, credit: 0, history: [] };
-
-  c.history.push({
-    date: new Date().toLocaleString(),
-    debit: amount,
-    credit: 0,
-    method: "charge",
-    remarks
-  });
-
-  // ✅ put your try/catch here
-  try {
-    await setDoc(ref, { ...c, debit: (c.debit || 0) + amount });
-    alert("✅ Client record saved");
-  } catch (err) {
-    console.error("Firestore write failed:", err);
-    alert("⚠️ Failed to save client record: " + err.message);
-  }
-}
-
-async function addPayment(id, first, last, amount, method, remarks) {
-  const ref = doc(db, "clients", id);
-
-  const snap = await getDoc(ref);
-  const c = snap.exists() 
-    ? snap.data() 
-    : { firstName: first, lastName: last, debit: 0, credit: 0, history: [] };
-
-  c.history.push({
-    date: new Date().toLocaleString(),
-    debit: 0,
-    credit: amount,
-    method,
-    remarks
-  });
-
-  // ✅ put your try/catch here
-  try {
-    await setDoc(ref, { ...c, credit: (c.credit || 0) + amount });
-    alert("✅ Client record saved");
-  } catch (err) {
-    console.error("Firestore write failed:", err);
-    alert("⚠️ Failed to save client record: " + err.message);
-  }
-}
-
+</body>
+</html>
