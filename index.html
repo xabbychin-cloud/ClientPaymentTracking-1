@@ -142,3 +142,32 @@ document.addEventListener("DOMContentLoaded", () => {
 
 });
 </script>
+
+  <!-- your page content above -->
+
+  <!-- 🔥 SERVICE WORKER REGISTRATION (PASTE HERE) -->
+  <script>
+    console.log("🔥 index.html reached bottom");
+
+    if ("serviceWorker" in navigator) {
+      console.log("🟢 Service workers supported");
+
+      window.addEventListener("load", () => {
+        console.log("🧭 Attempting to register SW…");
+
+        navigator.serviceWorker
+          .register("./sw.js")
+          .then(reg => {
+            console.log("✅ SW REGISTERED:", reg.scope);
+          })
+          .catch(err => {
+            console.error("❌ SW REGISTRATION FAILED:", err);
+          });
+      });
+    } else {
+      console.warn("❌ Service workers NOT supported");
+    }
+  </script>
+
+</body>
+</html>
