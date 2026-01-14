@@ -192,3 +192,18 @@
     renderHistory(Object.entries(clients).map(([id, client]) => ({ id, client })));
   };
 </script>
+
+<script>
+if ("serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker
+      .register("./sw.js")   // 👈 RELATIVE path for GitHub Pages
+      .then((reg) => {
+        console.log("✅ Service Worker registered:", reg.scope);
+      })
+      .catch((err) => {
+        console.error("❌ Service Worker registration failed:", err);
+      });
+  });
+}
+</script>
