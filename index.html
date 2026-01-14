@@ -36,6 +36,9 @@
   <button id="filterOutstanding">Outstanding</button>
   <button id="filterPaid">Paid</button>
 
+  <!-- Search Bar -->
+  <input id="searchBox" placeholder="Search by name or remarks">
+
   <!-- Clients Table -->
   <table id="clientsTable">
     <thead>
@@ -60,15 +63,14 @@
       enableIndexedDbPersistence 
     } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-   const firebaseConfig = {
-  apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
-  authDomain: "client-payment-tracker-3572b.firebaseapp.com",
-  projectId: "client-payment-tracker-3572b",
-  storageBucket: "client-payment-tracker-3572b.firebasestorage.app",
-  messagingSenderId: "151091330895",
-  appId: "1:151091330895:web:d23440ad57a386da720f3a",
-  measurementId: "G-NH7D18261Q"
-};
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "client-payment-tracker-3572b.firebaseapp.com",
+      projectId: "client-payment-tracker-3572b",
+      storageBucket: "client-payment-tracker-3572b.appspot.com",
+      messagingSenderId: "151091330895",
+      appId: "1:151091330895:web:d23440ad57a386da720f3a"
+    };
 
     const app = initializeApp(firebaseConfig);
     const db = getFirestore(app);
@@ -84,6 +86,7 @@
 
     let clients = {};
     let currentFilter = "all";
+    let searchQuery = "";
 
     // --- Add Charge ---
     async function addCharge(id, first, last, amount, remarks) {
@@ -102,7 +105,14 @@
           remarks
         });
 
-        await setDoc(ref, { ...c, debit: (c.debit || 0) + amount });
+        await setDoc(ref, { 
+          firstName: first, 
+          lastName: last, 
+          debit: (c.debit || 0) + amount, 
+          credit: c.credit || 0, 
+          history: c.history 
+        }, { merge: true });
+
         alert(`✅ Charge of ${amount} added for ${first} ${last} (Client ID: ${id})`);
       } catch (err) {
         console.error("Firestore write failed:", err);
@@ -127,7 +137,14 @@
           remarks
         });
 
-        await setDoc(ref, { ...c, credit: (c.credit || 0) + amount });
+        await setDoc(ref, { 
+          firstName: first, 
+          lastName: last, 
+          debit: c.debit || 0, 
+          credit: (c.credit || 0) + amount, 
+          history: c.history 
+        }, { merge: true });
+
         alert(`✅ Payment of ${amount} recorded for ${first} ${last} (Client ID: ${id})`);
       } catch (err) {
         console.error("Firestore write failed:", err);
@@ -169,7 +186,14 @@
       Object.entries(clients).forEach(([id, c]) => {
         const balance = (c.debit || 0) - (c.credit || 0);
         const status = balance > 0 ? "Outstanding" : "Paid";
+
+        // --- Search filter by name OR remarks ---
+        const fullName = `${c.firstName || ""} ${c.lastName || ""}`.toLowerCase();
+        const remarksText = (c.history || []).map(h => h.remarks || "").join(" ").toLowerCase();
+
+        if (searchQuery && !fullName.includes(searchQuery) && !remarksText.includes(searchQuery)) return;
         if (currentFilter !== "all" && status.toLowerCase() !== currentFilter) return;
+
         tbody.insertAdjacentHTML("beforeend", `
           <tr class="${status.toLowerCase()}">
             <td>${id}</td>
@@ -202,23 +226,3 @@
     paymentForm?.addEventListener("submit", e => {
       e.preventDefault();
       addPayment(
-        document.getElementById("clientId").value,
-        document.getElementById("firstName").value,
-        document.getElementById("lastName").value,
-        parseFloat(document.getElementById("amount").value),
-        document.getElementById("method").value,
-        document.getElementById("remarks").value
-      );
-      paymentForm.reset();
-    });
-
-    // --- Filter Buttons ---
-    document.getElementById("filterAll").onclick = () => { currentFilter = "all"; renderClients(); };
-    document.getElementById("filterOutstanding").onclick = () => { currentFilter = "outstanding"; renderClients(); };
-    document.getElementById("filterPaid").onclick = () => { currentFilter = "paid"; renderClients(); };
-  </script>
-</body>
-</html>
-
-
-
