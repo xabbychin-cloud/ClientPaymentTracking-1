@@ -9,35 +9,41 @@
     collection
   } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-  // 🔥 Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
     authDomain: "client-payment-tracker-3572b.firebaseapp.com",
     projectId: "client-payment-tracker-3572b",
     storageBucket: "client-payment-tracker-3572b.firebasestorage.app",
     messagingSenderId: "151091330895",
-    appId: "1:151091330895:web:d23440ad57a386da720f3a",
-    measurementId: "G-NH7D18261Q"
+    appId: "1:151091330895:web:d23440ad57a386da720f3a"
   };
 
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
+
+  // 🔗 DOM REFERENCES (REQUIRED)
+  const chargeForm = document.getElementById("chargeForm");
+  const paymentForm = document.getElementById("paymentForm");
+  const filterAll = document.getElementById("filterAll");
+  const filterOutstanding = document.getElementById("filterOutstanding");
+  const filterPaid = document.getElementById("filterPaid");
+  const searchBtn = document.getElementById("searchBtn");
+  const viewAllBtn = document.getElementById("viewAllBtn");
+  const searchInput = document.getElementById("searchInput");
 
   let clients = {};
   let currentFilter = "all";
 
   const balanceOf = c => (c.debit || 0) - (c.credit || 0);
 
-  // ➕ Add Charge
   async function addCharge(id, first, last, amount, remarks) {
     const ref = doc(db, "clients", id);
     const snap = await getDoc(ref);
-
-    const client = snap.exists()
+    const c = snap.exists()
       ? snap.data()
       : { firstName: first, lastName: last, debit: 0, credit: 0, history: [] };
 
-    client.history.push({
+    c.history.push({
       date: new Date().toLocaleString(),
       debit: amount,
       credit: 0,
@@ -46,25 +52,23 @@
     });
 
     await setDoc(ref, {
-      ...client,
+      ...c,
       firstName: first,
       lastName: last,
-      debit: (client.debit || 0) + amount
+      debit: (c.debit || 0) + amount
     });
 
-    alert("Charge added successfully");
+    alert("Charge added");
   }
 
-  // ➕ Add Payment
   async function addPayment(id, first, last, amount, method, remarks) {
     const ref = doc(db, "clients", id);
     const snap = await getDoc(ref);
-
-    const client = snap.exists()
+    const c = snap.exists()
       ? snap.data()
       : { firstName: first, lastName: last, debit: 0, credit: 0, history: [] };
 
-    client.history.push({
+    c.history.push({
       date: new Date().toLocaleString(),
       debit: 0,
       credit: amount,
@@ -73,23 +77,21 @@
     });
 
     await setDoc(ref, {
-      ...client,
+      ...c,
       firstName: first,
       lastName: last,
-      credit: (client.credit || 0) + amount
+      credit: (c.credit || 0) + amount
     });
 
-    alert("Payment added successfully");
+    alert("Payment added");
   }
 
-  // 🔄 Live updates
   onSnapshot(collection(db, "clients"), snap => {
     clients = {};
     snap.forEach(d => (clients[d.id] = d.data()));
     renderClients();
   });
 
-  // 📊 Render client summary table
   function renderClients() {
     const tbody = document.querySelector("#clientsTable tbody");
     tbody.innerHTML = "";
@@ -97,7 +99,6 @@
     Object.entries(clients).forEach(([id, c]) => {
       const balance = balanceOf(c);
       const status = balance > 0 ? "Outstanding" : "Paid";
-
       if (currentFilter !== "all" && status.toLowerCase() !== currentFilter) return;
 
       const last = c.history?.[c.history.length - 1] || {};
@@ -120,7 +121,6 @@
     });
   }
 
-  // 📜 Render history table
   function renderHistory(list) {
     const tbody = document.querySelector("#historyTable tbody");
     tbody.innerHTML = "";
@@ -145,54 +145,50 @@
     });
   }
 
-  // 🧾 Forms
-  chargeForm.onsubmit = e => {
+  // 🧾 EVENTS
+  chargeForm.addEventListener("submit", e => {
     e.preventDefault();
     addCharge(
-      chargeClientId.value,
-      chargeFirstName.value,
-      chargeLastName.value,
-      parseFloat(chargeAmount.value),
-      chargeRemarks.value
+      document.getElementById("chargeClientId").value,
+      document.getElementById("chargeFirstName").value,
+      document.getElementById("chargeLastName").value,
+      parseFloat(document.getElementById("chargeAmount").value),
+      document.getElementById("chargeRemarks").value
     );
     chargeForm.reset();
-  };
+  });
 
-  paymentForm.onsubmit = e => {
+  paymentForm.addEventListener("submit", e => {
     e.preventDefault();
     addPayment(
-      clientId.value,
-      firstName.value,
-      lastName.value,
-      parseFloat(amount.value),
-      method.value,
-      remarks.value
+      document.getElementById("clientId").value,
+      document.getElementById("firstName").value,
+      document.getElementById("lastName").value,
+      parseFloat(document.getElementById("amount").value),
+      document.getElementById("method").value,
+      document.getElementById("remarks").value
     );
     paymentForm.reset();
-  };
+  });
 
-  // 🎯 Filters
   filterAll.onclick = () => { currentFilter = "all"; renderClients(); };
   filterOutstanding.onclick = () => { currentFilter = "outstanding"; renderClients(); };
   filterPaid.onclick = () => { currentFilter = "paid"; renderClients(); };
 
-  // 🔍 Search
   searchBtn.onclick = () => {
     const term = searchInput.value.toLowerCase();
-    const matches = Object.entries(clients)
-      .filter(([id, c]) =>
-        id.toLowerCase().includes(term) ||
-        c.firstName?.toLowerCase().includes(term) ||
-        c.lastName?.toLowerCase().includes(term)
-      )
-      .map(([id, client]) => ({ id, client }));
-
-    renderHistory(matches);
+    renderHistory(
+      Object.entries(clients)
+        .filter(([id, c]) =>
+          id.toLowerCase().includes(term) ||
+          c.firstName?.toLowerCase().includes(term) ||
+          c.lastName?.toLowerCase().includes(term)
+        )
+        .map(([id, client]) => ({ id, client }))
+    );
   };
 
   viewAllBtn.onclick = () => {
-    renderHistory(
-      Object.entries(clients).map(([id, client]) => ({ id, client }))
-    );
+    renderHistory(Object.entries(clients).map(([id, client]) => ({ id, client })));
   };
 </script>
