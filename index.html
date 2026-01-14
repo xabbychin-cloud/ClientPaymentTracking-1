@@ -88,13 +88,6 @@
     .auth-form button:hover {
       background-color: #45a049;
     }
-    .google-btn {
-      background-color: #4285F4;
-      color: white;
-    }
-    .google-btn:hover {
-      background-color: #3367D6;
-    }
     .toggle-auth {
       text-align: center;
       margin-top: 10px;
@@ -109,8 +102,6 @@
   <div id="authContainer">
     <div id="loginForm" class="auth-form">
       <h2>Login</h2>
-      <button id="googleSignInBtn" class="google-btn">Sign in with Google</button>
-      <hr style="margin: 20px 0;">
       <input id="loginEmail" type="email" placeholder="Email" required>
       <input id="loginPassword" type="password" placeholder="Password" required>
       <button id="loginBtn">Login</button>
@@ -209,7 +200,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
     import { 
-      getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithRedirect, getRedirectResult 
+      getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
     import { 
       getFirestore, doc, getDoc, setDoc, onSnapshot, collection,
@@ -217,30 +208,20 @@
     } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
     const firebaseConfig = {
-  apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
-  authDomain: "client-payment-tracker-3572b.firebaseapp.com",
-  projectId: "client-payment-tracker-3572b",
-  storageBucket: "client-payment-tracker-3572b.firebasestorage.app",
-  messagingSenderId: "151091330895",
-  appId: "1:151091330895:web:d23440ad57a386da720f3a",
-  measurementId: "G-NH7D18261Q"
+      apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
+      authDomain: "client-payment-tracker-3572b.firebaseapp.com",
+      projectId: "client-payment-tracker-3572b",
+      storageBucket: "client-payment-tracker-3572b.firebasestorage.app",
+      messagingSenderId: "151091330895",
+      appId: "1:151091330895:web:d23440ad57a386da720f3a",
+      measurementId: "G-NH7D18261Q"
     };
 
     const app = initializeApp(firebaseConfig);
     const auth = getAuth(app);
     const db = getFirestore(app);
-    const provider = new GoogleAuthProvider();
 
-    onAuthStateChanged(auth, (user) => {
-  if (user) {
-    console.log("User signed in:", user.displayName, user.email);
-  } else {
-    console.log("No user signed in");
-  }
-});
-
-
-    // ✅ Enable offline persistence
+    // Enable offline persistence
     enableIndexedDbPersistence(db).catch((err) => {
       if (err.code === 'failed-precondition') {
         console.error("Persistence failed: multiple tabs open");
@@ -270,41 +251,17 @@
       document.getElementById("appContainer").style.display = "block";
     }
 
-    // Handle redirect result on page load
-getRedirectResult(auth).then((result) => {
-  if (result && result.user) {
-    console.log("Signed in with Google via redirect:", result.user);
-    // Force show app if auth state doesn't trigger immediately
-    showAppContainer();
-    loadClients();  // Ensure data loads
-  }
-}).catch((error) => {
-  console.error("Redirect sign-in error:", error);
-  alert("Google sign-in failed: " + error.message);
-});
-
-    // Google Sign-In (Redirect)
-    document.getElementById("googleSignInBtn").addEventListener("click", async () => {
+    // Login
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const email = document.getElementById("loginEmail").value;
+      const password = document.getElementById("loginPassword").value;
       try {
-        await signInWithRedirect(auth, provider);
-        // No need for alert here; the redirect will handle it
+        await signInWithEmailAndPassword(auth, email, password);
+        alert("Logged in successfully!");
       } catch (err) {
-        alert("Google sign-in failed: " + err.message);
+        alert("Login failed: " + err.message);
       }
     });
-
-import { signInWithPopup } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";  // Add this import
-
-// In the event listener:
-document.getElementById("googleSignInBtn").addEventListener("click", async () => {
-  try {
-    const result = await signInWithPopup(auth, provider);
-    console.log("Signed in with Google:", result.user);
-    // No need for getRedirectResult with popup
-  } catch (err) {
-    alert("Google sign-in failed: " + err.message);
-  }
-});
 
     // Signup
     document.getElementById("signupBtn").addEventListener("click", async () => {
@@ -336,17 +293,17 @@ document.getElementById("googleSignInBtn").addEventListener("click", async () =>
 
     // Auth state listener
     onAuthStateChanged(auth, (user) => {
-  if (user) {
-    console.log("User signed in:", user.displayName, user.email);
-    currentUser = user;
-    showAppContainer();
-    loadClients();  // Load data here
-  } else {
-    console.log("No user signed in");
-    currentUser = null;
-    showAuthContainer();
-  }
-});
+      if (user) {
+        console.log("User signed in:", user.email);
+        currentUser = user;
+        showAppContainer();
+        loadClients();
+      } else {
+        console.log("No user signed in");
+        currentUser = null;
+        showAuthContainer();
+      }
+    });
 
     // --- Add Charge ---
     async function addCharge(first, last, amount, remarks) {
@@ -494,11 +451,21 @@ document.getElementById("googleSignInBtn").addEventListener("click", async () =>
         const remarksText = (c.history || []).map(h => h.remarks || "").join(" ").toLowerCase();
 
         if (searchQuery && !fullName.includes(searchQuery) && !remarksText.includes(searchQuery)) return;
-        if (currentFilter !== "all" && status.toLowerCase() !== current
+        if (currentFilter !== "all" && status.toLowerCase() !== currentFilter) return;
 
+        tbody.insertAdjacentHTML("beforeend", `
+          <tr>
+            <td>${id}</td>
+            <td>${highlightText(`${c.firstName} ${c.lastName}`, searchQuery)}</td>
+            <td>${(c.debit || 0).toFixed(2)}</td>
+            <td>${(c.credit || 0).toFixed(2)}</td>
+            <td>${balance.toFixed(2)}</td>
+            <td>${status}</td>
+            <td><button onclick="viewClient('${id}')">View</button></td>
+          </tr>
+        `);
+      });
+    }
 
-
-
-
- 
-
+    // --- Event Listeners for Forms ---
+    document.getElementBy
