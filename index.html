@@ -102,7 +102,7 @@
   <div id="authContainer">
     <div id="loginForm" class="auth-form">
       <h2>Login</h2>
-      <input id="loginEmail" type="email" placeholder="Email" required>
+      <input id="loginEmail" type="email" placeholder="Username" required>  <!-- Changed to Username -->
       <input id="loginPassword" type="password" placeholder="Password" required>
       <button id="loginBtn">Login</button>
       <div class="toggle-auth">
@@ -111,7 +111,7 @@
     </div>
     <div id="signupForm" class="auth-form" style="display: none;">
       <h2>Sign Up</h2>
-      <input id="signupEmail" type="email" placeholder="Email" required>
+      <input id="signupEmail" type="email" placeholder="Username" required>  <!-- Changed to Username -->
       <input id="signupPassword" type="password" placeholder="Password" required>
       <button id="signupBtn">Sign Up</button>
       <div class="toggle-auth">
@@ -193,7 +193,7 @@
       </div>
     </div>
 
-    <button id="logoutBtn">Logout</button>
+    <button id="logoutBtn">Logout</button>  <!-- Already included -->
   </div>
 
   <!-- Firebase & Script -->
@@ -253,7 +253,7 @@
 
     // Login
     document.getElementById("loginBtn").addEventListener("click", async () => {
-      const email = document.getElementById("loginEmail").value;
+      const email = document.getElementById("loginEmail").value;  // Still uses email for Firebase
       const password = document.getElementById("loginPassword").value;
       try {
         await signInWithEmailAndPassword(auth, email, password);
@@ -265,11 +265,11 @@
 
     // Signup
     document.getElementById("signupBtn").addEventListener("click", async () => {
-      const email = document.getElementById("signupEmail").value;
+      const email = document.getElementById("signupEmail").value;  // Still uses email for Firebase
       const password = document.getElementById("signupPassword").value;
       try {
         await createUserWithEmailAndPassword(auth, email, password);
-        alert("Account created successfully!");
+        alert("Account created successfully!");  // Success prompt
       } catch (err) {
         alert("Signup failed: " + err.message);
       }
@@ -469,3 +469,4 @@
 
     // --- Event Listeners for Forms ---
     document.getElementBy
+
