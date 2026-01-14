@@ -126,6 +126,8 @@
       <input id="chargeRemarks" placeholder="Remarks">
       <button type="submit">Add Charge</button>
     </form>
+    <input id="chargeStartDate" type="date" placeholder="Start Date" required>
+<input id="chargeEndDate" type="date" placeholder="End Date" required>
 
     <!-- Payment Form -->
     <form id="paymentForm">
@@ -161,6 +163,10 @@
       <tbody></tbody>
     </table>
 
+    <input id="filterStartDate" type="date" placeholder="Start Date">
+<input id="filterEndDate" type="date" placeholder="End Date">
+<button id="checkNotifications">Check Notifications</button>
+
     <!-- Modal for Viewing Client Records -->
     <div id="viewModal" class="modal">
       <div class="modal-content">
@@ -190,6 +196,14 @@
 
     <button id="logoutBtn">Logout</button>
   </div>
+  
+  <div id="calendarModal" class="calendar-modal">
+  <div class="calendar-content">
+    <span class="close" id="closeCalendar">&times;</span>
+    <h2 id="calendarTitle">Client Calendar</h2>
+    <div id="calendar"></div>
+  </div>
+</div>
 
   <!-- Firebase & Script -->
   <script type="module">
@@ -507,6 +521,14 @@
       renderClients();
     });
 
+    <!-- Summary Section -->
+<div class="summary-section">
+  <h3>Monthly Summary (Select Month)</h3>
+  <input id="summaryMonth" type="month" value="">
+  <p><strong>Total Paid:</strong> <span id="totalPaid">0.00</span></p>
+  <p><strong>Total Outstanding:</strong> <span id="totalOutstanding">0.00</span></p>
+</div>
+
     // Close modal
     document.getElementById("closeModal").addEventListener("click", () => {
       document.getElementById("viewModal").style.display = "none";
@@ -514,5 +536,6 @@
   </script>
 </body>
 </html>
+
 
 
