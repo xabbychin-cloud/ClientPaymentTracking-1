@@ -172,6 +172,9 @@
       }
     }
 
+    // Expose viewClient to window for onclick
+    window.viewClient = viewClient;
+
     // --- Realtime Updates ---
     onSnapshot(collection(db, "clients"), snap => {
       clients = {};
@@ -227,3 +230,36 @@
       e.preventDefault();
       addPayment(
         document.getElementById("clientId").value,
+        document.getElementById("firstName").value,
+        document.getElementById("lastName").value,
+        parseFloat(document.getElementById("amount").value),
+        document.getElementById("method").value,
+        document.getElementById("remarks").value
+      );
+      paymentForm.reset();
+    });
+
+    // --- Filter Listeners ---
+    document.getElementById("filterAll").addEventListener("click", () => {
+      currentFilter = "all";
+      renderClients();
+    });
+
+    document.getElementById("filterOutstanding").addEventListener("click", () => {
+      currentFilter = "outstanding";
+      renderClients();
+    });
+
+    document.getElementById("filterPaid").addEventListener("click", () => {
+      currentFilter = "paid";
+      renderClients();
+    });
+
+    // --- Search Listener ---
+    document.getElementById("searchBox").addEventListener("input", e => {
+      searchQuery = e.target.value.toLowerCase();
+      renderClients();
+    });
+  </script>
+</body>
+</html>
