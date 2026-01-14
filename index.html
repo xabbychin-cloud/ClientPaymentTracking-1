@@ -1,209 +1,15 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Client Payment Tracker</title>
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#0b5ed7">
-  <link rel="stylesheet" href="style.css">
-</head>
-<body>
-  <h1>Client Payment Tracker</h1>
-
-  <!-- Add Charge -->
-  <form id="chargeForm">
-    <h3>Add Charge</h3>
-    <input type="text" id="chargeClientId" placeholder="Client ID" required>
-    <input type="text" id="chargeFirstName" placeholder="First name (if new)">
-    <input type="text" id="chargeLastName" placeholder="Surname (if new)">
-    <input type="number" id="chargeAmount" placeholder="Charge Amount" required>
-    <input type="text" id="chargeRemarks" placeholder="Remarks (optional)">
-    <button type="submit">Add Charge</button>
-  </form>
-
-  <!-- Add Payment -->
-  <form id="paymentForm">
-    <h3>Add Payment</h3>
-    <input type="text" id="clientId" placeholder="Client ID" required>
-    <input type="text" id="firstName" placeholder="First name" required>
-    <input type="text" id="lastName" placeholder="Surname" required>
-    <input type="number" id="amount" placeholder="Payment Amount" required>
-    <select id="method">
-      <option value="cash">Cash</option>
-      <option value="bank">Bank Transfer</option>
-    </select>
-    <input type="text" id="remarks" placeholder="Remarks (optional)">
-    <button type="submit">Add Payment</button>
-  </form>
-
-  <!-- Filters -->
-  <div class="filters">
-    <button id="filterAll" type="button">Show All</button>
-    <button id="filterOutstanding" type="button">Show Outstanding</button>
-    <button id="filterPaid" type="button">Show Paid</button>
-  </div>
-
-  <!-- Clients summary -->
-  <table id="clientsTable">
-    <thead>
-      <tr>
-        <th>Client ID</th>
-        <th>Name</th>
-        <th>Total Charges</th>
-        <th>Total Payments</th>
-        <th>Balance</th>
-        <th>Status</th>
-        <th>Last Date Added</th>
-        <th>Last Remarks</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
-  <!-- Search -->
-  <div class="search-bar">
-    <input type="text" id="searchInput" placeholder="Search by ID, first name, or surname">
-    <button id="searchBtn" type="button">View record(s)</button>
-    <button id="viewAllBtn" type="button">View ALL records</button>
-  </div>
-
-  <!-- History -->
-  <table id="historyTable">
-    <thead>
-      <tr>
-        <th>Client ID</th>
-        <th>Name</th>
-        <th>Date Added</th>
-        <th>Debit</th>
-        <th>Credit</th>
-        <th>Method</th>
-        <th>Remarks</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
-  <!-- Register Service Worker -->
-  <script>
-    if ("serviceWorker" in navigator) {
-      navigator.serviceWorker.register("service-worker.js")
-        .then(() => console.log("Service Worker registered"));
-    }
-  </script>
-
-  <!-- Firebase + App Logic -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection } 
-      from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-
-    // ✅ Your Firebase config
-    const firebaseConfig = {
-      apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
-      authDomain: "client-payment-tracker-3572b.firebaseapp.com",
-      projectId: "client-payment-tracker-3572b",
-      storageBucket: "client-payment-tracker-3572b.firebasestorage.app",
-      messagingSenderId: "151091330895",
-      appId: "1:151091330895:web:d23440ad57a386da720f3a",
-      measurementId: "G-NH7D18261Q"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-
-    let clients = {};
-    let currentFilter = 'all';
-
-    function computeBalance(c){ return (c.debit||0) - (c.credit||0); }
-
-    async function addCharge(id, firstName, lastName, amount, remarks) {
-      const ref = doc(db, "clients", id);
-      const snap = await getDoc(ref);
-      let c = snap.exists() ? snap.data() : { firstName, lastName, debit: 0, credit: 0, history: [] };
-      const newHistory = [...(c.history||[]), { date: new Date().toLocaleString(), debit: amount, credit: 0, method: "charge", remarks }];
-      await setDoc(ref, { ...c, firstName, lastName, debit: (c.debit||0)+amount, history: newHistory });
-      alert(`Charge added successfully for ${firstName} ${lastName} (ID:${id})`);
-    }
-
-    async function addPayment(id, firstName, lastName, amount, method, remarks) {
-      const ref = doc(db, "clients", id);
-      const snap = await getDoc(ref);
-      let c = snap.exists() ? snap.data() : { firstName, lastName, debit: 0, credit: 0, history: [] };
-      const newHistory = [...(c.history||[]), { date: new Date().toLocaleString(), debit: 0, credit: amount, method, remarks }];
-      await setDoc(ref, { ...c, firstName, lastName, credit: (c.credit||0)+amount, history: newHistory });
-      alert(`Payment added successfully for ${firstName} ${lastName} (ID:${id})`);
-    }
-
-    onSnapshot(collection(db, "clients"), (snap) => {
-      clients = {};
-      snap.forEach(docSnap => { clients[docSnap.id] = docSnap.data(); });
-      renderTable();
-    });
-
-    function renderTable() {
-      const tbody = document.querySelector('#clientsTable tbody');
-      tbody.innerHTML = '';
-      Object.keys(clients).forEach(id => {
-        const c = clients[id];
-        const balance = computeBalance(c);
-        const status = balance > 0 ? 'Outstanding' : 'Paid';
-        if (currentFilter !== 'all' && status.toLowerCase() !== currentFilter) return;
-        let lastDate='', lastRemarks='';
-        if (c.history && c.history.length>0) {
-          const last=c.history[c.history.length-1];
-          lastDate=last.date; lastRemarks=last.remarks||'';
-        }
-        tbody.insertAdjacentHTML('beforeend',`
-          <tr class="${status==='Outstanding'?'outstanding':'paid'}">
-            <td>${id}</td>
-            <td>${c.firstName||''} ${c.lastName||''}</td>
-            <td>${(c.debit||0).toFixed(2)}</td>
-            <td>${(c.credit||0).toFixed(2)}</td>
-            <td>${balance.toFixed(2)}</td>
-            <td>${status}</td>
-            <td>${lastDate}</td>
-            <td>${lastRemarks}</td>
-          </tr>
-        `);
-      });
-    }
-
-    function populateHistory(matches){
-      const tbody=document.querySelector('#historyTable tbody');
-      tbody.innerHTML='';
-      matches.forEach(({id,client})=>{
-        client.history.forEach(p=>{
-          tbody.insertAdjacentHTML('beforeend',`
-            <tr>
-              <td>${id}</td>
-              <td>${client.firstName||''} ${client.lastName||''}</td>
-              <td>${p.date}</td>
-              <td>${p.debit.toFixed(2)}</td>
-              <td>${p.credit.toFixed(2)}</td>
-              <td>${p.method}</td>
-              <td>${p.remarks||''}</td>
-            </tr>
-          `);
-        });
-      });
-    }
-
-    // Event listeners
-    document.getElementById('chargeForm').addEventListener('submit', e=>{
-      e.preventDefault();
-      addCharge(
-        document.getElementById('chargeClientId').value,
-        document.getElementById('chargeFirstName').value,
-        document.getElementById('chargeLastName').value,
-        parseFloat(document.getElementById('chargeAmount
-
 <script type="module">
   import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-  import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection } 
-    from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+  import {
+    getFirestore,
+    doc,
+    getDoc,
+    setDoc,
+    onSnapshot,
+    collection
+  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-  // Firebase config
+  // 🔥 Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
     authDomain: "client-payment-tracker-3572b.firebaseapp.com",
@@ -218,124 +24,175 @@
   const db = getFirestore(app);
 
   let clients = {};
-  let currentFilter = 'all';
+  let currentFilter = "all";
 
-  function computeBalance(c){ return (c.debit||0) - (c.credit||0); }
+  const balanceOf = c => (c.debit || 0) - (c.credit || 0);
 
-  async function addCharge(id, firstName, lastName, amount, remarks) {
+  // ➕ Add Charge
+  async function addCharge(id, first, last, amount, remarks) {
     const ref = doc(db, "clients", id);
     const snap = await getDoc(ref);
-    let c = snap.exists() ? snap.data() : { firstName, lastName, debit: 0, credit: 0, history: [] };
-    const newHistory = [...(c.history||[]), { date: new Date().toLocaleString(), debit: amount, credit: 0, method: "charge", remarks }];
-    await setDoc(ref, { ...c, firstName, lastName, debit: (c.debit||0)+amount, history: newHistory });
-    alert(`Charge added successfully for ${firstName} ${lastName} (ID:${id})`);
+
+    const client = snap.exists()
+      ? snap.data()
+      : { firstName: first, lastName: last, debit: 0, credit: 0, history: [] };
+
+    client.history.push({
+      date: new Date().toLocaleString(),
+      debit: amount,
+      credit: 0,
+      method: "charge",
+      remarks
+    });
+
+    await setDoc(ref, {
+      ...client,
+      firstName: first,
+      lastName: last,
+      debit: (client.debit || 0) + amount
+    });
+
+    alert("Charge added successfully");
   }
 
-  async function addPayment(id, firstName, lastName, amount, method, remarks) {
+  // ➕ Add Payment
+  async function addPayment(id, first, last, amount, method, remarks) {
     const ref = doc(db, "clients", id);
     const snap = await getDoc(ref);
-    let c = snap.exists() ? snap.data() : { firstName, lastName, debit: 0, credit: 0, history: [] };
-    const newHistory = [...(c.history||[]), { date: new Date().toLocaleString(), debit: 0, credit: amount, method, remarks }];
-    await setDoc(ref, { ...c, firstName, lastName, credit: (c.credit||0)+amount, history: newHistory });
-    alert(`Payment added successfully for ${firstName} ${lastName} (ID:${id})`);
+
+    const client = snap.exists()
+      ? snap.data()
+      : { firstName: first, lastName: last, debit: 0, credit: 0, history: [] };
+
+    client.history.push({
+      date: new Date().toLocaleString(),
+      debit: 0,
+      credit: amount,
+      method,
+      remarks
+    });
+
+    await setDoc(ref, {
+      ...client,
+      firstName: first,
+      lastName: last,
+      credit: (client.credit || 0) + amount
+    });
+
+    alert("Payment added successfully");
   }
 
-  // Live updates
-  onSnapshot(collection(db, "clients"), (snap) => {
+  // 🔄 Live updates
+  onSnapshot(collection(db, "clients"), snap => {
     clients = {};
-    snap.forEach(docSnap => { clients[docSnap.id] = docSnap.data(); });
-    renderTable();
+    snap.forEach(d => (clients[d.id] = d.data()));
+    renderClients();
   });
 
-  // Render summary table
-  function renderTable() {
-    const tbody = document.querySelector('#clientsTable tbody');
-    tbody.innerHTML = '';
-    Object.keys(clients).forEach(id => {
-      const c = clients[id];
-      const balance = computeBalance(c);
-      const status = balance > 0 ? 'Outstanding' : 'Paid';
-      if (currentFilter !== 'all' && status.toLowerCase() !== currentFilter) return;
-      let lastDate='', lastRemarks='';
-      if (c.history && c.history.length>0) {
-        const last=c.history[c.history.length-1];
-        lastDate=last.date; lastRemarks=last.remarks||'';
-      }
-      tbody.insertAdjacentHTML('beforeend',`
-        <tr class="${status==='Outstanding'?'outstanding':'paid'}">
+  // 📊 Render client summary table
+  function renderClients() {
+    const tbody = document.querySelector("#clientsTable tbody");
+    tbody.innerHTML = "";
+
+    Object.entries(clients).forEach(([id, c]) => {
+      const balance = balanceOf(c);
+      const status = balance > 0 ? "Outstanding" : "Paid";
+
+      if (currentFilter !== "all" && status.toLowerCase() !== currentFilter) return;
+
+      const last = c.history?.[c.history.length - 1] || {};
+
+      tbody.insertAdjacentHTML(
+        "beforeend",
+        `
+        <tr>
           <td>${id}</td>
-          <td>${c.firstName||''} ${c.lastName||''}</td>
-          <td>${(c.debit||0).toFixed(2)}</td>
-          <td>${(c.credit||0).toFixed(2)}</td>
+          <td>${c.firstName || ""} ${c.lastName || ""}</td>
+          <td>${(c.debit || 0).toFixed(2)}</td>
+          <td>${(c.credit || 0).toFixed(2)}</td>
           <td>${balance.toFixed(2)}</td>
           <td>${status}</td>
-          <td>${lastDate}</td>
-          <td>${lastRemarks}</td>
+          <td>${last.date || ""}</td>
+          <td>${last.remarks || ""}</td>
         </tr>
-      `);
+      `
+      );
     });
   }
 
-  // Render history table
-  function populateHistory(matches){
-    const tbody=document.querySelector('#historyTable tbody');
-    tbody.innerHTML='';
-    matches.forEach(({id,client})=>{
-      client.history.forEach(p=>{
-        tbody.insertAdjacentHTML('beforeend',`
+  // 📜 Render history table
+  function renderHistory(list) {
+    const tbody = document.querySelector("#historyTable tbody");
+    tbody.innerHTML = "";
+
+    list.forEach(({ id, client }) => {
+      client.history.forEach(h => {
+        tbody.insertAdjacentHTML(
+          "beforeend",
+          `
           <tr>
             <td>${id}</td>
-            <td>${client.firstName||''} ${client.lastName||''}</td>
-            <td>${p.date}</td>
-            <td>${p.debit.toFixed(2)}</td>
-            <td>${p.credit.toFixed(2)}</td>
-            <td>${p.method}</td>
-            <td>${p.remarks||''}</td>
+            <td>${client.firstName} ${client.lastName}</td>
+            <td>${h.date}</td>
+            <td>${h.debit.toFixed(2)}</td>
+            <td>${h.credit.toFixed(2)}</td>
+            <td>${h.method}</td>
+            <td>${h.remarks || ""}</td>
           </tr>
-        `);
+        `
+        );
       });
     });
   }
 
-  // Event listeners
-  document.getElementById('chargeForm').addEventListener('submit', e=>{
+  // 🧾 Forms
+  chargeForm.onsubmit = e => {
     e.preventDefault();
     addCharge(
-      document.getElementById('chargeClientId').value,
-      document.getElementById('chargeFirstName').value,
-      document.getElementById('chargeLastName').value,
-      parseFloat(document.getElementById('chargeAmount').value),
-      document.getElementById('chargeRemarks').value
+      chargeClientId.value,
+      chargeFirstName.value,
+      chargeLastName.value,
+      parseFloat(chargeAmount.value),
+      chargeRemarks.value
     );
-  });
+    chargeForm.reset();
+  };
 
-  document.getElementById('paymentForm').addEventListener('submit', e=>{
+  paymentForm.onsubmit = e => {
     e.preventDefault();
     addPayment(
-      document.getElementById('clientId').value,
-      document.getElementById('firstName').value,
-      document.getElementById('lastName').value,
-      parseFloat(document.getElementById('amount').value),
-      document.getElementById('method').value,
-      document.getElementById('remarks').value
+      clientId.value,
+      firstName.value,
+      lastName.value,
+      parseFloat(amount.value),
+      method.value,
+      remarks.value
     );
-  });
+    paymentForm.reset();
+  };
 
-  document.getElementById('filterAll').addEventListener('click', ()=>{ currentFilter='all'; renderTable(); });
-  document.getElementById('filterOutstanding').addEventListener('click', ()=>{ currentFilter='outstanding'; renderTable(); });
-  document.getElementById('filterPaid').addEventListener('click', ()=>{ currentFilter='paid'; renderTable(); });
+  // 🎯 Filters
+  filterAll.onclick = () => { currentFilter = "all"; renderClients(); };
+  filterOutstanding.onclick = () => { currentFilter = "outstanding"; renderClients(); };
+  filterPaid.onclick = () => { currentFilter = "paid"; renderClients(); };
 
-  document.getElementById('searchBtn').addEventListener('click', ()=>{
-    const term=document.getElementById('searchInput').value.toLowerCase();
-    const matches=Object.entries(clients)
-      .filter(([id,c])=>id.toLowerCase().includes(term) || (c.firstName||'').toLowerCase().includes(term) || (c.lastName||'').toLowerCase().includes(term))
-      .map(([id,c])=>({id,client:c}));
-    populateHistory(matches);
-  });
+  // 🔍 Search
+  searchBtn.onclick = () => {
+    const term = searchInput.value.toLowerCase();
+    const matches = Object.entries(clients)
+      .filter(([id, c]) =>
+        id.toLowerCase().includes(term) ||
+        c.firstName?.toLowerCase().includes(term) ||
+        c.lastName?.toLowerCase().includes(term)
+      )
+      .map(([id, client]) => ({ id, client }));
 
-  document.getElementById('viewAllBtn').addEventListener('click', ()=>{
-    const matches=Object.entries(clients).map(([id,c])=>({id,client:c}));
-    populateHistory(matches);
-  });
+    renderHistory(matches);
+  };
+
+  viewAllBtn.onclick = () => {
+    renderHistory(
+      Object.entries(clients).map(([id, client]) => ({ id, client }))
+    );
+  };
 </script>
-
