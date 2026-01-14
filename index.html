@@ -119,17 +119,13 @@
     <h1>Client Payment Tracker</h1>
 
     <!-- Charge Form -->
-    document.getElementById("chargeForm").addEventListener("submit", (e) => {
-  e.preventDefault();
-  const first = document.getElementById("chargeFirstName").value;
-  const last = document.getElementById("chargeLastName").value;
-  const amount = parseFloat(document.getElementById("chargeAmount").value);
-  const startDate = document.getElementById("chargeStartDate").value;
-  const endDate = document.getElementById("chargeEndDate").value;
-  const remarks = document.getElementById("chargeRemarks").value;
-  addCharge(first, last, amount, startDate, endDate, remarks);
-  e.target.reset();
-});
+    <form id="chargeForm">
+      <input id="chargeFirstName" placeholder="First Name" required>
+      <input id="chargeLastName" placeholder="Last Name" required>
+      <input id="chargeAmount" type="number" placeholder="Amount" required>
+      <input id="chargeRemarks" placeholder="Remarks">
+      <button type="submit">Add Charge</button>
+    </form>
 
     <!-- Payment Form -->
     <form id="paymentForm">
@@ -165,10 +161,6 @@
       <tbody></tbody>
     </table>
 
-    <input id="filterStartDate" type="date" placeholder="Start Date">
-<input id="filterEndDate" type="date" placeholder="End Date">
-<button id="checkNotifications">Check Notifications</button>
-
     <!-- Modal for Viewing Client Records -->
     <div id="viewModal" class="modal">
       <div class="modal-content">
@@ -198,14 +190,6 @@
 
     <button id="logoutBtn">Logout</button>
   </div>
-  
-  <div id="calendarModal" class="calendar-modal">
-  <div class="calendar-content">
-    <span class="close" id="closeCalendar">&times;</span>
-    <h2 id="calendarTitle">Client Calendar</h2>
-    <div id="calendar"></div>
-  </div>
-</div>
 
   <!-- Firebase & Script -->
   <script type="module">
@@ -217,9 +201,6 @@
       getFirestore, doc, getDoc, setDoc, onSnapshot, collection,
       enableIndexedDbPersistence 
     } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-
-    // Add this import for FullCalendar
-import { Calendar } from 'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js';
 
     const firebaseConfig = {
       apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
@@ -248,8 +229,6 @@ import { Calendar } from 'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.
     let clients = {};
     let currentFilter = "all";
     let searchQuery = "";
-    let filterStartDate = "";
-    let filterEndDate = "";
 
     // Function to generate client ID based on name (assuming unique names)
     function generateClientId(first, last) {
@@ -312,47 +291,36 @@ import { Calendar } from 'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.
 
     // Auth state listener (shows app if signed in)
     onAuthStateChanged(auth, (user) => {
-  if (user) {
-    console.log("User signed in:", user.email);
-    currentUser = user;
-    showAppContainer();
-    loadClients();
-    document.getElementById("summaryMonth").value = new Date().toISOString().slice(0, 7); // Default to current month
-  } else {
-    console.log("No user signed in");
-    currentUser = null;
-    showAuthContainer();
-  }
-});
+      if (user) {
+        console.log("User signed in:", user.email);
+        currentUser = user;
+        showAppContainer();
+        loadClients();
+      } else {
+        console.log("No user signed in");
+        currentUser = null;
+        showAuthContainer();
+      }
+    });
 
     // --- Add Charge ---
-    async function addCharge(first, last, amount, startDate, endDate, remarks) {
-  if (!currentUser) return;
-  const id = generateClientId(first, last);
-  const ref = doc(db, "users", currentUser.uid, "clients", id);
-  try {
-    const snap = await getDoc(ref);
-    const c = snap.exists() ? snap.data() : { firstName: first, lastName: last, debit: 0, credit: 0, history: [] };
-    c.history.push({
-      date: new Date().toLocaleString(),
-      debit: amount,
-      credit: 0,
-      method: "charge",
-      remarks,
-      startDate,
-      endDate
-    });
-    await setDoc(ref, { 
-      firstName: first, lastName: last, 
-      debit: (c.debit || 0) + amount, 
-      credit: c.credit || 0, 
-      history: c.history 
-    }, { merge: true });
-    alert(`✅ Charge added for ${first} ${last}`);
-  } catch (err) {
-    alert("⚠️ Failed: " + err.message);
-  }
-}
+    async function addCharge(first, last, amount, remarks) {
+      if (!currentUser) return;
+      const id = generateClientId(first, last);
+      const ref = doc(db, "users", currentUser.uid, "clients", id);
+      try {
+        const snap = await getDoc(ref);
+        const c = snap.exists() 
+          ? snap.data() 
+          : { firstName: first, lastName: last, debit: 0, credit: 0, history: [] };
+
+        c.history.push({
+          date: new Date().toLocaleString(),
+          debit: amount,
+          credit: 0,
+          method: "charge",
+          remarks
+        });
 
         await setDoc(ref, { 
           firstName: first, 
@@ -404,44 +372,40 @@ import { Calendar } from 'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.
     }
 
     // --- View Client Records (Modal) ---
-   async function viewClient(id) {
-  if (!currentUser) return;
-  const ref = doc(db, "users", currentUser.uid, "clients", id);
-  try {
-    const snap = await getDoc(ref);
-    if (snap.exists()) {
-      const c = snap.data();
-      document.getElementById("modalTitle").textContent = `Records for ${c.firstName} ${c.lastName}`;
-      document.getElementById("totalDebit").textContent = (c.debit || 0).toFixed(2);
-      document.getElementById("totalCredit").textContent = (c.credit || 0).toFixed(2);
-      const bal = (c.debit || 0) - (c.credit || 0);
-      document.getElementById("balance").textContent = bal.toFixed(2);
-      document.getElementById("status").textContent = bal > 0 ? "Outstanding" : "Paid";
+    async function viewClient(id) {
+      if (!currentUser) return;
+      const ref = doc(db, "users", currentUser.uid, "clients", id);
+      try {
+        const snap = await getDoc(ref);
+        if (snap.exists()) {
+          const c = snap.data();
+          const modal = document.getElementById("viewModal");
+          const modalTitle = document.getElementById("modalTitle");
+          const totalDebit = document.getElementById("totalDebit");
+          const totalCredit = document.getElementById("totalCredit");
+          const balance = document.getElementById("balance");
+          const status = document.getElementById("status");
+          const historyBody = document.getElementById("historyBody");
 
-      const historyBody = document.getElementById("historyBody");
-      historyBody.innerHTML = "";
-      c.history.filter(h => {
-        const hDate = new Date(h.date);
-        return (!filterStartDate || hDate >= new Date(filterStartDate)) && (!filterEndDate || hDate <= new Date(filterEndDate));
-      }).forEach(h => {
-        historyBody.insertAdjacentHTML("beforeend", `
-          <tr>
-            <td>${h.date}</td>
-            <td>${h.debit.toFixed(2)}</td>
-            <td>${h.credit.toFixed(2)}</td>
-            <td>${h.method}</td>
-            <td>${h.remarks}</td>
-          </tr>
-        `);
-      });
-      document.getElementById("viewModal").style.display = "block";
-    } else {
-      alert("No records found for this client.");
-    }
-  } catch (err) {
-    alert("⚠️ Unable to fetch: " + err.message);
-  }
-}
+          modalTitle.textContent = `Records for ${c.firstName} ${c.lastName} (ID: ${id})`;
+          totalDebit.textContent = (c.debit || 0).toFixed(2);
+          totalCredit.textContent = (c.credit || 0).toFixed(2);
+          const bal = (c.debit || 0) - (c.credit || 0);
+          balance.textContent = bal.toFixed(2);
+          status.textContent = bal > 0 ? "Outstanding" : "Paid";
+
+          historyBody.innerHTML = "";
+          c.history.forEach(h => {
+            historyBody.insertAdjacentHTML("beforeend", `
+              <tr>
+                <td>${h.date}</td>
+                <td>${h.debit.toFixed(2)}</td>
+                <td>${h.credit.toFixed(2)}</td>
+                <td>${h.method}</td>
+                <td>${h.remarks}</td>
+              </tr>
+            `);
+          });
 
           modal.style.display = "block";
         } else {
@@ -455,57 +419,6 @@ import { Calendar } from 'https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.
 
     // Expose viewClient to window for onclick
     window.viewClient = viewClient;
-
-    // Calculate Monthly Summary
-function calculateSummary() {
-  const selectedMonth = document.getElementById("summaryMonth").value;
-  if (!selectedMonth) return;
-  let totalPaid = 0;
-  let totalOutstanding = 0;
-  Object.values(clients).forEach(c => {
-    const balance = (c.debit || 0) - (c.credit || 0);
-    if (balance > 0) totalOutstanding += balance;
-    totalPaid += c.credit || 0;
-  });
-  document.getElementById("totalPaid").textContent = totalPaid.toFixed(2);
-  document.getElementById("totalOutstanding").textContent = totalOutstanding.toFixed(2);
-}
-
-// Show Calendar for Client
-async function showCalendar(id) {
-  if (!currentUser) return;
-  const ref = doc(db, "users", currentUser.uid, "clients", id);
-  try {
-    const snap = await getDoc(ref);
-    if (snap.exists()) {
-      const c = snap.data();
-      document.getElementById("calendarTitle").textContent = `Calendar for ${c.firstName} ${c.lastName}`;
-      const events = [];
-      c.history.forEach(h => {
-        if (h.startDate && h.endDate) {
-          events.push({
-            title: `${h.remarks} (${h.debit > 0 ? 'Charge' : 'Payment'})`,
-            start: h.startDate,
-            end: h.endDate,
-            color: h.debit > 0 ? 'red' : 'green' // Red for outstanding, green for paid
-          });
-        }
-      });
-      const calendarEl = document.getElementById('calendar');
-      const calendar = new Calendar(calendarEl, {
-        initialView: 'dayGridMonth',
-        events: events
-      });
-      calendar.render();
-      document.getElementById("calendarModal").style.display = "block";
-    }
-  } catch (err) {
-    alert("⚠️ Unable to load calendar: " + err.message);
-  }
-}
-
-// Expose showCalendar to window
-window.showCalendar = showCalendar;
 
     // --- Load Clients (Realtime) ---
     function loadClients() {
@@ -525,37 +438,32 @@ window.showCalendar = showCalendar;
     }
 
     function renderClients() {
-  const tbody = document.querySelector("#clientsTable tbody");
-  if (!tbody) return;
-  tbody.innerHTML = "";
-  Object.entries(clients).forEach(([id, c]) => {
-    const balance = (c.debit || 0) - (c.credit || 0);
-    const status = balance > 0 ? "Outstanding" : "Paid";
-    const fullName = `${c.firstName || ""} ${c.lastName || ""}`.toLowerCase();
-    const remarksText = (c.history || []).map(h => h.remarks || "").join(" ").toLowerCase();
-    const hasMatchingHistory = c.history.some(h => {
-      const hDate = new Date(h.date);
-      return (!filterStartDate || hDate >= new Date(filterStartDate)) && (!filterEndDate || hDate <= new Date(filterEndDate));
-    });
+      const tbody = document.querySelector("#clientsTable tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      Object.entries(clients).forEach(([id, c]) => {
+        const balance = (c.debit || 0) - (c.credit || 0);
+        const status = balance > 0 ? "Outstanding" : "Paid";
+        // --- Search filter by name OR remarks ---
+        const fullName = `${c.firstName || ""} ${c.lastName || ""}`.toLowerCase();
+        const remarksText = (c.history || []).map(h => h.remarks || "").join(" ").toLowerCase();
 
-    if (searchQuery && !fullName.includes(searchQuery) && !remarksText.includes(searchQuery)) return;
-    if (currentFilter !== "all" && status.toLowerCase() !== currentFilter) return;
-    if ((filterStartDate || filterEndDate) && !hasMatchingHistory) return;
+        if (searchQuery && !fullName.includes(searchQuery) && !remarksText.includes(searchQuery)) return;
+        if (currentFilter !== "all" && status.toLowerCase() !== currentFilter) return;
 
-    tbody.insertAdjacentHTML("beforeend", `
-      <tr>
-        <td>${id}</td>
-        <td><a href="#" onclick="showCalendar('${id}')">${highlightText(`${c.firstName} ${c.lastName}`, searchQuery)}</a></td>
-        <td>${(c.debit || 0).toFixed(2)}</td>
-        <td>${(c.credit || 0).toFixed(2)}</td>
-        <td>${balance.toFixed(2)}</td>
-        <td>${status}</td>
-        <td><button onclick="viewClient('${id}')">View</button></td>
-      </tr>
-    `);
-  });
-  calculateSummary(); // Update summary after rendering
-}
+        tbody.insertAdjacentHTML("beforeend", `
+          <tr>
+            <td>${id}</td>
+            <td>${highlightText(`${c.firstName} ${c.lastName}`, searchQuery)}</td>
+            <td>${(c.debit || 0).toFixed(2)}</td>
+            <td>${(c.credit || 0).toFixed(2)}</td>
+            <td>${balance.toFixed(2)}</td>
+            <td>${status}</td>
+            <td><button onclick="viewClient('${id}')">View</button></td>
+          </tr>
+        `);
+      });
+    }
 
     // --- Event Listeners for Forms ---
     document.getElementById("chargeForm").addEventListener("submit", (e) => {
@@ -599,14 +507,6 @@ window.showCalendar = showCalendar;
       renderClients();
     });
 
-    <!-- Summary Section -->
-<div class="summary-section">
-  <h3>Monthly Summary (Select Month)</h3>
-  <input id="summaryMonth" type="month" value="">
-  <p><strong>Total Paid:</strong> <span id="totalPaid">0.00</span></p>
-  <p><strong>Total Outstanding:</strong> <span id="totalOutstanding">0.00</span></p>
-</div>
-
     // Close modal
     document.getElementById("closeModal").addEventListener("click", () => {
       document.getElementById("viewModal").style.display = "none";
@@ -615,46 +515,5 @@ window.showCalendar = showCalendar;
 </body>
 </html>
 
-// Summary month change
-document.getElementById("summaryMonth").addEventListener("change", calculateSummary);
 
-// Date filters
-document.getElementById("filterStartDate").addEventListener("change", (e) => {
-  filterStartDate = e.target.value;
-  renderClients();
-});
-document.getElementById("filterEndDate").addEventListener("change", (e) => {
-  filterEndDate = e.target.value;
-  renderClients();
-});
-
-// Notifications
-document.getElementById("checkNotifications").addEventListener("click", async () => {
-  if (!('Notification' in window)) {
-    alert("Notifications not supported in this browser.");
-    return;
-  }
-  if (Notification.permission === 'default') {
-    await Notification.requestPermission();
-  }
-  if (Notification.permission === 'granted') {
-    const outstandingClients = Object.values(clients).filter(c => (c.debit || 0) - (c.credit || 0) > 0);
-    if (outstandingClients.length > 0) {
-      new Notification(`Outstanding Balances: ${outstandingClients.length} clients`, {
-        body: `Clients: ${outstandingClients.map(c => `${c.firstName} ${c.lastName}`).join(', ')}`
-      });
-    } else {
-      alert("No outstanding balances!");
-    }
-  } else {
-    alert("Notification permission denied.");
-  }
-});
-
-// Close calendar modal
-document.getElementById("closeCalendar").addEventListener("click", () => {
-  document.getElementById("calendarModal").style.display = "none";
-});
-
-
-
+ 
