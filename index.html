@@ -1,3 +1,28 @@
+<think>
+First, the user says: "sign in with google is not clickable, it should be directed to the gmail account after click then app will open"
+
+
+## Investigating user issue  
+- The user reported that the "Sign in with Google" button is not clickable.  
+- They expected it to redirect to their Gmail account and open the app after clicking.
+</think>Yes, I see the issue! The Google sign-in button might not be responding properly, or it could be due to browser popup blockers (since the current code uses a popup). Based on your description ("directed to the gmail account after click then app will open"), it sounds like you want a **redirect flow** instead of a popup. This will redirect the entire page to Google's sign-in page, and after authentication, it redirects back to your app.
+
+### Why This Happens
+- The current code uses `signInWithPopup`, which opens a small window. If popups are blocked (common in browsers), it fails silently or shows an error.
+- A redirect flow (`signInWithRedirect`) is more reliable for web apps, as it takes over the whole page.
+
+### Updated Code
+I've modified the code to use `signInWithRedirect` for Google sign-in. This should make the button clickable and redirect to Google as expected.
+
+**Key Changes**:
+- Switched to `signInWithRedirect` on button click.
+- Added `getRedirectResult` on page load to handle the redirect back (this checks if the user just came back from Google).
+- Kept `onAuthStateChanged` for ongoing auth state management.
+- The button should now redirect to Google, and after sign-in, the app will load.
+
+Replace your existing code with this updated version:
+
+```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -209,7 +234,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
     import { 
-      getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithPopup 
+      getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, GoogleAuthProvider, signInWithRedirect, getRedirectResult 
     } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
     import { 
       getFirestore, doc, getDoc, setDoc, onSnapshot, collection,
@@ -260,11 +285,20 @@
       document.getElementById("appContainer").style.display = "block";
     }
 
-    // Google Sign-In
+    // Handle redirect result on page load
+    getRedirectResult(auth).then((result) => {
+      if (result.user) {
+        console.log("Signed in with Google via redirect:", result.user);
+      }
+    }).catch((error) => {
+      console.error("Redirect sign-in error:", error);
+    });
+
+    // Google Sign-In (Redirect)
     document.getElementById("googleSignInBtn").addEventListener("click", async () => {
       try {
-        await signInWithPopup(auth, provider);
-        alert("Signed in with Google successfully!");
+        await signInWithRedirect(auth, provider);
+        // No need for alert here; the redirect will handle it
       } catch (err) {
         alert("Google sign-in failed: " + err.message);
       }
@@ -471,3 +505,4 @@
 
         if (searchQuery && !fullName.includes(searchQuery) && !remarksText.includes(searchQuery)) return;
         if (currentFilter !== "all" && status.toLowerCase() !== current
+
