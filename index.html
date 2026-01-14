@@ -103,6 +103,15 @@
       <div class="note">Sample format: username@example.com</div>
       <input id="signupPassword" type="password" placeholder="Password" required>
       <button id="signupBtn">Create Account</button>
+      <p>Already have an account? <a href="#" id="showLogin">Login</a></p>
+    </div>
+
+    <div id="loginForm" class="auth-form" style="display: none;">
+      <h2>Login</h2>
+      <input id="loginEmail" type="email" placeholder="Username" required>
+      <input id="loginPassword" type="password" placeholder="Password" required>
+      <button id="loginBtn">Login</button>
+      <p>Don't have an account? <a href="#" id="showSignup">Sign up</a></p>
     </div>
   </div>
 
@@ -186,7 +195,7 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
     import { 
-      getAuth, createUserWithEmailAndPassword, signOut, onAuthStateChanged
+      getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
     import { 
       getFirestore, doc, getDoc, setDoc, onSnapshot, collection,
@@ -237,16 +246,41 @@
       document.getElementById("appContainer").style.display = "block";
     }
 
-    // Signup (only auth method now)
+    // Signup
     document.getElementById("signupBtn").addEventListener("click", async () => {
       const email = document.getElementById("signupEmail").value;
       const password = document.getElementById("signupPassword").value;
       try {
         await createUserWithEmailAndPassword(auth, email, password);
-        alert("Account created successfully!");  // Success prompt
+        alert("Account created successfully!");
       } catch (err) {
         alert("Signup failed: " + err.message);
       }
+    });
+
+    // Login
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const email = document.getElementById("loginEmail").value;
+      const password = document.getElementById("loginPassword").value;
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+      } catch (err) {
+        alert("Login failed: " + err.message);
+      }
+    });
+
+    // Toggle to login form
+    document.getElementById("showLogin").addEventListener("click", (e) => {
+      e.preventDefault();
+      document.getElementById("signupForm").style.display = "none";
+      document.getElementById("loginForm").style.display = "block";
+    });
+
+    // Toggle to signup form
+    document.getElementById("showSignup").addEventListener("click", (e) => {
+      e.preventDefault();
+      document.getElementById("loginForm").style.display = "none";
+      document.getElementById("signupForm").style.display = "block";
     });
 
     // Logout
@@ -480,4 +514,5 @@
   </script>
 </body>
 </html>
+
 
