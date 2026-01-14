@@ -197,4 +197,119 @@
   </script>
 </body>
 </html>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+  import { 
+    getFirestore, doc, getDoc, setDoc, onSnapshot, collection,
+    enableIndexedDbPersistence 
+  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const firebaseConfig = {
+      apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
+      authDomain: "client-payment-tracker-3572b.firebaseapp.com",
+      projectId: "client-payment-tracker-3572b",
+      storageBucket: "client-payment-tracker-3572b.appspot.com",
+      messagingSenderId: "151091330895",
+      appId: "1:151091330895:web:d23440ad57a386da720f3a"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // ✅ Enable offline persistence
+    enableIndexedDbPersistence(db).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        console.error("Persistence failed: multiple tabs open");
+      } else if (err.code === 'unimplemented') {
+        console.error("Persistence not supported by this browser");
+      }
+    });
+
+    // --- Add Charge ---
+    async function addCharge(id, first, last, amount, remarks) {
+      const ref = doc(db, "clients", id);
+      try {
+        const snap = await getDoc(ref);
+        const c = snap.exists() ? snap.data() : { firstName: first, lastName: last, debit: 0, credit: 0, history: [] };
+        c.history.push({ date: new Date().toLocaleString(), debit: amount, credit: 0, method: "charge", remarks });
+        await setDoc(ref, { ...c, firstName: first, lastName: last, debit: (c.debit || 0) + amount });
+        alert("Charge added");
+      } catch (err) {
+        console.error("Error adding charge:", err);
+        alert("You are offline. Charge will sync when back online.");
+      }
+    }
+
+    // --- Add Payment ---
+    async function addPayment(id, first, last, amount, method, remarks) {
+      const ref = doc(db, "clients", id);
+      try {
+        const snap = await getDoc(ref);
+        const c = snap.exists() ? snap.data() : { firstName: first, lastName: last, debit: 0, credit: 0, history: [] };
+        c.history.push({ date: new Date().toLocaleString(), debit: 0, credit: amount, method, remarks });
+        await setDoc(ref, { ...c, firstName: first, lastName: last, credit: (c.credit || 0) + amount });
+        alert("Payment added");
+      } catch (err) {
+        console.error("Error adding payment:", err);
+        alert("You are offline. Payment will sync when back online.");
+      }
+    }
+
+    // --- Realtime Updates ---
+    onSnapshot(collection(db, "clients"), snap => {
+      let clients = {};
+      snap.forEach(d => (clients[d.id] = d.data()));
+      renderClients(clients);
+    });
+
+    function renderClients(clients) {
+      const tbody = document.querySelector("#clientsTable tbody");
+      if (!tbody) return;
+      tbody.innerHTML = "";
+      Object.entries(clients).forEach(([id, c]) => {
+        const balance = (c.debit || 0) - (c.credit || 0);
+        const status = balance > 0 ? "Outstanding" : "Paid";
+        tbody.insertAdjacentHTML("beforeend", `
+          <tr class="${status.toLowerCase()}">
+            <td>${id}</td>
+            <td>${c.firstName || ""} ${c.lastName || ""}</td>
+            <td>${(c.debit || 0).toFixed(2)}</td>
+            <td>${(c.credit || 0).toFixed(2)}</td>
+            <td>${balance.toFixed(2)}</td>
+            <td>${status}</td>
+          </tr>
+        `);
+      });
+    }
+
+    // --- Form Listeners ---
+    const chargeForm = document.getElementById("chargeForm");
+    chargeForm?.addEventListener("submit", e => {
+      e.preventDefault();
+      addCharge(
+        document.getElementById("chargeClientId").value,
+        document.getElementById("chargeFirstName").value,
+        document.getElementById("chargeLastName").value,
+        parseFloat(document.getElementById("chargeAmount").value),
+        document.getElementById("chargeRemarks").value
+      );
+      chargeForm.reset();
+    });
+
+    const paymentForm = document.getElementById("paymentForm");
+    paymentForm?.addEventListener("submit", e => {
+      e.preventDefault();
+      addPayment(
+        document.getElementById("clientId").value,
+        document.getElementById("firstName").value,
+        document.getElementById("lastName").value,
+        parseFloat(document.getElementById("amount").value),
+        document.getElementById("method").value,
+        document.getElementById("remarks").value
+      );
+      paymentForm.reset();
+    });
+  });
+</script>
 
