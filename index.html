@@ -230,6 +230,15 @@
     const db = getFirestore(app);
     const provider = new GoogleAuthProvider();
 
+    onAuthStateChanged(auth, (user) => {
+  if (user) {
+    console.log("User signed in:", user.displayName, user.email);
+  } else {
+    console.log("No user signed in");
+  }
+});
+
+
     // ✅ Enable offline persistence
     enableIndexedDbPersistence(db).catch((err) => {
       if (err.code === 'failed-precondition') {
@@ -479,6 +488,7 @@
 
         if (searchQuery && !fullName.includes(searchQuery) && !remarksText.includes(searchQuery)) return;
         if (currentFilter !== "all" && status.toLowerCase() !== current
+
 
 
 
