@@ -1,13 +1,15 @@
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-  import {
-    getFirestore,
-    doc,
-    getDoc,
-    setDoc,
-    onSnapshot,
-    collection
-  } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  onSnapshot,
+  collection
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+
+document.addEventListener("DOMContentLoaded", () => {
 
   const firebaseConfig = {
     apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
@@ -21,7 +23,7 @@
   const app = initializeApp(firebaseConfig);
   const db = getFirestore(app);
 
-  // 🔗 DOM REFERENCES (REQUIRED)
+  // DOM REFERENCES (SAFE NOW)
   const chargeForm = document.getElementById("chargeForm");
   const paymentForm = document.getElementById("paymentForm");
   const filterAll = document.getElementById("filterAll");
@@ -94,8 +96,9 @@
 
   function renderClients() {
     const tbody = document.querySelector("#clientsTable tbody");
-    tbody.innerHTML = "";
+    if (!tbody) return;
 
+    tbody.innerHTML = "";
     Object.entries(clients).forEach(([id, c]) => {
       const balance = balanceOf(c);
       const status = balance > 0 ? "Outstanding" : "Paid";
@@ -103,9 +106,7 @@
 
       const last = c.history?.[c.history.length - 1] || {};
 
-      tbody.insertAdjacentHTML(
-        "beforeend",
-        `
+      tbody.insertAdjacentHTML("beforeend", `
         <tr>
           <td>${id}</td>
           <td>${c.firstName || ""} ${c.lastName || ""}</td>
@@ -116,57 +117,32 @@
           <td>${last.date || ""}</td>
           <td>${last.remarks || ""}</td>
         </tr>
-      `
-      );
+      `);
     });
   }
 
-  function renderHistory(list) {
-    const tbody = document.querySelector("#historyTable tbody");
-    tbody.innerHTML = "";
-
-    list.forEach(({ id, client }) => {
-      client.history.forEach(h => {
-        tbody.insertAdjacentHTML(
-          "beforeend",
-          `
-          <tr>
-            <td>${id}</td>
-            <td>${client.firstName} ${client.lastName}</td>
-            <td>${h.date}</td>
-            <td>${h.debit.toFixed(2)}</td>
-            <td>${h.credit.toFixed(2)}</td>
-            <td>${h.method}</td>
-            <td>${h.remarks || ""}</td>
-          </tr>
-        `
-        );
-      });
-    });
-  }
-
-  // 🧾 EVENTS
-  chargeForm.addEventListener("submit", e => {
+  // EVENTS (SAFE NOW)
+  chargeForm?.addEventListener("submit", e => {
     e.preventDefault();
     addCharge(
-      document.getElementById("chargeClientId").value,
-      document.getElementById("chargeFirstName").value,
-      document.getElementById("chargeLastName").value,
-      parseFloat(document.getElementById("chargeAmount").value),
-      document.getElementById("chargeRemarks").value
+      chargeClientId.value,
+      chargeFirstName.value,
+      chargeLastName.value,
+      parseFloat(chargeAmount.value),
+      chargeRemarks.value
     );
     chargeForm.reset();
   });
 
-  paymentForm.addEventListener("submit", e => {
+  paymentForm?.addEventListener("submit", e => {
     e.preventDefault();
     addPayment(
-      document.getElementById("clientId").value,
-      document.getElementById("firstName").value,
-      document.getElementById("lastName").value,
-      parseFloat(document.getElementById("amount").value),
-      document.getElementById("method").value,
-      document.getElementById("remarks").value
+      clientId.value,
+      firstName.value,
+      lastName.value,
+      parseFloat(amount.value),
+      method.value,
+      remarks.value
     );
     paymentForm.reset();
   });
@@ -174,36 +150,5 @@
   filterAll.onclick = () => { currentFilter = "all"; renderClients(); };
   filterOutstanding.onclick = () => { currentFilter = "outstanding"; renderClients(); };
   filterPaid.onclick = () => { currentFilter = "paid"; renderClients(); };
-
-  searchBtn.onclick = () => {
-    const term = searchInput.value.toLowerCase();
-    renderHistory(
-      Object.entries(clients)
-        .filter(([id, c]) =>
-          id.toLowerCase().includes(term) ||
-          c.firstName?.toLowerCase().includes(term) ||
-          c.lastName?.toLowerCase().includes(term)
-        )
-        .map(([id, client]) => ({ id, client }))
-    );
-  };
-
-  viewAllBtn.onclick = () => {
-    renderHistory(Object.entries(clients).map(([id, client]) => ({ id, client })));
-  };
-</script>
-
-<script>
-if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => {
-    navigator.serviceWorker
-      .register("./sw.js")   // 👈 RELATIVE path for GitHub Pages
-      .then((reg) => {
-        console.log("✅ Service Worker registered:", reg.scope);
-      })
-      .catch((err) => {
-        console.error("❌ Service Worker registration failed:", err);
-      });
-  });
-}
+});
 </script>
