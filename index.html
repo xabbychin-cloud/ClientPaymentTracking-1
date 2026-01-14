@@ -53,9 +53,36 @@
 
   <!-- Firebase & Script -->
   <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-    import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+  import { getFirestore, doc, getDoc, setDoc, onSnapshot, collection,
+           enableIndexedDbPersistence } 
+    from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
+  document.addEventListener("DOMContentLoaded", () => {
+    const firebaseConfig = {
+      apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
+      authDomain: "client-payment-tracker-3572b.firebaseapp.com",
+      projectId: "client-payment-tracker-3572b",
+      storageBucket: "client-payment-tracker-3572b.appspot.com",
+      messagingSenderId: "151091330895",
+      appId: "1:151091330895:web:d23440ad57a386da720f3a"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    // ✅ Enable offline persistence here
+    enableIndexedDbPersistence(db).catch((err) => {
+      if (err.code === 'failed-precondition') {
+        console.error("Persistence failed: multiple tabs open");
+      } else if (err.code === 'unimplemented') {
+        console.error("Persistence not supported by this browser");
+      }
+    });
+
+    // ... your addCharge, addPayment, onSnapshot, etc.
+  });
+</script>
     document.addEventListener("DOMContentLoaded", () => {
       const firebaseConfig = {
         apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
@@ -170,3 +197,4 @@
   </script>
 </body>
 </html>
+
