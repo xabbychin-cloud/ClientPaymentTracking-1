@@ -8,6 +8,25 @@
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
+  <!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Client Payment Tracking</title>
+  <link rel="manifest" href="/ClientPaymentTracking-1/manifest.json">
+</head>
+<body>
+  <!-- Your app content -->
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('/ClientPaymentTracking-1/sw.js')
+        .then(reg => console.log('SW registered:', reg))
+        .catch(err => console.error('SW registration failed:', err));
+    }
+  </script>
+</body>
+</html>
 
   <h1>Client Payment Tracker</h1>
 
@@ -172,3 +191,4 @@
 
 </body>
 </html>
+
