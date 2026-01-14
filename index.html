@@ -8,26 +8,6 @@
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Client Payment Tracking</title>
-  <link rel="manifest" href="/ClientPaymentTracking-1/manifest.json">
-</head>
-<body>
-  <!-- Your app content -->
-
-  <script>
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('/ClientPaymentTracking-1/sw.js')
-        .then(reg => console.log('SW registered:', reg))
-        .catch(err => console.error('SW registration failed:', err));
-    }
-  </script>
-</body>
-</html>
-
   <h1>Client Payment Tracker</h1>
 
   <!-- Charge Form -->
@@ -81,7 +61,7 @@
         apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
         authDomain: "client-payment-tracker-3572b.firebaseapp.com",
         projectId: "client-payment-tracker-3572b",
-        storageBucket: "client-payment-tracker-3572b.appspot.com",   // ✅ FIXED
+        storageBucket: "client-payment-tracker-3572b.appspot.com",
         messagingSenderId: "151091330895",
         appId: "1:151091330895:web:d23440ad57a386da720f3a"
       };
@@ -89,7 +69,7 @@
       const app = initializeApp(firebaseConfig);
       const db = getFirestore(app);
 
-      // ✅ Properly reference form inputs
+      // Form references
       const chargeForm = document.getElementById("chargeForm");
       const chargeClientId = document.getElementById("chargeClientId");
       const chargeFirstName = document.getElementById("chargeFirstName");
@@ -188,7 +168,5 @@
       });
     }
   </script>
-
 </body>
 </html>
-
