@@ -57,84 +57,150 @@
     .history-table th {
       background-color: #f2f2f2;
     }
+    /* Auth forms */
+    #authContainer {
+      display: block;
+    }
+    #appContainer {
+      display: none;
+    }
+    .auth-form {
+      max-width: 400px;
+      margin: 50px auto;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .auth-form input {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 8px;
+    }
+    .auth-form button {
+      width: 100%;
+      padding: 10px;
+      background-color: #4CAF50;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .auth-form button:hover {
+      background-color: #45a049;
+    }
+    .toggle-auth {
+      text-align: center;
+      margin-top: 10px;
+    }
+    .toggle-auth a {
+      color: #007BFF;
+      cursor: pointer;
+    }
   </style>
 </head>
 <body>
-  <h1>Client Payment Tracker</h1>
-
-  <!-- Charge Form -->
-  <form id="chargeForm">
-    <input id="chargeFirstName" placeholder="First Name" required>
-    <input id="chargeLastName" placeholder="Last Name" required>
-    <input id="chargeAmount" type="number" placeholder="Amount" required>
-    <input id="chargeRemarks" placeholder="Remarks">
-    <button type="submit">Add Charge</button>
-  </form>
-
-  <!-- Payment Form -->
-  <form id="paymentForm">
-    <input id="firstName" placeholder="First Name" required>
-    <input id="lastName" placeholder="Last Name" required>
-    <input id="amount" type="number" placeholder="Amount" required>
-    <input id="method" placeholder="Payment Method">
-    <input id="remarks" placeholder="Remarks">
-    <button type="submit">Add Payment</button>
-  </form>
-
-  <!-- Filter Buttons -->
-  <button id="filterAll">All</button>
-  <button id="filterOutstanding">Outstanding</button>
-  <button id="filterPaid">Paid</button>
-
-  <!-- Search Bar -->
-  <input id="searchBox" placeholder="Search by name or remarks">
-
-  <!-- Clients Table -->
-  <table id="clientsTable">
-    <thead>
-      <tr>
-        <th>ID</th>
-        <th>Name</th>
-        <th>Debit</th>
-        <th>Credit</th>
-        <th>Balance</th>
-        <th>Status</th>
-        <th>Actions</th>
-      </tr>
-    </thead>
-    <tbody></tbody>
-  </table>
-
-  <!-- Modal for Viewing Client Records -->
-  <div id="viewModal" class="modal">
-    <div class="modal-content">
-      <span class="close" id="closeModal">&times;</span>
-      <h2 id="modalTitle">Client Records</h2>
-      <div id="modalSummary">
-        <p><strong>Total Debit:</strong> <span id="totalDebit"></span></p>
-        <p><strong>Total Credit:</strong> <span id="totalCredit"></span></p>
-        <p><strong>Balance:</strong> <span id="balance"></span></p>
-        <p><strong>Status:</strong> <span id="status"></span></p>
+  <div id="authContainer">
+    <div id="loginForm" class="auth-form">
+      <h2>Login</h2>
+      <input id="loginEmail" type="email" placeholder="Email" required>
+      <input id="loginPassword" type="password" placeholder="Password" required>
+      <button id="loginBtn">Login</button>
+      <div class="toggle-auth">
+        <a id="showSignup">Don't have an account? Sign up</a>
       </div>
-      <h3>Transaction History</h3>
-      <table class="history-table" id="historyTable">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Debit</th>
-            <th>Credit</th>
-            <th>Method</th>
-            <th>Remarks</th>
-          </tr>
-        </thead>
-        <tbody id="historyBody"></tbody>
-      </table>
     </div>
+    <div id="signupForm" class="auth-form" style="display: none;">
+      <h2>Sign Up</h2>
+      <input id="signupEmail" type="email" placeholder="Email" required>
+      <input id="signupPassword" type="password" placeholder="Password" required>
+      <button id="signupBtn">Sign Up</button>
+      <div class="toggle-auth">
+        <a id="showLogin">Already have an account? Login</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="appContainer">
+    <h1>Client Payment Tracker</h1>
+
+    <!-- Charge Form -->
+    <form id="chargeForm">
+      <input id="chargeFirstName" placeholder="First Name" required>
+      <input id="chargeLastName" placeholder="Last Name" required>
+      <input id="chargeAmount" type="number" placeholder="Amount" required>
+      <input id="chargeRemarks" placeholder="Remarks">
+      <button type="submit">Add Charge</button>
+    </form>
+
+    <!-- Payment Form -->
+    <form id="paymentForm">
+      <input id="firstName" placeholder="First Name" required>
+      <input id="lastName" placeholder="Last Name" required>
+      <input id="amount" type="number" placeholder="Amount" required>
+      <input id="method" placeholder="Payment Method">
+      <input id="remarks" placeholder="Remarks">
+      <button type="submit">Add Payment</button>
+    </form>
+
+    <!-- Filter Buttons -->
+    <button id="filterAll">All</button>
+    <button id="filterOutstanding">Outstanding</button>
+    <button id="filterPaid">Paid</button>
+
+    <!-- Search Bar -->
+    <input id="searchBox" placeholder="Search by name or remarks">
+
+    <!-- Clients Table -->
+    <table id="clientsTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Debit</th>
+          <th>Credit</th>
+          <th>Balance</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+
+    <!-- Modal for Viewing Client Records -->
+    <div id="viewModal" class="modal">
+      <div class="modal-content">
+        <span class="close" id="closeModal">&times;</span>
+        <h2 id="modalTitle">Client Records</h2>
+        <div id="modalSummary">
+          <p><strong>Total Debit:</strong> <span id="totalDebit"></span></p>
+          <p><strong>Total Credit:</strong> <span id="totalCredit"></span></p>
+          <p><strong>Balance:</strong> <span id="balance"></span></p>
+          <p><strong>Status:</strong> <span id="status"></span></p>
+        </div>
+        <h3>Transaction History</h3>
+        <table class="history-table" id="historyTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Debit</th>
+              <th>Credit</th>
+              <th>Method</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <button id="logoutBtn">Logout</button>
   </div>
 
   <!-- Firebase & Script -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+    import { 
+      getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged 
+    } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
     import { 
       getFirestore, doc, getDoc, setDoc, onSnapshot, collection,
       enableIndexedDbPersistence 
@@ -150,6 +216,7 @@
     };
 
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     const db = getFirestore(app);
 
     // ✅ Enable offline persistence
@@ -161,6 +228,7 @@
       }
     });
 
+    let currentUser = null;
     let clients = {};
     let currentFilter = "all";
     let searchQuery = "";
@@ -170,10 +238,75 @@
       return `${first}_${last}`.replace(/\s+/g, '_').toLowerCase();
     }
 
+    // --- Auth Functions ---
+    function showAuthContainer() {
+      document.getElementById("authContainer").style.display = "block";
+      document.getElementById("appContainer").style.display = "none";
+    }
+
+    function showAppContainer() {
+      document.getElementById("authContainer").style.display = "none";
+      document.getElementById("appContainer").style.display = "block";
+    }
+
+    // Login
+    document.getElementById("loginBtn").addEventListener("click", async () => {
+      const email = document.getElementById("loginEmail").value;
+      const password = document.getElementById("loginPassword").value;
+      try {
+        await signInWithEmailAndPassword(auth, email, password);
+        alert("Logged in successfully!");
+      } catch (err) {
+        alert("Login failed: " + err.message);
+      }
+    });
+
+    // Signup
+    document.getElementById("signupBtn").addEventListener("click", async () => {
+      const email = document.getElementById("signupEmail").value;
+      const password = document.getElementById("signupPassword").value;
+      try {
+        await createUserWithEmailAndPassword(auth, email, password);
+        alert("Account created successfully!");
+      } catch (err) {
+        alert("Signup failed: " + err.message);
+      }
+    });
+
+    // Toggle forms
+    document.getElementById("showSignup").addEventListener("click", () => {
+      document.getElementById("loginForm").style.display = "none";
+      document.getElementById("signupForm").style.display = "block";
+    });
+    document.getElementById("showLogin").addEventListener("click", () => {
+      document.getElementById("signupForm").style.display = "none";
+      document.getElementById("loginForm").style.display = "block";
+    });
+
+    // Logout
+    document.getElementById("logoutBtn").addEventListener("click", async () => {
+      await signOut(auth);
+      alert("Logged out!");
+    });
+
+    // Auth state listener
+    onAuthStateChanged(auth, (user) => {
+      if (user) {
+        currentUser = user;
+        showAppContainer();
+        // Load user-specific data
+        loadClients();
+      } else {
+        currentUser = null;
+        showAuthContainer();
+      }
+    });
+
     // --- Add Charge ---
     async function addCharge(first, last, amount, remarks) {
+      if (!currentUser) return;
       const id = generateClientId(first, last);
-      const ref = doc(db, "clients", id);
+      const ref = doc(db, "users", currentUser.uid, "clients", id);
       try {
         const snap = await getDoc(ref);
         const c = snap.exists() 
@@ -205,8 +338,9 @@
 
     // --- Add Payment ---
     async function addPayment(first, last, amount, method, remarks) {
+      if (!currentUser) return;
       const id = generateClientId(first, last);
-      const ref = doc(db, "clients", id);
+      const ref = doc(db, "users", currentUser.uid, "clients", id);
       try {
         const snap = await getDoc(ref);
         const c = snap.exists() 
@@ -238,7 +372,8 @@
 
     // --- View Client Records (Modal) ---
     async function viewClient(id) {
-      const ref = doc(db, "clients", id);
+      if (!currentUser) return;
+      const ref = doc(db, "users", currentUser.uid, "clients", id);
       try {
         const snap = await getDoc(ref);
         if (snap.exists()) {
@@ -284,12 +419,15 @@
     // Expose viewClient to window for onclick
     window.viewClient = viewClient;
 
-    // --- Realtime Updates ---
-    onSnapshot(collection(db, "clients"), snap => {
-      clients = {};
-      snap.forEach(d => (clients[d.id] = d.data()));
-      renderClients();
-    });
+    // --- Load Clients (Realtime) ---
+    function loadClients() {
+      if (!currentUser) return;
+      onSnapshot(collection(db, "users", currentUser.uid, "clients"), snap => {
+        clients = {};
+        snap.forEach(d => (clients[d.id] = d.data()));
+        renderClients();
+      });
+    }
 
     // Function to highlight text
     function highlightText(text, query) {
@@ -311,85 +449,4 @@
         const remarksText = (c.history || []).map(h => h.remarks || "").join(" ").toLowerCase();
 
         if (searchQuery && !fullName.includes(searchQuery) && !remarksText.includes(searchQuery)) return;
-        if (currentFilter !== "all" && status.toLowerCase() !== currentFilter) return;
-
-        // Highlight the name if it matches the search query
-        const highlightedName = highlightText(`${c.firstName || ""} ${c.lastName || ""}`, searchQuery);
-
-        tbody.insertAdjacentHTML("beforeend", `
-          <tr class="${status.toLowerCase()}">
-            <td>${id}</td>
-            <td>${highlightedName}</td>
-            <td>${(c.debit || 0).toFixed(2)}</td>
-            <td>${(c.credit || 0).toFixed(2)}</td>
-            <td>${balance.toFixed(2)}</td>
-            <td>${status}</td>
-            <td><button onclick="viewClient('${id}')">View</button></td>
-          </tr>
-        `);
-      });
-    }
-
-    // --- Form Listeners ---
-    const chargeForm = document.getElementById("chargeForm");
-    chargeForm?.addEventListener("submit", e => {
-      e.preventDefault();
-      addCharge(
-        document.getElementById("chargeFirstName").value,
-        document.getElementById("chargeLastName").value,
-        parseFloat(document.getElementById("chargeAmount").value),
-        document.getElementById("chargeRemarks").value
-      );
-      chargeForm.reset();
-    });
-
-    const paymentForm = document.getElementById("paymentForm");
-    paymentForm?.addEventListener("submit", e => {
-      e.preventDefault();
-      addPayment(
-        document.getElementById("firstName").value,
-        document.getElementById("lastName").value,
-        parseFloat(document.getElementById("amount").value),
-        document.getElementById("method").value,
-        document.getElementById("remarks").value
-      );
-      paymentForm.reset();
-    });
-
-    // --- Filter Listeners ---
-    document.getElementById("filterAll").addEventListener("click", () => {
-      currentFilter = "all";
-      renderClients();
-    });
-
-    document.getElementById("filterOutstanding").addEventListener("click", () => {
-      currentFilter = "outstanding";
-      renderClients();
-    });
-
-    document.getElementById("filterPaid").addEventListener("click", () => {
-      currentFilter = "paid";
-      renderClients();
-    });
-
-    // --- Search Listener ---
-    document.getElementById("searchBox").addEventListener("input", e => {
-      searchQuery = e.target.value.toLowerCase();
-      renderClients();
-    });
-
-    // --- Modal Close Listener ---
-    document.getElementById("closeModal").addEventListener("click", () => {
-      document.getElementById("viewModal").style.display = "none";
-    });
-
-    // Close modal when clicking outside
-    window.addEventListener("click", e => {
-      const modal = document.getElementById("viewModal");
-      if (e.target === modal) {
-        modal.style.display = "none";
-      }
-    });
-  </script>
-</body>
-</html>
+        if (currentFilter !== "all"
