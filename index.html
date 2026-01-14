@@ -1,28 +1,3 @@
-<think>
-First, the user says: "sign in with google is not clickable, it should be directed to the gmail account after click then app will open"
-
-
-## Investigating user issue  
-- The user reported that the "Sign in with Google" button is not clickable.  
-- They expected it to redirect to their Gmail account and open the app after clicking.
-</think>Yes, I see the issue! The Google sign-in button might not be responding properly, or it could be due to browser popup blockers (since the current code uses a popup). Based on your description ("directed to the gmail account after click then app will open"), it sounds like you want a **redirect flow** instead of a popup. This will redirect the entire page to Google's sign-in page, and after authentication, it redirects back to your app.
-
-### Why This Happens
-- The current code uses `signInWithPopup`, which opens a small window. If popups are blocked (common in browsers), it fails silently or shows an error.
-- A redirect flow (`signInWithRedirect`) is more reliable for web apps, as it takes over the whole page.
-
-### Updated Code
-I've modified the code to use `signInWithRedirect` for Google sign-in. This should make the button clickable and redirect to Google as expected.
-
-**Key Changes**:
-- Switched to `signInWithRedirect` on button click.
-- Added `getRedirectResult` on page load to handle the redirect back (this checks if the user just came back from Google).
-- Kept `onAuthStateChanged` for ongoing auth state management.
-- The button should now redirect to Google, and after sign-in, the app will load.
-
-Replace your existing code with this updated version:
-
-```html
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -498,11 +473,11 @@ Replace your existing code with this updated version:
       Object.entries(clients).forEach(([id, c]) => {
         const balance = (c.debit || 0) - (c.credit || 0);
         const status = balance > 0 ? "Outstanding" : "Paid";
-
         // --- Search filter by name OR remarks ---
         const fullName = `${c.firstName || ""} ${c.lastName || ""}`.toLowerCase();
         const remarksText = (c.history || []).map(h => h.remarks || "").join(" ").toLowerCase();
 
         if (searchQuery && !fullName.includes(searchQuery) && !remarksText.includes(searchQuery)) return;
         if (currentFilter !== "all" && status.toLowerCase() !== current
+
 
