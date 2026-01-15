@@ -1,103 +1,63 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
-  <meta http-equiv="Pragma" content="no-cache">
-  <meta http-equiv="Expires" content="0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<meta http-equiv="Pragma" content="no-cache">
+<meta http-equiv="Expires" content="0">
 
-  <title>Client Payment Tracker</title>
+<title>Client Payment Tracker</title>
 
-  <style>
-    body { font-family: Arial, sans-serif; margin:0; }
+<style>
+body{font-family:Arial;margin:0}
+header{background:#4CAF50;color:#fff;padding:10px;display:flex;gap:10px}
+header button{background:#fff;color:#4CAF50;border:none;padding:8px 12px;cursor:pointer}
+header input{margin-left:auto;padding:6px;width:220px}
 
-    header {
-      background:#4CAF50;
-      color:white;
-      padding:10px;
-      display:flex;
-      align-items:center;
-      gap:10px;
-    }
+#appContainer{display:none;padding:15px}
+#authContainer{display:block}
 
-    header button {
-      background:white;
-      color:#4CAF50;
-      border:none;
-      padding:8px 12px;
-      cursor:pointer;
-      font-weight:bold;
-    }
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border:1px solid #ddd;padding:8px}
+th{background:#f2f2f2;color:#000}
 
-    header input {
-      margin-left:auto;
-      padding:6px;
-      width:200px;
-    }
+mark{background:yellow}
 
-    #authContainer { display:block; }
-    #appContainer { display:none; padding:20px; }
+.filters button{margin-right:5px}
 
-    .auth-form {
-      max-width:400px;
-      margin:60px auto;
-      padding:20px;
-      border:1px solid #ccc;
-    }
+.modal{
+ display:none;position:fixed;inset:0;background:rgba(0,0,0,.4)
+}
+.modal-content{
+ background:#fff;
+ width:520px;
+ max-height:80vh;
+ overflow-y:auto;
+ margin:8% auto;
+ padding:20px;
+ border-radius:4px
+}
+.close{float:right;font-size:20px;cursor:pointer}
 
-    .auth-form input, .auth-form button {
-      width:100%;
-      padding:8px;
-      margin-bottom:10px;
-    }
+.debit-red{color:red;font-weight:bold}
+.balance-red{color:red;font-weight:bold}
+.balance-green{color:green;font-weight:bold}
 
-    table {
-      width:100%;
-      border-collapse:collapse;
-      margin-top:20px;
-    }
+#logoutBtn{
+ margin-top:40px;
+ width:100%;
+ padding:10px;
+ background:#f44336;
+ color:white;
+ border:none;
+ cursor:pointer
+}
 
-    th, td {
-      border:1px solid #ddd;
-      padding:8px;
-    }
-
-    th { background:#f2f2f2; }
-
-    mark { background:yellow; }
-
-    .modal {
-      display:none;
-      position:fixed;
-      inset:0;
-      background:rgba(0,0,0,.4);
-    }
-
-    .modal-content {
-      background:white;
-      max-width:400px;
-      margin:10% auto;
-      padding:20px;
-    }
-
-    .close {
-      float:right;
-      cursor:pointer;
-      font-size:20px;
-    }
-
-    #logoutBtn {
-      margin-top:40px;
-      background:#f44336;
-      color:white;
-      border:none;
-      padding:10px;
-      width:100%;
-      cursor:pointer;
-    }
-  </style>
+.auth-form{max-width:400px;margin:60px auto;border:1px solid #ccc;padding:20px}
+.auth-form input,.auth-form button{width:100%;padding:8px;margin-bottom:10px}
+</style>
 </head>
 
 <body>
@@ -124,150 +84,177 @@
 <!-- APP -->
 <div id="appContainer">
 
-  <!-- TOOLBAR -->
-  <header>
-    <button id="openCharge">Add Charge</button>
-    <button id="openPayment">Add Payment</button>
-    <input id="searchBox" placeholder="Search name...">
-  </header>
+<header>
+  <button id="openCharge">Add Charge</button>
+  <button id="openPayment">Add Payment</button>
+  <input id="searchBox" placeholder="Search client...">
+</header>
 
-  <!-- CLIENT TABLE -->
-  <table>
-    <thead>
-      <tr>
-        <th>Client</th>
-        <th>Debit</th>
-        <th>Credit</th>
-        <th>Balance</th>
-      </tr>
-    </thead>
-    <tbody id="clientsTable"></tbody>
-  </table>
-
-  <button id="logoutBtn">Logout</button>
+<div class="filters">
+  <button onclick="setFilter('all')">All</button>
+  <button onclick="setFilter('outstanding')">Outstanding</button>
+  <button onclick="setFilter('paid')">Paid</button>
 </div>
 
-<!-- ADD CHARGE MODAL -->
+<table>
+<thead>
+<tr>
+  <th>Client</th>
+  <th>Debit</th>
+  <th>Credit</th>
+  <th>Balance</th>
+  <th>Action</th>
+</tr>
+</thead>
+<tbody id="clientsTable"></tbody>
+</table>
+
+<button id="logoutBtn">Logout</button>
+</div>
+
+<!-- ADD CHARGE -->
 <div class="modal" id="chargeModal">
-  <div class="modal-content">
-    <span class="close" onclick="chargeModal.style.display='none'">&times;</span>
-    <h3>Add Charge</h3>
-    <input id="cFirst" placeholder="First Name">
-    <input id="cLast" placeholder="Last Name">
-    <input id="cAmount" type="number" placeholder="Amount">
-    <input id="cRemarks" placeholder="Remarks">
-    <button onclick="submitCharge()">Save</button>
-  </div>
+<div class="modal-content">
+<span class="close" onclick="chargeModal.style.display='none'">&times;</span>
+<h3>Add Charge</h3>
+<input id="cFirst" placeholder="First Name">
+<input id="cLast" placeholder="Last Name">
+<input id="cAmount" type="number" placeholder="Amount">
+<button onclick="submitCharge()">Save</button>
+</div>
 </div>
 
-<!-- ADD PAYMENT MODAL -->
+<!-- ADD PAYMENT -->
 <div class="modal" id="paymentModal">
-  <div class="modal-content">
-    <span class="close" onclick="paymentModal.style.display='none'">&times;</span>
-    <h3>Add Payment</h3>
-    <input id="pFirst" placeholder="First Name">
-    <input id="pLast" placeholder="Last Name">
-    <input id="pAmount" type="number" placeholder="Amount">
-    <select id="pType">
-      <option value="cash">Cash</option>
-      <option value="bank">Bank</option>
-      <option value="card">Card</option>
-    </select>
-    <select id="pMode">
-      <option value="full">Full</option>
-      <option value="partial">Partial</option>
-    </select>
-    <button onclick="submitPayment()">Save</button>
-  </div>
+<div class="modal-content">
+<span class="close" onclick="paymentModal.style.display='none'">&times;</span>
+<h3>Add Payment</h3>
+<input id="pFirst" placeholder="First Name">
+<input id="pLast" placeholder="Last Name">
+<input id="pAmount" type="number" placeholder="Amount">
+<button onclick="submitPayment()">Save</button>
+</div>
 </div>
 
-<!-- FIREBASE -->
+<!-- VIEW RECORDS -->
+<div class="modal" id="viewModal">
+<div class="modal-content">
+<span class="close" onclick="viewModal.style.display='none'">&times;</span>
+<h3 id="viewTitle"></h3>
+<p><strong>Total Debit:</strong> <span id="vd"></span></p>
+<p><strong>Total Credit:</strong> <span id="vc"></span></p>
+<p><strong>Balance:</strong> <span id="vb"></span></p>
+
+<table>
+<thead>
+<tr>
+  <th>Date</th>
+  <th>Debit</th>
+  <th>Credit</th>
+</tr>
+</thead>
+<tbody id="historyBody"></tbody>
+</table>
+</div>
+</div>
+
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, setDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import{initializeApp}from"https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import{getAuth,createUserWithEmailAndPassword,signInWithEmailAndPassword,signOut,onAuthStateChanged}from"https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import{getFirestore,doc,getDoc,setDoc,collection,onSnapshot}from"https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-const app = initializeApp({
-  apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
-  authDomain: "client-payment-tracker-3572b.firebaseapp.com",
-  projectId: "client-payment-tracker-3572b",
+const app=initializeApp({
+ apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
+ authDomain:"client-payment-tracker-3572b.firebaseapp.com",
+ projectId:"client-payment-tracker-3572b"
 });
+const auth=getAuth(app),db=getFirestore(app);
 
-const auth = getAuth(app);
-const db = getFirestore(app);
+let user=null,clients={},search="",filter="all";
 
-let user = null;
-let clients = {};
-let search = "";
+const cid=(f,l)=>`${f}_${l}`.toLowerCase();
+const hi=t=>search?t.replace(new RegExp(`(${search})`,'gi'),'<mark>$1</mark>'):t;
 
-const cid = (f,l)=>`${f}_${l}`.toLowerCase();
-const highlight = (t)=>search? t.replace(new RegExp(`(${search})`,'gi'),'<mark>$1</mark>'):t;
+signupBtn.onclick=()=>createUserWithEmailAndPassword(auth,signupEmail.value,signupPassword.value);
+loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
+logoutBtn.onclick=()=>signOut(auth);
 
-signupBtn.onclick = ()=>createUserWithEmailAndPassword(auth,signupEmail.value,signupPassword.value);
-loginBtn.onclick = ()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
-logoutBtn.onclick = ()=>signOut(auth);
-
-showLogin.onclick=e=>{e.preventDefault();signupForm.style.display='none';loginForm.style.display='block';}
-showSignup.onclick=e=>{e.preventDefault();loginForm.style.display='none';signupForm.style.display='block';}
+showLogin.onclick=e=>{e.preventDefault();signupForm.style.display='none';loginForm.style.display='block'}
+showSignup.onclick=e=>{e.preventDefault();loginForm.style.display='none';signupForm.style.display='block'}
 
 onAuthStateChanged(auth,u=>{
-  if(u){ user=u; authContainer.style.display='none'; appContainer.style.display='block'; load(); }
-  else { authContainer.style.display='block'; appContainer.style.display='none'; }
+ if(u){user=u;authContainer.style.display='none';appContainer.style.display='block';load()}
+ else{authContainer.style.display='block';appContainer.style.display='none'}
 });
 
 openCharge.onclick=()=>chargeModal.style.display='block';
 openPayment.onclick=()=>paymentModal.style.display='block';
+searchBox.oninput=e=>{search=e.target.value.toLowerCase();render()}
 
-searchBox.oninput=e=>{search=e.target.value.toLowerCase();render();}
+function setFilter(f){filter=f;render()}
+window.setFilter=setFilter;
 
 function load(){
-  onSnapshot(collection(db,"users",user.uid,"clients"),snap=>{
-    clients={};
-    snap.forEach(d=>clients[d.id]=d.data());
-    render();
-  });
+ onSnapshot(collection(db,"users",user.uid,"clients"),s=>{
+  clients={};s.forEach(d=>clients[d.id]=d.data());render()
+ })
 }
 
 function render(){
-  clientsTable.innerHTML="";
-  Object.values(clients).forEach(c=>{
-    const bal=c.debit-c.credit;
-    const name=`${c.firstName} ${c.lastName}`.toLowerCase();
-    if(search && !name.includes(search)) return;
+ clientsTable.innerHTML="";
+ Object.entries(clients).forEach(([id,c])=>{
+  const bal=c.debit-c.credit;
+  const status=bal>0?"outstanding":"paid";
+  const name=`${c.firstName} ${c.lastName}`.toLowerCase();
+  if(search&&!name.includes(search))return;
+  if(filter!=="all"&&filter!==status)return;
 
-    clientsTable.innerHTML+=`
-      <tr>
-        <td>${highlight(`${c.firstName} ${c.lastName}`)}</td>
-        <td>${c.debit}</td>
-        <td>${c.credit}</td>
-        <td>${bal}</td>
-      </tr>`;
-  });
+  clientsTable.innerHTML+=`
+  <tr>
+   <td>${hi(`${c.firstName} ${c.lastName}`)}</td>
+   <td class="${bal>0?'debit-red':''}">${c.debit}</td>
+   <td>${c.credit}</td>
+   <td class="${bal>0?'balance-red':'balance-green'}">${bal}</td>
+   <td><button onclick="viewClient('${id}')">View</button></td>
+  </tr>`;
+ })
 }
 
 async function submitCharge(){
-  const f=cFirst.value,l=cLast.value,a=+cAmount.value;
-  const ref=doc(db,"users",user.uid,"clients",cid(f,l));
-  const s=await getDoc(ref);
-  const c=s.exists()?s.data():{firstName:f,lastName:l,debit:0,credit:0};
-  c.debit+=a;
-  await setDoc(ref,c,{merge:true});
-  chargeModal.style.display='none';
+ const f=cFirst.value,l=cLast.value,a=+cAmount.value;
+ const r=doc(db,"users",user.uid,"clients",cid(f,l));
+ const s=await getDoc(r);
+ const c=s.exists()?s.data():{firstName:f,lastName:l,debit:0,credit:0,history:[]};
+ c.debit+=a;c.history.push({date:new Date().toLocaleString(),debit:a,credit:0});
+ await setDoc(r,c,{merge:true});
+ chargeModal.style.display='none';
 }
 
 async function submitPayment(){
-  const f=pFirst.value,l=pLast.value,a=+pAmount.value;
-  const ref=doc(db,"users",user.uid,"clients",cid(f,l));
-  const s=await getDoc(ref);
-  const c=s.exists()?s.data():{firstName:f,lastName:l,debit:0,credit:0};
-  c.credit+=a;
-  await setDoc(ref,c,{merge:true});
-  paymentModal.style.display='none';
+ const f=pFirst.value,l=pLast.value,a=+pAmount.value;
+ const r=doc(db,"users",user.uid,"clients",cid(f,l));
+ const s=await getDoc(r);
+ const c=s.exists()?s.data():{firstName:f,lastName:l,debit:0,credit:0,history:[]};
+ c.credit+=a;c.history.push({date:new Date().toLocaleString(),debit:0,credit:a});
+ await setDoc(r,c,{merge:true});
+ paymentModal.style.display='none';
 }
 
-window.submitCharge=submitCharge;
-window.submitPayment=submitPayment;
+window.viewClient=id=>{
+ const c=clients[id],bal=c.debit-c.credit;
+ viewTitle.textContent=`${c.firstName} ${c.lastName}`;
+ vd.textContent=c.debit;
+ vc.textContent=c.credit;
+ vb.textContent=bal;
+ vb.className=bal>0?'balance-red':'balance-green';
+ historyBody.innerHTML=c.history.map(h=>`
+  <tr>
+   <td>${h.date}</td>
+   <td class="${h.debit>0?'debit-red':''}">${h.debit}</td>
+   <td>${h.credit}</td>
+  </tr>`).join("");
+ viewModal.style.display='block';
+}
 </script>
-
 </body>
 </html>
