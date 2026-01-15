@@ -6,6 +6,8 @@
   <title>Client Payment Tracker</title>
   <link rel="manifest" href="./manifest.json">
   <link rel="stylesheet" href="./style.css">
+  <!-- Add vanilla-calendar CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/vanilla-calendar-pro@2.9.3/build/vanilla-calendar.min.css">
   <style>
     /* Basic modal styles */
     .modal {
@@ -93,6 +95,11 @@
       color: #666;
       margin-bottom: 10px;
     }
+    /* Calendar styles */
+    #clientCalendar {
+      margin-top: 20px;
+      width: 100%;
+    }
   </style>
 </head>
 <body>
@@ -118,11 +125,13 @@
   <div id="appContainer">
     <h1>Client Payment Tracker</h1>
 
-    <!-- Charge Form -->
+    <!-- Charge Form (Updated with date pickers) -->
     <form id="chargeForm">
       <input id="chargeFirstName" placeholder="First Name" required>
       <input id="chargeLastName" placeholder="Last Name" required>
       <input id="chargeAmount" type="number" placeholder="Amount" required>
+      <input id="chargeStartDate" type="date" placeholder="Start Date"> <!-- New: Start Date -->
+      <input id="chargeEndDate" type="date" placeholder="End Date"> <!-- New: End Date -->
       <input id="chargeRemarks" placeholder="Remarks">
       <button type="submit">Add Charge</button>
     </form>
@@ -161,7 +170,7 @@
       <tbody></tbody>
     </table>
 
-    <!-- Modal for Viewing Client Records -->
+    <!-- Modal for Viewing Client Records (Updated with calendar) -->
     <div id="viewModal" class="modal">
       <div class="modal-content">
         <span class="close" id="closeModal">&times;</span>
@@ -185,6 +194,9 @@
           </thead>
           <tbody id="historyBody"></tbody>
         </table>
+        <!-- New: Calendar Section -->
+        <h3>Booked Dates Calendar</h3>
+        <div id="clientCalendar"></div>
       </div>
     </div>
 
@@ -303,9 +315,18 @@
       }
     });
 
-    // --- Add Charge ---
-    async function addCharge(first, last, amount, remarks) {
+    // --- Add Charge (Updated to include dates) ---
+    async function addCharge(first, last, amount, remarks, startDate, endDate) {
       if (!currentUser) return;
+      // Validate dates: start <= end, and both provided or neither
+      if ((startDate && !endDate) || (!startDate && endDate)) {
+        alert("Both start and end dates must be provided if using dates.");
+        return;
+      }
+      if (startDate && endDate && new Date(startDate) > new Date(endDate)) {
+        alert("Start date must be before or equal to end date.");
+        return;
+      }
       const id = generateClientId(first, last);
       const ref = doc(db, "users", currentUser.uid, "clients", id);
       try {
@@ -319,7 +340,9 @@
           debit: amount,
           credit: 0,
           method: "charge",
-          remarks
+          remarks,
+          startDate: startDate || null, // New: Store dates
+          endDate: endDate || null
         });
 
         await setDoc(ref, { 
@@ -371,7 +394,7 @@
       }
     }
 
-    // --- View Client Records (Modal) ---
+    // --- View Client Records (Modal) (Updated with calendar) ---
     async function viewClient(id) {
       if (!currentUser) return;
       const ref = doc(db, "users", currentUser.uid, "clients", id);
@@ -407,6 +430,9 @@
             `);
           });
 
+          // New: Render Calendar with booked dates
+          renderClientCalendar(c.history);
+
           modal.style.display = "block";
         } else {
           alert("No records found for this client.");
@@ -417,103 +443,35 @@
       }
     }
 
-    // Expose viewClient to window for onclick
-    window.viewClient = viewClient;
+    // New: Function to render calendar with highlighted dates
+    function renderClientCalendar(history) {
+      const calendarEl = document.getElementById("clientCalendar");
+      calendarEl.innerHTML = ""; // Clear previous calendar
 
-    // --- Load Clients (Realtime) ---
-    function loadClients() {
-      if (!currentUser) return;
-      onSnapshot(collection(db, "users", currentUser.uid, "clients"), snap => {
-        clients = {};
-        snap.forEach(d => (clients[d.id] = d.data()));
-        renderClients();
+      // Collect all booked dates from charge history
+      const bookedDates = [];
+      history.forEach(h => {
+        if (h.method === "charge" && h.startDate && h.endDate) {
+          let currentDate = new Date(h.startDate);
+          const endDate = new Date(h.endDate);
+          while (currentDate <= endDate) {
+            bookedDates.push(currentDate.toISOString().split('T')[0]); // YYYY-MM-DD
+            currentDate.setDate(currentDate.getDate() + 1);
+          }
+        }
       });
-    }
 
-    // Function to highlight text
-    function highlightText(text, query) {
-      if (!query) return text;
-      const regex = new RegExp(`(${query})`, 'gi');
-      return text.replace(regex, '<mark>$1</mark>');
-    }
+      if (bookedDates.length === 0) {
+        calendarEl.innerHTML = "<p>No booked dates found.</p>";
+        return;
+      }
 
-    function renderClients() {
-      const tbody = document.querySelector("#clientsTable tbody");
-      if (!tbody) return;
-      tbody.innerHTML = "";
-      Object.entries(clients).forEach(([id, c]) => {
-        const balance = (c.debit || 0) - (c.credit || 0);
-        const status = balance > 0 ? "Outstanding" : "Paid";
-        // --- Search filter by name OR remarks ---
-        const fullName = `${c.firstName || ""} ${c.lastName || ""}`.toLowerCase();
-        const remarksText = (c.history || []).map(h => h.remarks || "").join(" ").toLowerCase();
-
-        if (searchQuery && !fullName.includes(searchQuery) && !remarksText.includes(searchQuery)) return;
-        if (currentFilter !== "all" && status.toLowerCase() !== currentFilter) return;
-
-        tbody.insertAdjacentHTML("beforeend", `
-          <tr>
-            <td>${id}</td>
-            <td>${highlightText(`${c.firstName} ${c.lastName}`, searchQuery)}</td>
-            <td>${(c.debit || 0).toFixed(2)}</td>
-            <td>${(c.credit || 0).toFixed(2)}</td>
-            <td>${balance.toFixed(2)}</td>
-            <td>${status}</td>
-            <td><button onclick="viewClient('${id}')">View</button></td>
-          </tr>
-        `);
-      });
-    }
-
-    // --- Event Listeners for Forms ---
-    document.getElementById("chargeForm").addEventListener("submit", (e) => {
-      e.preventDefault();
-      const first = document.getElementById("chargeFirstName").value;
-      const last = document.getElementById("chargeLastName").value;
-      const amount = parseFloat(document.getElementById("chargeAmount").value);
-      const remarks = document.getElementById("chargeRemarks").value;
-      addCharge(first, last, amount, remarks);
-      e.target.reset();
-    });
-
-    document.getElementById("paymentForm").addEventListener("submit", (e) => {
-      e.preventDefault();
-      const first = document.getElementById("firstName").value;
-      const last = document.getElementById("lastName").value;
-      const amount = parseFloat(document.getElementById("amount").value);
-      const method = document.getElementById("method").value;
-      const remarks = document.getElementById("remarks").value;
-      addPayment(first, last, amount, method, remarks);
-      e.target.reset();
-    });
-
-    // Filter buttons
-    document.getElementById("filterAll").addEventListener("click", () => {
-      currentFilter = "all";
-      renderClients();
-    });
-    document.getElementById("filterOutstanding").addEventListener("click", () => {
-      currentFilter = "outstanding";
-      renderClients();
-    });
-    document.getElementById("filterPaid").addEventListener("click", () => {
-      currentFilter = "paid";
-      renderClients();
-    });
-
-    // Search
-    document.getElementById("searchBox").addEventListener("input", (e) => {
-      searchQuery = e.target.value.toLowerCase();
-      renderClients();
-    });
-
-    // Close modal
-    document.getElementById("closeModal").addEventListener("click", () => {
-      document.getElementById("viewModal").style.display = "none";
-    });
-  </script>
-</body>
-</html>
-
-
- 
+      // Initialize vanilla-calendar
+      import('https://cdn.jsdelivr.net/npm/vanilla-calendar-pro@2.9.3/build/vanilla-calendar.min.js').then(({ Calendar }) => {
+        const calendar = new Calendar(calendarEl, {
+          type: 'default',
+          settings: {
+            selected: {
+              dates: bookedDates, // Highlight these dates
+              month: new Date().getMonth(),
+              year: new Date().
