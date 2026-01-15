@@ -3,238 +3,498 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
 <title>Client Payment Tracker</title>
-
+<link rel="manifest" href="./manifest.json">
+<link rel="stylesheet" href="./style.css">
 <style>
-body{font-family:Arial;margin:0}
-header{
- background:#4CAF50;color:#fff;padding:10px;
- display:flex;gap:8px;flex-wrap:wrap
-}
-header button{background:#fff;color:#4CAF50;border:none;padding:8px}
-header input{padding:6px;flex:1;min-width:180px}
-
-table{width:100%;border-collapse:collapse;margin-top:10px}
-th,td{border:1px solid #ddd;padding:8px}
-th{background:#f2f2f2;color:#000}
-
-mark{background:yellow}
-
-.modal{
- display:none;position:fixed;inset:0;
- background:rgba(0,0,0,.4);z-index:10
-}
-.modal-content{
- background:#fff;
- width:90%;
- max-width:700px;
- max-height:85vh;
- overflow-y:auto;
- margin:5% auto;
- padding:20px;
- border-radius:4px
-}
-.close{float:right;font-size:20px;cursor:pointer}
-
-.debit-red{color:red;font-weight:bold}
-.balance-red{color:red;font-weight:bold}
-.balance-green{color:green;font-weight:bold}
-
-@media(max-width:600px){
- header{gap:6px}
-}
-
-#logoutBtn{
- margin:30px 10px;
- width:calc(100% - 20px);
- padding:12px;
- background:#f44336;
- color:white;border:none
-}
+  body {
+    font-family: Arial, sans-serif;
+    margin:0;
+    padding:0;
+    background:#f5f5f5;
+  }
+  header {
+    background:#4CAF50;
+    color:white;
+    padding:10px 20px;
+    display:flex;
+    flex-wrap:wrap;
+    align-items:center;
+    justify-content:space-between;
+    position:sticky;
+    top:0;
+    z-index:1000;
+  }
+  header h1 {
+    margin:0;
+    font-size:1.2rem;
+  }
+  .toolbar {
+    display:flex;
+    flex-wrap:wrap;
+    gap:10px;
+  }
+  .toolbar button {
+    padding:8px 12px;
+    background:#ffffff;
+    border:none;
+    border-radius:4px;
+    cursor:pointer;
+    color:#4CAF50;
+    font-weight:bold;
+  }
+  .toolbar button.active {
+    background:#4CAF50;
+    color:white;
+  }
+  main {
+    padding:20px;
+  }
+  /* Modal / Section styling */
+  .modal-section {
+    display:none;
+    background:white;
+    padding:20px;
+    border-radius:8px;
+    box-shadow:0 0 10px rgba(0,0,0,0.2);
+    margin-bottom:20px;
+  }
+  .modal-section h2 {
+    margin-top:0;
+  }
+  .modal-section input, .modal-section select, .modal-section button {
+    width:100%;
+    margin-bottom:10px;
+    padding:8px;
+    border-radius:4px;
+    border:1px solid #ccc;
+  }
+  .modal-section button {
+    background:#4CAF50;
+    color:white;
+    border:none;
+    cursor:pointer;
+  }
+  .modal-section button:hover {background:#45a049;}
+  
+  /* Client table */
+  table {
+    width:100%;
+    border-collapse:collapse;
+    margin-top:10px;
+  }
+  table th, table td {
+    border:1px solid #ddd;
+    padding:8px;
+    text-align:left;
+  }
+  table th {
+    background:#f2f2f2;
+    color:black;
+  }
+  table td.debit-red {
+    color:red;
+    font-weight:bold;
+  }
+  .history-table {
+    max-height:300px;
+    overflow-y:auto;
+    display:block;
+  }
+  /* Search */
+  #searchBox {
+    margin-top:10px;
+    padding:8px;
+    width:100%;
+  }
+  /* Bottom logout */
+  #logoutBtn {
+    width:100%;
+    padding:10px;
+    background:#FF5722;
+    color:white;
+    border:none;
+    cursor:pointer;
+    margin-top:20px;
+    border-radius:4px;
+  }
+  #logoutBtn:hover {background:#E64A19;}
+  
+  /* Responsive */
+  @media(max-width:600px){
+    .toolbar {overflow-x:auto; gap:5px;}
+    .toolbar button {flex:1 0 auto; font-size:0.9rem;}
+    table, .history-table {font-size:0.8rem;}
+  }
 </style>
 </head>
-
 <body>
 
-<header id="toolbar" style="display:none">
-  <button onclick="openCharge()">Add Charge</button>
-  <button onclick="openPayment()">Add Payment</button>
-  <button onclick="openExpense()">Expense</button>
-  <button id="adminBtn" onclick="openReport()" style="display:none">Admin Report</button>
-  <input id="searchBox" placeholder="Search client...">
+<header>
+  <h1>Client Payment Tracker</h1>
+  <div class="toolbar">
+    <button id="btnAddCharge">Add Charge</button>
+    <button id="btnAddPayment">Add Payment</button>
+    <button id="btnExpenses">Expenses</button>
+    <button id="btnReports">Admin Reports</button>
+  </div>
 </header>
 
-<table id="clientTable" style="display:none">
-<thead>
-<tr><th>Client</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Action</th></tr>
-</thead>
-<tbody></tbody>
-</table>
+<main>
+  <!-- Add Charge Section -->
+  <div id="sectionAddCharge" class="modal-section">
+    <h2>Add Charge</h2>
+    <input id="chargeFirstName" placeholder="First Name" required>
+    <input id="chargeLastName" placeholder="Last Name" required>
+    <input id="chargeAmount" type="number" placeholder="Amount" required>
+    <input id="chargeStartDate" type="date" placeholder="Start Date" required>
+    <input id="chargeEndDate" type="date" placeholder="End Date" required>
+    <input id="chargeRemarks" placeholder="Remarks">
+    <button id="addChargeBtn">Add Charge</button>
+  </div>
 
-<button id="logoutBtn" style="display:none">Logout</button>
+  <!-- Add Payment Section -->
+  <div id="sectionAddPayment" class="modal-section">
+    <h2>Add Payment</h2>
+    <input id="paymentClientName" placeholder="Client Name" list="clientNames" required>
+    <datalist id="clientNames"></datalist>
+    <input id="paymentAmount" type="number" placeholder="Amount" required>
+    <select id="paymentType" required>
+      <option value="">Select Payment Type</option>
+      <option value="cash">Cash</option>
+      <option value="bank transfer">Bank Transfer</option>
+      <option value="credit card">Credit Card</option>
+      <option value="others">Others</option>
+    </select>
+    <select id="paymentMode" required>
+      <option value="">Select Payment Mode</option>
+      <option value="full">Full Payment</option>
+      <option value="partial">Partial Payment</option>
+    </select>
+    <input id="paymentDate" type="date" placeholder="Date of Payment" required>
+    <input id="paymentRemarks" placeholder="Remarks">
+    <div id="paymentBalance" style="margin-bottom:10px; font-weight:bold;"></div>
+    <button id="addPaymentBtn">Add Payment</button>
+  </div>
 
-<!-- ADD CHARGE -->
-<div class="modal" id="chargeModal">
-<div class="modal-content">
-<span class="close" onclick="closeAll()">&times;</span>
-<h3>Add Charge</h3>
-<input id="cFirst" placeholder="First name">
-<input id="cLast" placeholder="Last name">
-<input id="cAmount" type="number" placeholder="Amount">
-<label>Start Date</label>
-<input id="cStart" type="date">
-<label>End Date</label>
-<input id="cEnd" type="date">
-<input id="cRemarks" placeholder="Remarks">
-<button onclick="saveCharge()">Save</button>
-</div>
-</div>
+  <!-- Expenses Section -->
+  <div id="sectionExpenses" class="modal-section">
+    <h2>Add Expense</h2>
+    <input id="expenseDate" type="date" required>
+    <input id="expenseDescription" placeholder="Description" required>
+    <input id="expenseInvoice" placeholder="Invoice Number (Optional)">
+    <input id="expenseAmount" type="number" placeholder="Amount" required>
+    <button id="addExpenseBtn">Add Expense</button>
+  </div>
 
-<!-- ADD PAYMENT -->
-<div class="modal" id="paymentModal">
-<div class="modal-content">
-<span class="close" onclick="closeAll()">&times;</span>
-<h3>Add Payment</h3>
-<input id="pName" placeholder="Search client name">
-<div id="payableInfo"></div>
-<input id="pAmount" type="number" placeholder="Amount">
-<label>Payment Date</label>
-<input id="pDate" type="date">
-<select id="pType">
-<option>Cash</option>
-<option>Bank Transfer</option>
-<option>Credit Card</option>
-<option>Others</option>
-</select>
-<select id="pMode">
-<option>Full Payment</option>
-<option>Partial Payment</option>
-</select>
-<input id="pRemarks" placeholder="Remarks">
-<button onclick="savePayment()">Save</button>
-</div>
-</div>
+  <!-- Admin Reports Section -->
+  <div id="sectionReports" class="modal-section">
+    <h2>Admin Reports</h2>
+    <label>Start Date: <input type="date" id="reportStartDate"></label>
+    <label>End Date: <input type="date" id="reportEndDate"></label>
+    <div style="margin-top:10px;">
+      <p>Total Sales: <span id="totalSales">0</span></p>
+      <p>Total Expenses: <span id="totalExpenses">0</span></p>
+      <p>Net Income: <span id="netIncome">0</span></p>
+    </div>
+  </div>
 
-<!-- VIEW RECORD -->
-<div class="modal" id="viewModal">
-<div class="modal-content">
-<span class="close" onclick="closeAll()">&times;</span>
-<h3 id="vTitle"></h3>
-<p><b>Total Debit:</b> <span id="vd"></span></p>
-<p><b>Total Credit:</b> <span id="vc"></span></p>
-<p><b>Balance:</b> <span id="vb"></span></p>
-<table>
-<thead>
-<tr><th>Date</th><th>Debit</th><th>Credit</th><th>Remarks</th></tr>
-</thead>
-<tbody id="historyBody"></tbody>
-</table>
-</div>
-</div>
+  <!-- Client Records Table -->
+  <div>
+    <input id="searchBox" placeholder="Search by name or remarks">
+    <div style="margin-top:10px;">
+      <button id="filterAll">All</button>
+      <button id="filterOutstanding">Outstanding</button>
+      <button id="filterPaid">Paid</button>
+    </div>
+    <table id="clientsTable">
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>Name</th>
+          <th>Debit</th>
+          <th>Credit</th>
+          <th>Balance</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
 
-<!-- EXPENSE -->
-<div class="modal" id="expenseModal">
-<div class="modal-content">
-<span class="close" onclick="closeAll()">&times;</span>
-<h3>Add Expense</h3>
-<input id="eDate" type="date">
-<input id="eDesc" placeholder="Description">
-<input id="eInvoice" placeholder="Invoice #">
-<input id="eAmount" type="number" placeholder="Amount">
-<button onclick="saveExpense()">Save</button>
-</div>
-</div>
+  <!-- View Client Modal -->
+  <div id="viewModal" class="modal-section" style="max-height:80vh; overflow-y:auto;">
+    <h2 id="modalTitle">Client Records</h2>
+    <p><strong>Total Debit:</strong> <span id="totalDebit">0</span></p>
+    <p><strong>Total Credit:</strong> <span id="totalCredit">0</span></p>
+    <p><strong>Balance:</strong> <span id="balance">0</span></p>
+    <p><strong>Status:</strong> <span id="status">Paid</span></p>
+    <h3>Transaction History</h3>
+    <div class="history-table">
+      <table>
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Debit</th>
+            <th>Credit</th>
+            <th>Method</th>
+            <th>Mode</th>
+            <th>Remarks</th>
+            <th>Start Date</th>
+            <th>End Date</th>
+          </tr>
+        </thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+    <button onclick="document.getElementById('viewModal').style.display='none'">Close</button>
+  </div>
 
-<!-- ADMIN REPORT -->
-<div class="modal" id="reportModal">
-<div class="modal-content">
-<span class="close" onclick="closeAll()">&times;</span>
-<h3>Admin Report</h3>
-<label>Start</label>
-<input id="rStart" type="date">
-<label>End</label>
-<input id="rEnd" type="date">
-<button onclick="generateReport()">Generate</button>
-<p id="reportResult"></p>
-</div>
-</div>
+  <button id="logoutBtn">Logout</button>
+</main>
 
 <script type="module">
-import{initializeApp}from"https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import{getAuth,onAuthStateChanged,signOut}from"https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import{getFirestore,collection,doc,getDoc,setDoc,onSnapshot,addDoc,getDocs}from"https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { 
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import { 
+  getFirestore, doc, getDoc, setDoc, collection, addDoc, onSnapshot, query, where, getDocs, enableIndexedDbPersistence 
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-const ADMIN_EMAIL="your@email.com";
+const firebaseConfig = {
+  apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
+  authDomain: "client-payment-tracker-3572b.firebaseapp.com",
+  projectId: "client-payment-tracker-3572b",
+  storageBucket: "client-payment-tracker-3572b.firebasestorage.app",
+  messagingSenderId: "151091330895",
+  appId: "1:151091330895:web:d23440ad57a386da720f3a",
+  measurementId: "G-NH7D18261Q"
+};
 
-const app=initializeApp({
- apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
- authDomain:"client-payment-tracker-3572b.firebaseapp.com",
- projectId:"client-payment-tracker-3572b"
-});
-const auth=getAuth(app),db=getFirestore(app);
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+enableIndexedDbPersistence(db).catch(()=>{});
 
-let user,clients={},expenses=[];
+let currentUser=null;
+let clients={};
+let expenses=[];
 
-onAuthStateChanged(auth,u=>{
- if(u){
-  user=u;
-  toolbar.style.display="flex";
-  clientTable.style.display="table";
-  logoutBtn.style.display="block";
-  if(u.email===ADMIN_EMAIL) adminBtn.style.display="inline-block";
-  loadClients();
- }
-});
-
-logoutBtn.onclick=()=>signOut(auth);
-
-function closeAll(){
- document.querySelectorAll('.modal').forEach(m=>m.style.display='none')
+function generateClientId(first,last){
+  return `${first}_${last}`.replace(/\s+/g,'_').toLowerCase();
 }
-window.openCharge=()=>chargeModal.style.display='block';
-window.openPayment=()=>paymentModal.style.display='block';
-window.openExpense=()=>expenseModal.style.display='block';
-window.openReport=()=>reportModal.style.display='block';
 
+/* ----- Toolbar Switching ----- */
+const sections={
+  "btnAddCharge":"sectionAddCharge",
+  "btnAddPayment":"sectionAddPayment",
+  "btnExpenses":"sectionExpenses",
+  "btnReports":"sectionReports"
+};
+
+Object.entries(sections).forEach(([btnId,secId])=>{
+  document.getElementById(btnId).addEventListener("click",()=>{
+    Object.values(sections).forEach(sid=>document.getElementById(sid).style.display="none");
+    document.getElementById(secId).style.display="block";
+  });
+});
+
+/* ----- Auth State ----- */
+onAuthStateChanged(auth,user=>{
+  if(user){currentUser=user; loadClients(); loadExpenses();} 
+  else{alert("Please login.");}
+});
+
+document.getElementById("logoutBtn").addEventListener("click",async()=>{
+  await signOut(auth);
+  alert("Logged out!"); 
+});
+
+/* ----- Load Clients ----- */
 function loadClients(){
- onSnapshot(collection(db,"users",user.uid,"clients"),s=>{
-  clients={};
-  s.forEach(d=>clients[d.id]=d.data());
-  render();
- });
+  if(!currentUser) return;
+  onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
+    clients={};
+    snap.forEach(d=>clients[d.id]=d.data());
+    renderClients();
+    populateClientDatalist();
+  });
 }
 
-function render(){
- const tb=document.querySelector("#clientTable tbody");
- tb.innerHTML="";
- Object.entries(clients).forEach(([id,c])=>{
-  const bal=c.debit-c.credit;
-  tb.innerHTML+=`
-  <tr>
-   <td>${c.firstName} ${c.lastName}</td>
-   <td class="${bal>0?'debit-red':''}">${c.debit}</td>
-   <td>${c.credit}</td>
-   <td class="${bal>0?'balance-red':'balance-green'}">${bal}</td>
-   <td><button onclick="viewClient('${id}')">View</button></td>
-  </tr>`;
- });
+function populateClientDatalist(){
+  const dataList=document.getElementById("clientNames");
+  dataList.innerHTML="";
+  Object.values(clients).forEach(c=>{
+    const opt=document.createElement("option");
+    opt.value=c.firstName+" "+c.lastName;
+    dataList.appendChild(opt);
+  });
 }
 
-window.viewClient=id=>{
- const c=clients[id],bal=c.debit-c.credit;
- vTitle.textContent=`${c.firstName} ${c.lastName}`;
- vd.textContent=c.debit;vc.textContent=c.credit;
- vb.textContent=bal;vb.className=bal>0?'balance-red':'balance-green';
- historyBody.innerHTML=c.history.map(h=>`
- <tr>
-  <td>${h.date}</td>
-  <td class="${h.debit>0?'debit-red':''}">${h.debit}</td>
-  <td>${h.credit}</td>
-  <td>${h.remarks||''}</td>
- </tr>`).join("");
- viewModal.style.display="block";
+/* ----- Render Clients ----- */
+let currentFilter="all";
+let searchQuery="";
+
+function renderClients(){
+  const tbody=document.querySelector("#clientsTable tbody");
+  tbody.innerHTML="";
+  Object.entries(clients).forEach(([id,c])=>{
+    const balance=(c.debit||0)-(c.credit||0);
+    const status=balance>0?"Outstanding":"Paid";
+    const fullName=(c.firstName+" "+c.lastName).toLowerCase();
+    const remarksText=(c.history||[]).map(h=>h.remarks||"").join(" ").toLowerCase();
+    if(searchQuery && !fullName.includes(searchQuery) && !remarksText.includes(searchQuery)) return;
+    if(currentFilter!=="all" && status.toLowerCase()!==currentFilter) return;
+    tbody.insertAdjacentHTML("beforeend",`
+      <tr>
+        <td>${id}</td>
+        <td>${c.firstName} ${c.lastName}</td>
+        <td class="${balance>0?'debit-red':''}">${(c.debit||0).toFixed(2)}</td>
+        <td>${(c.credit||0).toFixed(2)}</td>
+        <td class="${balance>0?'debit-red':''}">${balance.toFixed(2)}</td>
+        <td>${status}</td>
+        <td><button onclick="viewClient('${id}')">View</button></td>
+      </tr>
+    `);
+  });
+}
+
+/* ----- Search & Filters ----- */
+document.getElementById("searchBox").addEventListener("input",e=>{
+  searchQuery=e.target.value.toLowerCase();
+  renderClients();
+});
+document.getElementById("filterAll").addEventListener("click",()=>{currentFilter="all"; renderClients();});
+document.getElementById("filterOutstanding").addEventListener("click",()=>{currentFilter="outstanding"; renderClients();});
+document.getElementById("filterPaid").addEventListener("click",()=>{currentFilter="paid"; renderClients();});
+
+/* ----- Add Charge ----- */
+document.getElementById("addChargeBtn").addEventListener("click",async()=>{
+  if(!currentUser) return;
+  const first=document.getElementById("chargeFirstName").value;
+  const last=document.getElementById("chargeLastName").value;
+  const amount=parseFloat(document.getElementById("chargeAmount").value);
+  const startDate=document.getElementById("chargeStartDate").value;
+  const endDate=document.getElementById("chargeEndDate").value;
+  const remarks=document.getElementById("chargeRemarks").value;
+  const id=generateClientId(first,last);
+  const ref=doc(db,"users",currentUser.uid,"clients",id);
+  const snap=await getDoc(ref);
+  const c=snap.exists()?snap.data():{firstName:first,lastName:last,debit:0,credit:0,history:[]};
+  c.history.push({date:new Date().toLocaleString(),debit:amount,credit:0,method:"charge",paymentMode:"",remarks,startDate,endDate});
+  await setDoc(ref,{firstName:first,lastName:last,debit:(c.debit||0)+amount,credit:c.credit||0,history:c.history},{merge:true});
+  alert("Charge added!");
+});
+
+/* ----- Add Payment ----- */
+document.getElementById("paymentClientName").addEventListener("input",()=>{
+  const name=document.getElementById("paymentClientName").value.toLowerCase();
+  const client=Object.values(clients).find(c=>(c.firstName+" "+c.lastName).toLowerCase()===name);
+  if(client){
+    const balance=(client.debit||0)-(client.credit||0);
+    document.getElementById("paymentBalance").textContent="Outstanding Balance: "+balance.toFixed(2);
+  } else {
+    document.getElementById("paymentBalance").textContent="";
+  }
+});
+
+document.getElementById("addPaymentBtn").addEventListener("click",async()=>{
+  if(!currentUser) return;
+  const name=document.getElementById("paymentClientName").value;
+  const [first,last]=name.split(" ");
+  const amount=parseFloat(document.getElementById("paymentAmount").value);
+  const type=document.getElementById("paymentType").value;
+  const mode=document.getElementById("paymentMode").value;
+  const date=document.getElementById("paymentDate").value;
+  const remarks=document.getElementById("paymentRemarks").value;
+  const id=generateClientId(first,last);
+  const ref=doc(db,"users",currentUser.uid,"clients",id);
+  const snap=await getDoc(ref);
+  const c=snap.exists()?snap.data():{firstName:first,lastName:last,debit:0,credit:0,history:[]};
+  c.history.push({date,type,debit:0,credit:amount,method:"payment",paymentMode:mode,remarks,startDate:"",endDate:""});
+  await setDoc(ref,{firstName:first,lastName:last,debit:c.debit||0,credit:(c.credit||0)+amount,history:c.history},{merge:true});
+  alert("Payment recorded!");
+});
+
+/* ----- Expenses ----- */
+document.getElementById("addExpenseBtn").addEventListener("click",async()=>{
+  if(!currentUser) return;
+  const date=document.getElementById("expenseDate").value;
+  const desc=document.getElementById("expenseDescription").value;
+  const invoice=document.getElementById("expenseInvoice").value;
+  const amount=parseFloat(document.getElementById("expenseAmount").value);
+  const ref=collection(db,"users",currentUser.uid,"expenses");
+  await addDoc(ref,{date,description:desc,invoice,amount});
+  alert("Expense added!");
+  loadExpenses();
+});
+
+function loadExpenses(){
+  if(!currentUser) return;
+  onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
+    expenses=[];
+    snap.forEach(d=>expenses.push(d.data()));
+    calculateReports();
+  });
+}
+
+/* ----- Admin Reports ----- */
+function calculateReports(){
+  const start=document.getElementById("reportStartDate").value;
+  const end=document.getElementById("reportEndDate").value;
+  const startTS=start?new Date(start):null;
+  const endTS=end?new Date(end):null;
+  let sales=0;
+  let expense=0;
+  Object.values(clients).forEach(c=>{
+    (c.history||[]).forEach(h=>{
+      const d=new Date(h.date);
+      if((!startTS||d>=startTS)&&(!endTS||d<=endTS)){
+        if(h.method==="payment") sales+=h.credit||0;
+      }
+    });
+  });
+  expenses.forEach(e=>{
+    const d=new Date(e.date);
+    if((!startTS||d>=startTS)&&(!endTS||d<=endTS)) expense+=e.amount||0;
+  });
+  document.getElementById("totalSales").textContent=sales.toFixed(2);
+  document.getElementById("totalExpenses").textContent=expense.toFixed(2);
+  document.getElementById("netIncome").textContent=(sales-expense).toFixed(2);
+}
+
+document.getElementById("reportStartDate").addEventListener("change",calculateReports);
+document.getElementById("reportEndDate").addEventListener("change",calculateReports);
+
+/* ----- View Client ----- */
+window.viewClient=async function(id){
+  const c=clients[id];
+  if(!c) return;
+  document.getElementById("modalTitle").textContent=c.firstName+" "+c.lastName;
+  document.getElementById("totalDebit").textContent=(c.debit||0).toFixed(2);
+  document.getElementById("totalCredit").textContent=(c.credit||0).toFixed(2);
+  const balance=(c.debit||0)-(c.credit||0);
+  document.getElementById("balance").textContent=balance.toFixed(2);
+  document.getElementById("status").textContent=balance>0?"Outstanding":"Paid";
+  const tbody=document.getElementById("historyBody");
+  tbody.innerHTML="";
+  (c.history||[]).forEach(h=>{
+    tbody.insertAdjacentHTML("beforeend",`<tr>
+      <td>${h.date||""}</td>
+      <td class="${h.debit>0?'debit-red':''}">${h.debit||0}</td>
+      <td>${h.credit||0}</td>
+      <td>${h.method||""}</td>
+      <td>${h.paymentMode||""}</td>
+      <td>${h.remarks||""}</td>
+      <td>${h.startDate||""}</td>
+      <td>${h.endDate||""}</td>
+    </tr>`);
+  });
+  document.getElementById('viewModal').style.display='block';
 };
 </script>
+
 </body>
 </html>
