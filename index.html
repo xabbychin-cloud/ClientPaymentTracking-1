@@ -4,220 +4,181 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Client Payment Tracker</title>
-<link rel="stylesheet" href="./style.css">
+
 <style>
-  body{font-family:sans-serif;margin:0;padding:0;background:#f9f9f9;}
-  h1{color:white;background:#4CAF50;padding:10px;text-align:center;}
-  #toolbar{display:flex;flex-wrap:nowrap;overflow-x:auto;background:#333;color:white;padding:5px;gap:5px;}
-  #toolbar button{flex:0 0 auto;padding:10px;background:#4CAF50;color:white;border:none;cursor:pointer;border-radius:3px;}
-  #toolbar button:hover{background:#45a049;}
-  .container{padding:10px;}
-  .auth-form, .section-form{background:white;padding:15px;margin:10px 0;border-radius:5px;box-shadow:0 0 5px #ccc;}
-  .auth-form input, .section-form input, .section-form select{width:100%;margin:5px 0;padding:8px;}
-  .section-form button, .auth-form button{width:100%;padding:10px;margin-top:5px;background:#4CAF50;color:white;border:none;cursor:pointer;}
-  .section-form button:hover, .auth-form button:hover{background:#45a049;}
-  #clientsTable, #historyTable, #payablesTable, #expensesTable{width:100%;border-collapse:collapse;margin-top:10px;}
-  #clientsTable th,#clientsTable td,#historyTable th,#historyTable td,#payablesTable th,#payablesTable td,#expensesTable th,#expensesTable td{border:1px solid #ddd;padding:5px;text-align:left;}
-  #clientsTable th,#historyTable th,#payablesTable th,#expensesTable th{background:#f2f2f2;}
-  .debit-red{color:red;font-weight:bold;}
-  .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;overflow:auto;background:rgba(0,0,0,0.5);z-index:1000;}
-  .modal-content{background:white;margin:5% auto;padding:15px;border-radius:5px;width:90%;max-width:900px;max-height:80vh;overflow:auto;}
-  .close{float:right;font-size:28px;font-weight:bold;color:#aaa;cursor:pointer;}
-  .close:hover{color:black;}
-  #logoutBtn{background:#f44336;}
-  #logoutBtn:hover{background:#d32f2f;margin-top:10px;}
-  @media(max-width:600px){#toolbar{flex-wrap:nowrap;overflow-x:auto;}}
+body{margin:0;font-family:Arial;background:#f5f5f5}
+h1{background:#2e7d32;color:white;padding:15px;text-align:center;margin:0}
+#toolbar{display:flex;gap:8px;padding:10px;background:#333;overflow-x:auto}
+#toolbar button{background:#4CAF50;color:white;border:none;padding:10px 15px;border-radius:4px;cursor:pointer}
+#toolbar button:hover{background:#43a047}
+
+.section{display:none;background:white;margin:10px;padding:15px;border-radius:6px}
+input,select,button{width:100%;padding:8px;margin-top:6px}
+button{cursor:pointer}
+
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border:1px solid #ccc;padding:6px;text-align:left}
+th{background:#eee;color:black}
+
+.debit-red{color:red;font-weight:bold}
+
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5)}
+.modal-content{background:white;width:95%;max-width:900px;margin:5% auto;padding:15px;max-height:80vh;overflow:auto}
+.close{float:right;font-size:22px;cursor:pointer}
+
+#logoutBtn{background:#d32f2f;color:white;margin:15px}
+
+.readonly{background:#eee}
 </style>
 </head>
+
 <body>
 
 <h1>Client Payment Tracker</h1>
 
 <div id="toolbar">
-  <button id="showAddCharge">Add Charge</button>
-  <button id="showAddPayment">Add Payment</button>
-  <button id="showExpenses">Add Expense</button>
-  <button id="showAdminReport">Admin Report</button>
+  <button onclick="showSection('chargeSection')">Add Charge</button>
+  <button onclick="showSection('paymentSection')">Add Payment</button>
+  <button onclick="showSection('expenseSection')">Expenses</button>
+  <button onclick="showSection('reportSection')">Admin Report</button>
 </div>
 
-<div class="container">
-
-<!-- Auth Forms -->
-<div id="authContainer">
-  <div id="signupForm" class="auth-form">
-    <h2>Sign Up</h2>
-    <input id="signupEmail" type="email" placeholder="Email" required>
-    <input id="signupPassword" type="password" placeholder="Password" required>
-    <button id="signupBtn">Create Account</button>
-    <p>Already have an account? <a href="#" id="showLogin">Login</a></p>
-  </div>
-
-  <div id="loginForm" class="auth-form" style="display:none;">
-    <h2>Login</h2>
-    <input id="loginEmail" type="email" placeholder="Email" required>
-    <input id="loginPassword" type="password" placeholder="Password" required>
-    <button id="loginBtn">Login</button>
-    <p>Don't have an account? <a href="#" id="showSignup">Sign up</a></p>
-  </div>
+<!-- AUTH -->
+<div id="authSection" class="section" style="display:block">
+  <h3>Login</h3>
+  <input id="loginEmail" placeholder="Email">
+  <input id="loginPassword" type="password" placeholder="Password">
+  <button id="loginBtn">Login</button>
 </div>
 
-<!-- Main App -->
-<div id="appContainer" style="display:none;">
+<div id="appSection" style="display:none">
 
-<!-- Add Charge -->
-<div id="chargeSection" class="section-form" style="display:none;">
+<!-- ADD CHARGE -->
+<div id="chargeSection" class="section">
   <h3>Add Charge</h3>
-  <input id="chargeFirstName" placeholder="First Name" required>
-  <input id="chargeLastName" placeholder="Last Name" required>
-  <input id="chargeAmount" type="number" placeholder="Amount" required>
-  <input id="chargeStartDate" type="date" placeholder="Start Date">
-  <input id="chargeEndDate" type="date" placeholder="End Date">
+  <input id="chargeName" placeholder="Client Full Name">
+  <input id="chargeAmount" type="number" placeholder="Amount">
+  <input id="chargeStart" type="date">
+  <input id="chargeEnd" type="date">
   <input id="chargeRemarks" placeholder="Remarks">
-  <button id="addChargeBtn">Add Charge</button>
+  <button id="addChargeBtn">Save Charge</button>
 </div>
 
-<!-- Add Payment -->
-<div id="paymentSection" class="section-form" style="display:none;">
+<!-- ADD PAYMENT -->
+<div id="paymentSection" class="section">
   <h3>Add Payment</h3>
-  <input id="paymentFirstName" placeholder="First Name" required>
-  <input id="paymentLastName" placeholder="Last Name" required>
-  <select id="paymentType" required>
+
+  <input id="paymentSearchName" placeholder="Search Client Name">
+  <button onclick="searchClientForPayment()">Search</button>
+
+  <input id="paymentClientName" readonly class="readonly">
+  <input id="paymentBalance" readonly class="readonly">
+
+  <table id="payablesTable">
+    <thead>
+      <tr><th>Date</th><th>Unpaid Amount</th><th>Remarks</th></tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <input id="paymentAmount" type="number" placeholder="Payment Amount">
+  <select id="paymentType">
     <option value="">Payment Type</option>
-    <option value="cash">Cash</option>
-    <option value="bank transfer">Bank Transfer</option>
-    <option value="credit card">Credit Card</option>
-    <option value="others">Others</option>
+    <option>Cash</option>
+    <option>Bank Transfer</option>
+    <option>Credit Card</option>
+    <option>Others</option>
   </select>
-  <select id="paymentMode" required>
+  <select id="paymentMode">
     <option value="">Payment Mode</option>
-    <option value="full">Full Payment</option>
-    <option value="partial">Partial Payment</option>
+    <option>Full</option>
+    <option>Partial</option>
   </select>
-  <input id="paymentDate" type="date" required>
-  <div id="payablesContainer">
-    <table id="payablesTable">
-      <thead><tr><th>Date</th><th>Amount</th><th>Remarks</th></tr></thead>
-      <tbody></tbody>
-    </table>
-  </div>
-  <input id="paymentAmount" type="number" placeholder="Amount" required>
+  <input id="paymentDate" type="date">
   <input id="paymentRemarks" placeholder="Remarks">
-  <button id="addPaymentBtn">Add Payment</button>
+  <button id="addPaymentBtn">Save Payment</button>
 </div>
 
-<!-- Add Expense -->
-<div id="expenseSection" class="section-form" style="display:none;">
-  <h3>Add Expense</h3>
-  <input id="expenseDate" type="date" required>
-  <input id="expenseAmount" type="number" placeholder="Amount" required>
-  <input id="expenseDescription" placeholder="Description" required>
-  <input id="expenseInvoice" placeholder="Invoice Number">
-  <button id="addExpenseBtn">Add Expense</button>
-</div>
+<!-- CLIENT SEARCH -->
+<div class="section" style="display:block">
+  <input id="searchClientInput" placeholder="Search Client">
+  <button onclick="renderClients()">Search</button>
 
-<!-- Admin Report -->
-<div id="adminReportSection" class="section-form" style="display:none;">
-  <h3>Admin Report</h3>
-  <input id="reportStart" type="date" placeholder="Start Date">
-  <input id="reportEnd" type="date" placeholder="End Date">
-  <button id="generateReportBtn">Generate Report</button>
-  <div id="reportSummary"></div>
-</div>
-
-<!-- Client Search & Table -->
-<div class="section-form">
-  <input id="searchClient" placeholder="Search by Name">
-  <select id="filterStatus">
+  <select id="filterStatus" onchange="renderClients()">
     <option value="all">All</option>
     <option value="outstanding">Outstanding</option>
     <option value="paid">Paid</option>
   </select>
+
   <table id="clientsTable">
-    <thead><tr><th>ID</th><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Status</th><th>Action</th></tr></thead>
+    <thead>
+      <tr>
+        <th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Status</th><th>Action</th>
+      </tr>
+    </thead>
     <tbody></tbody>
   </table>
 </div>
 
-<!-- Client Modal -->
+<!-- VIEW MODAL -->
 <div id="viewModal" class="modal">
   <div class="modal-content">
-    <span class="close">&times;</span>
-    <h2 id="modalTitle"></h2>
-    <p>Total Debit: <span id="totalDebit"></span></p>
-    <p>Total Credit: <span id="totalCredit"></span></p>
-    <p>Balance: <span id="balance"></span></p>
-    <p>Status: <span id="status"></span></p>
-    <table id="historyTable">
-      <thead><tr><th>Date</th><th>Debit</th><th>Credit</th><th>Method</th><th>Mode</th><th>Remarks</th><th>Start</th><th>End</th></tr></thead>
-      <tbody></tbody>
+    <span class="close" onclick="closeModal()">&times;</span>
+    <h3 id="modalTitle"></h3>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th><th>Debit</th><th>Credit</th><th>Method</th>
+          <th>Mode</th><th>Remarks</th><th>Start</th><th>End</th>
+        </tr>
+      </thead>
+      <tbody id="modalBody"></tbody>
     </table>
   </div>
 </div>
 
 <button id="logoutBtn">Logout</button>
-
-</div> <!-- end appContainer -->
-</div> <!-- end container -->
+</div>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore, collection, doc, setDoc, getDoc, addDoc, onSnapshot, query, where, getDocs, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-// --- Firebase Config ---
 const firebaseConfig = {
   apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
   authDomain: "client-payment-tracker-3572b.firebaseapp.com",
-  projectId: "client-payment-tracker-3572b",
-  storageBucket: "client-payment-tracker-3572b.firebasestorage.app",
-  messagingSenderId: "151091330895",
-  appId: "1:151091330895:web:d23440ad57a386da720f3a",
-  measurementId: "G-NH7D18261Q"
+  projectId: "client-payment-tracker-3572b"
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
-enableIndexedDbPersistence(db).catch(()=>{});
 
-let currentUser=null, clients={}, expenses=[];
+let currentUser=null;
+let clients={};
 
-// --- Auth ---
-document.getElementById("signupBtn").addEventListener("click", async ()=>{
-  const email=document.getElementById("signupEmail").value;
-  const pass=document.getElementById("signupPassword").value;
-  try{await createUserWithEmailAndPassword(auth,email,pass); alert("Account created!");}
-  catch(e){alert("Signup error: "+e.message);}
-});
-document.getElementById("loginBtn").addEventListener("click", async ()=>{
-  const email=document.getElementById("loginEmail").value;
-  const pass=document.getElementById("loginPassword").value;
-  try{await signInWithEmailAndPassword(auth,email,pass);}
-  catch(e){alert("Login failed: "+e.message);}
-});
-document.getElementById("showLogin").addEventListener("click",(e)=>{e.preventDefault();document.getElementById("signupForm").style.display="none";document.getElementById("loginForm").style.display="block";});
-document.getElementById("showSignup").addEventListener("click",(e)=>{e.preventDefault();document.getElementById("loginForm").style.display="none";document.getElementById("signupForm").style.display="block";});
-document.getElementById("logoutBtn").addEventListener("click", async ()=>{await signOut(auth);});
+function clientId(name){return name.toLowerCase().replace(/\s+/g,'_')}
 
-// --- Show App if logged in ---
-onAuthStateChanged(auth,user=>{
-  if(user){currentUser=user; document.getElementById("authContainer").style.display="none"; document.getElementById("appContainer").style.display="block"; loadClients(); loadExpenses();}
-  else{currentUser=null; document.getElementById("authContainer").style.display="block"; document.getElementById("appContainer").style.display="none";}
+// LOGIN
+document.getElementById("loginBtn").onclick=async()=>{
+  try{
+    await signInWithEmailAndPassword(auth,
+      loginEmail.value, loginPassword.value);
+  }catch(e){alert(e.message)}
+};
+
+onAuthStateChanged(auth,u=>{
+  if(u){
+    currentUser=u;
+    authSection.style.display="none";
+    appSection.style.display="block";
+    loadClients();
+  }
 });
 
-// --- Toolbar Sections ---
-document.getElementById("showAddCharge").addEventListener("click", ()=>{hideSections(); document.getElementById("chargeSection").style.display="block";});
-document.getElementById("showAddPayment").addEventListener("click", ()=>{hideSections(); document.getElementById("paymentSection").style.display="block"; populatePayables();});
-document.getElementById("showExpenses").addEventListener("click", ()=>{hideSections(); document.getElementById("expenseSection").style.display="block";});
-document.getElementById("showAdminReport").addEventListener("click", ()=>{hideSections(); document.getElementById("adminReportSection").style.display="block";});
-function hideSections(){document.getElementById("chargeSection").style.display="none"; document.getElementById("paymentSection").style.display="none"; document.getElementById("expenseSection").style.display="none"; document.getElementById("adminReportSection").style.display="none";}
-
-// --- Utilities ---
-function generateClientId(first,last){return `${first}_${last}`.toLowerCase().replace(/\s+/g,'_');}
-
-// --- Load Clients ---
+// LOAD CLIENTS
 function loadClients(){
-  if(!currentUser) return;
   onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
     clients={};
     snap.forEach(d=>clients[d.id]=d.data());
@@ -225,144 +186,58 @@ function loadClients(){
   });
 }
 
-// --- Load Expenses ---
-function loadExpenses(){
-  if(!currentUser) return;
-  onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
-    expenses=[];
-    snap.forEach(d=>expenses.push(d.data()));
+// RENDER CLIENTS
+window.renderClients=()=>{
+  const q=searchClientInput.value.toLowerCase();
+  const f=filterStatus.value;
+  const tb=document.querySelector("#clientsTable tbody");
+  tb.innerHTML="";
+  Object.values(clients).forEach(c=>{
+    const bal=(c.debit||0)-(c.credit||0);
+    const status=bal>0?"outstanding":"paid";
+    if(q && !c.name.toLowerCase().includes(q)) return;
+    if(f!=="all" && f!==status) return;
+    tb.innerHTML+=`
+      <tr>
+        <td>${c.name}</td>
+        <td class="${bal>0?'debit-red':''}">${c.debit}</td>
+        <td>${c.credit}</td>
+        <td class="${bal>0?'debit-red':''}">${bal}</td>
+        <td>${status}</td>
+        <td><button onclick="viewClient('${c.name}')">View</button></td>
+      </tr>`;
   });
-}
-
-// --- Render Clients Table ---
-function renderClients(){
-  const tbody=document.querySelector("#clientsTable tbody");
-  tbody.innerHTML="";
-  const search=document.getElementById("searchClient").value.toLowerCase();
-  const filter=document.getElementById("filterStatus").value;
-  Object.entries(clients).forEach(([id,c])=>{
-    const fullName=(c.firstName+" "+c.lastName).toLowerCase();
-    const balance=(c.debit||0)-(c.credit||0);
-    const status=balance>0?"Outstanding":"Paid";
-    if(search && !fullName.includes(search)) return;
-    if(filter!=="all" && filter!==status.toLowerCase()) return;
-    tbody.insertAdjacentHTML("beforeend",`<tr>
-      <td>${id}</td>
-      <td>${c.firstName} ${c.lastName}</td>
-      <td class="${balance>0?'debit-red':''}">${(c.debit||0).toFixed(2)}</td>
-      <td>${(c.credit||0).toFixed(2)}</td>
-      <td class="${balance>0?'debit-red':''}">${balance.toFixed(2)}</td>
-      <td>${status}</td>
-      <td><button onclick="viewClient('${id}')">View</button></td>
-    </tr>`);
-  });
-}
-
-// --- Search & Filter ---
-document.getElementById("searchClient").addEventListener("input", renderClients);
-document.getElementById("filterStatus").addEventListener("change", renderClients);
-
-// --- Add Charge ---
-document.getElementById("addChargeBtn").addEventListener("click", async ()=>{
-  const first=document.getElementById("chargeFirstName").value;
-  const last=document.getElementById("chargeLastName").value;
-  const amount=parseFloat(document.getElementById("chargeAmount").value);
-  const startDate=document.getElementById("chargeStartDate").value;
-  const endDate=document.getElementById("chargeEndDate").value;
-  const remarks=document.getElementById("chargeRemarks").value;
-  const id=generateClientId(first,last);
-  const ref=doc(db,"users",currentUser.uid,"clients",id);
-  const snap=await getDoc(ref);
-  const data=snap.exists()?snap.data():{firstName:first,lastName:last,debit:0,credit:0,history:[]};
-  data.history.push({date:new Date().toISOString(),debit:amount,credit:0,method:"charge",paymentMode:"",remarks,startDate,endDate});
-  await setDoc(ref,{firstName:first,lastName:last,debit:(data.debit||0)+amount,credit:data.credit||0,history:data.history},{merge:true});
-  alert("✅ Charge added!");
-  document.getElementById("chargeSection").reset;
-});
-
-// --- Populate Payables ---
-function populatePayables(){
-  const tbody=document.querySelector("#payablesTable tbody");
-  tbody.innerHTML="";
-  const first=document.getElementById("paymentFirstName").value;
-  const last=document.getElementById("paymentLastName").value;
-  const id=generateClientId(first,last);
-  const c=clients[id];
-  if(!c) return;
-  (c.history||[]).filter(h=>((h.debit||0)-(h.credit||0))>0).forEach(h=>{
-    const row=document.createElement("tr");
-    row.innerHTML=`<td>${h.date}</td><td>${((h.debit||0)-(h.credit||0)).toFixed(2)}</td><td>${h.remarks||""}</td>`;
-    row.addEventListener("click", ()=>{document.getElementById("paymentAmount").value=((h.debit||0)-(h.credit||0)).toFixed(2);});
-    tbody.appendChild(row);
-  });
-}
-
-// --- Add Payment ---
-document.getElementById("addPaymentBtn").addEventListener("click", async ()=>{
-  const first=document.getElementById("paymentFirstName").value;
-  const last=document.getElementById("paymentLastName").value;
-  const type=document.getElementById("paymentType").value;
-  const mode=document.getElementById("paymentMode").value;
-  const amount=parseFloat(document.getElementById("paymentAmount").value);
-  const date=document.getElementById("paymentDate").value;
-  const remarks=document.getElementById("paymentRemarks").value;
-  const id=generateClientId(first,last);
-  const ref=doc(db,"users",currentUser.uid,"clients",id);
-  const snap=await getDoc(ref);
-  if(!snap.exists()){alert("Client not found!"); return;}
-  const data=snap.data();
-  data.history.push({date,type,debit:0,credit:amount,method:"payment",paymentMode:mode,remarks});
-  await setDoc(ref,{debit:data.debit,credit:(data.credit||0)+amount,history:data.history},{merge:true});
-  alert("✅ Payment added!");
-});
-
-// --- Add Expense ---
-document.getElementById("addExpenseBtn").addEventListener("click", async ()=>{
-  const date=document.getElementById("expenseDate").value;
-  const amount=parseFloat(document.getElementById("expenseAmount").value);
-  const description=document.getElementById("expenseDescription").value;
-  const invoice=document.getElementById("expenseInvoice").value;
-  await addDoc(collection(db,"users",currentUser.uid,"expenses"),{date,amount,description,invoice});
-  alert("✅ Expense added!");
-});
-
-// --- Admin Report ---
-document.getElementById("generateReportBtn").addEventListener("click", ()=>{
-  const start=document.getElementById("reportStart").value?new Date(document.getElementById("reportStart").value):null;
-  const end=document.getElementById("reportEnd").value?new Date(document.getElementById("reportEnd").value):null;
-  let totalSales=0,totalExpenses=0;
-  Object.values(clients).forEach(c=>{(c.history||[]).forEach(h=>{const d=new Date(h.date);if((!start||d>=start)&&(!end||d<=end)){if(h.method==="payment") totalSales+=h.credit||0;}});});
-  expenses.forEach(e=>{const d=new Date(e.date);if(!start||d>=start) if(!end||d<=end) totalExpenses+=e.amount||0;});
-  document.getElementById("reportSummary").innerHTML=`<p>Total Sales: ${totalSales.toFixed(2)}</p><p>Total Expenses: ${totalExpenses.toFixed(2)}</p><p>Net Income: ${(totalSales-totalExpenses).toFixed(2)}</p>`;
-});
-
-// --- Client Modal ---
-const modal=document.getElementById("viewModal");
-document.querySelector(".close").addEventListener("click", ()=>{modal.style.display="none";});
-window.viewClient=function(id){
-  const c=clients[id]; if(!c) return;
-  document.getElementById("modalTitle").textContent=c.firstName+" "+c.lastName;
-  document.getElementById("totalDebit").textContent=(c.debit||0).toFixed(2);
-  document.getElementById("totalCredit").textContent=(c.credit||0).toFixed(2);
-  const balance=(c.debit||0)-(c.credit||0);
-  document.getElementById("balance").textContent=balance.toFixed(2);
-  document.getElementById("status").textContent=balance>0?"Outstanding":"Paid";
-  const tbody=document.querySelector("#historyTable tbody"); tbody.innerHTML="";
-  (c.history||[]).forEach(h=>{
-    const bal=(h.debit||0)-(h.credit||0);
-    tbody.insertAdjacentHTML("beforeend",`<tr>
-      <td>${h.date||""}</td>
-      <td class="${bal>0?'debit-red':''}">${(h.debit||0).toFixed(2)}</td>
-      <td>${(h.credit||0).toFixed(2)}</td>
-      <td>${h.method||""}</td>
-      <td>${h.paymentMode||""}</td>
-      <td>${h.remarks||""}</td>
-      <td>${h.startDate||""}</td>
-      <td>${h.endDate||""}</td>
-    </tr>`);
-  });
-  modal.style.display="block";
 };
+
+// VIEW CLIENT
+window.viewClient=(name)=>{
+  const c=clients[clientId(name)];
+  modalTitle.textContent=name;
+  modalBody.innerHTML="";
+  c.history.forEach(h=>{
+    modalBody.innerHTML+=`
+    <tr>
+      <td>${h.date}</td>
+      <td class="${h.debit>0?'debit-red':''}">${h.debit}</td>
+      <td>${h.credit}</td>
+      <td>${h.method}</td>
+      <td>${h.mode||''}</td>
+      <td>${h.remarks||''}</td>
+      <td>${h.start||''}</td>
+      <td>${h.end||''}</td>
+    </tr>`;
+  });
+  viewModal.style.display="block";
+};
+
+window.closeModal=()=>viewModal.style.display="none";
+
+window.showSection=id=>{
+  document.querySelectorAll(".section").forEach(s=>s.style.display="none");
+  document.getElementById(id).style.display="block";
+};
+
+logoutBtn.onclick=()=>signOut(auth);
 </script>
 
 </body>
