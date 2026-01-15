@@ -6,10 +6,11 @@
 <title>Client Payment Tracker</title>
 
 <style>
-body{margin:0;font-family:Arial;background:#f5f5f5}
+body{margin:0;font-family:Arial;background:#f4f4f4}
 h1{background:#2e7d32;color:white;padding:15px;text-align:center;margin:0}
+
 #toolbar{display:flex;gap:8px;padding:10px;background:#333;overflow-x:auto}
-#toolbar button{background:#4CAF50;color:white;border:none;padding:10px 15px;border-radius:4px;cursor:pointer}
+#toolbar button{background:#4CAF50;color:white;border:none;padding:10px 14px;border-radius:4px;cursor:pointer}
 #toolbar button:hover{background:#43a047}
 
 .section{display:none;background:white;margin:10px;padding:15px;border-radius:6px}
@@ -26,9 +27,27 @@ th{background:#eee;color:black}
 .modal-content{background:white;width:95%;max-width:900px;margin:5% auto;padding:15px;max-height:80vh;overflow:auto}
 .close{float:right;font-size:22px;cursor:pointer}
 
-#logoutBtn{background:#d32f2f;color:white;margin:15px}
-
 .readonly{background:#eee}
+
+.autocomplete-box{
+  position:relative;
+}
+.autocomplete-list{
+  position:absolute;
+  background:white;
+  border:1px solid #ccc;
+  width:100%;
+  max-height:150px;
+  overflow:auto;
+  z-index:100;
+}
+.autocomplete-item{
+  padding:6px;
+  cursor:pointer;
+}
+.autocomplete-item:hover{background:#f0f0f0}
+
+#logoutBtn{background:#c62828;color:white;margin:15px}
 </style>
 </head>
 
@@ -68,8 +87,10 @@ th{background:#eee;color:black}
 <div id="paymentSection" class="section">
   <h3>Add Payment</h3>
 
-  <input id="paymentSearchName" placeholder="Search Client Name">
-  <button onclick="searchClientForPayment()">Search</button>
+  <div class="autocomplete-box">
+    <input id="paymentSearch" placeholder="Search Client Name">
+    <div id="paymentAuto" class="autocomplete-list"></div>
+  </div>
 
   <input id="paymentClientName" readonly class="readonly">
   <input id="paymentBalance" readonly class="readonly">
@@ -99,9 +120,28 @@ th{background:#eee;color:black}
   <button id="addPaymentBtn">Save Payment</button>
 </div>
 
-<!-- CLIENT SEARCH -->
+<!-- EXPENSES -->
+<div id="expenseSection" class="section">
+  <h3>Add Expense</h3>
+  <input id="expenseDate" type="date">
+  <input id="expenseAmount" type="number" placeholder="Amount">
+  <input id="expenseDesc" placeholder="Description">
+  <input id="expenseInvoice" placeholder="Invoice (optional)">
+  <button id="addExpenseBtn">Save Expense</button>
+</div>
+
+<!-- ADMIN REPORT -->
+<div id="reportSection" class="section">
+  <h3>Admin Report</h3>
+  <input id="reportStart" type="date">
+  <input id="reportEnd" type="date">
+  <button id="generateReportBtn">Generate Report</button>
+  <div id="reportResult"></div>
+</div>
+
+<!-- CLIENT TABLE -->
 <div class="section" style="display:block">
-  <input id="searchClientInput" placeholder="Search Client">
+  <input id="searchClient" placeholder="Search Client">
   <button onclick="renderClients()">Search</button>
 
   <select id="filterStatus" onchange="renderClients()">
@@ -123,7 +163,7 @@ th{background:#eee;color:black}
 <!-- VIEW MODAL -->
 <div id="viewModal" class="modal">
   <div class="modal-content">
-    <span class="close" onclick="closeModal()">&times;</span>
+    <span class="close" onclick="viewModal.style.display='none'">&times;</span>
     <h3 id="modalTitle"></h3>
     <table>
       <thead>
@@ -143,37 +183,31 @@ th{background:#eee;color:black}
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
-  authDomain: "client-payment-tracker-3572b.firebaseapp.com",
-  projectId: "client-payment-tracker-3572b"
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+const app = initializeApp({
+  apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
+  authDomain:"client-payment-tracker-3572b.firebaseapp.com",
+  projectId:"client-payment-tracker-3572b"
+});
+const auth=getAuth(app);
+const db=getFirestore(app);
 
 let currentUser=null;
-let clients={};
+let clients={}, expenses=[];
 
-function clientId(name){return name.toLowerCase().replace(/\s+/g,'_')}
+const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
 
 // LOGIN
-document.getElementById("loginBtn").onclick=async()=>{
-  try{
-    await signInWithEmailAndPassword(auth,
-      loginEmail.value, loginPassword.value);
-  }catch(e){alert(e.message)}
-};
+loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value)
+  .catch(e=>alert(e.message));
 
 onAuthStateChanged(auth,u=>{
   if(u){
     currentUser=u;
     authSection.style.display="none";
     appSection.style.display="block";
-    loadClients();
+    loadClients(); loadExpenses();
   }
 });
 
@@ -186,32 +220,121 @@ function loadClients(){
   });
 }
 
-// RENDER CLIENTS
+// LOAD EXPENSES
+function loadExpenses(){
+  onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
+    expenses=[];
+    snap.forEach(d=>expenses.push(d.data()));
+  });
+}
+
+// ADD CHARGE
+addChargeBtn.onclick=async()=>{
+  const name=chargeName.value;
+  const ref=doc(db,"users",currentUser.uid,"clients",cid(name));
+  const s=await getDoc(ref);
+  const c=s.exists()?s.data():{name,debit:0,credit:0,history:[]};
+  c.history.push({date:new Date().toISOString(),debit:+chargeAmount.value,credit:0,method:"charge",remarks:chargeRemarks.value,start:chargeStart.value,end:chargeEnd.value});
+  await setDoc(ref,{name,debit:c.debit+ +chargeAmount.value,credit:c.credit,history:c.history});
+  alert("Charge added");
+};
+
+// AUTOCOMPLETE
+paymentSearch.oninput=()=>{
+  paymentAuto.innerHTML="";
+  const q=paymentSearch.value.toLowerCase();
+  Object.values(clients).forEach(c=>{
+    if(c.name.toLowerCase().includes(q)){
+      const d=document.createElement("div");
+      d.className="autocomplete-item";
+      d.textContent=c.name;
+      d.onclick=()=>selectClient(c.name);
+      paymentAuto.appendChild(d);
+    }
+  });
+};
+
+function selectClient(name){
+  paymentClientName.value=name;
+  paymentAuto.innerHTML="";
+  const c=clients[cid(name)];
+  const bal=(c.debit||0)-(c.credit||0);
+  paymentBalance.value="Balance: "+bal;
+  populatePayables(c);
+}
+
+function populatePayables(c){
+  const tb=document.querySelector("#payablesTable tbody");
+  tb.innerHTML="";
+  c.history.filter(h=>h.debit>0).forEach(h=>{
+    const paid=c.history.filter(x=>x.credit>0).reduce((a,b)=>a+b.credit,0);
+    const bal=h.debit-paid;
+    if(bal>0){
+      const r=tb.insertRow();
+      r.innerHTML=`<td>${h.date}</td><td>${bal}</td><td>${h.remarks||''}</td>`;
+      r.onclick=()=>paymentAmount.value=bal;
+    }
+  });
+}
+
+// ADD PAYMENT
+addPaymentBtn.onclick=async()=>{
+  const name=paymentClientName.value;
+  const ref=doc(db,"users",currentUser.uid,"clients",cid(name));
+  const s=await getDoc(ref);
+  const c=s.data();
+  c.history.push({date:paymentDate.value,debit:0,credit:+paymentAmount.value,method:"payment",mode:paymentMode.value,remarks:paymentRemarks.value});
+  await setDoc(ref,{...c,credit:c.credit+ +paymentAmount.value});
+  alert("Payment added");
+};
+
+// EXPENSE
+addExpenseBtn.onclick=async()=>{
+  await addDoc(collection(db,"users",currentUser.uid,"expenses"),{
+    date:expenseDate.value,amount:+expenseAmount.value,desc:expenseDesc.value,invoice:expenseInvoice.value
+  });
+  alert("Expense saved");
+};
+
+// REPORT
+generateReportBtn.onclick=()=>{
+  const s=new Date(reportStart.value);
+  const e=new Date(reportEnd.value);
+  let sales=0;
+  Object.values(clients).forEach(c=>c.history.forEach(h=>{
+    const d=new Date(h.date);
+    if(h.credit && d>=s && d<=e) sales+=h.credit;
+  }));
+  const exp=expenses.filter(x=>new Date(x.date)>=s&&new Date(x.date)<=e)
+    .reduce((a,b)=>a+b.amount,0);
+  reportResult.innerHTML=`Sales: ${sales}<br>Expenses: ${exp}<br>Net: ${sales-exp}`;
+};
+
+// CLIENT TABLE
 window.renderClients=()=>{
-  const q=searchClientInput.value.toLowerCase();
+  const q=searchClient.value.toLowerCase();
   const f=filterStatus.value;
   const tb=document.querySelector("#clientsTable tbody");
   tb.innerHTML="";
   Object.values(clients).forEach(c=>{
     const bal=(c.debit||0)-(c.credit||0);
-    const status=bal>0?"outstanding":"paid";
+    const s=bal>0?"outstanding":"paid";
     if(q && !c.name.toLowerCase().includes(q)) return;
-    if(f!=="all" && f!==status) return;
-    tb.innerHTML+=`
-      <tr>
-        <td>${c.name}</td>
-        <td class="${bal>0?'debit-red':''}">${c.debit}</td>
-        <td>${c.credit}</td>
-        <td class="${bal>0?'debit-red':''}">${bal}</td>
-        <td>${status}</td>
-        <td><button onclick="viewClient('${c.name}')">View</button></td>
-      </tr>`;
+    if(f!=="all"&&f!==s) return;
+    tb.innerHTML+=`<tr>
+      <td>${c.name}</td>
+      <td class="${bal>0?'debit-red':''}">${c.debit}</td>
+      <td>${c.credit}</td>
+      <td class="${bal>0?'debit-red':''}">${bal}</td>
+      <td>${s}</td>
+      <td><button onclick="viewClient('${c.name}')">View</button></td>
+    </tr>`;
   });
 };
 
 // VIEW CLIENT
-window.viewClient=(name)=>{
-  const c=clients[clientId(name)];
+window.viewClient=name=>{
+  const c=clients[cid(name)];
   modalTitle.textContent=name;
   modalBody.innerHTML="";
   c.history.forEach(h=>{
@@ -230,14 +353,11 @@ window.viewClient=(name)=>{
   viewModal.style.display="block";
 };
 
-window.closeModal=()=>viewModal.style.display="none";
-
+logoutBtn.onclick=()=>signOut(auth);
 window.showSection=id=>{
   document.querySelectorAll(".section").forEach(s=>s.style.display="none");
   document.getElementById(id).style.display="block";
 };
-
-logoutBtn.onclick=()=>signOut(auth);
 </script>
 
 </body>
