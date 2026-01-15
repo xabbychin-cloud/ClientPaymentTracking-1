@@ -93,6 +93,65 @@
       color: #666;
       margin-bottom: 10px;
     }
+    /* Reports section */
+    .reports-section {
+      margin-top: 20px;
+      border: 1px solid #ccc;
+      padding: 20px;
+    }
+    .report-tabs {
+      display: flex;
+      margin-bottom: 10px;
+    }
+    .report-tabs button {
+      padding: 10px;
+      margin-right: 10px;
+      background-color: #f2f2f2;
+      border: 1px solid #ddd;
+      cursor: pointer;
+    }
+    .report-tabs button.active {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .report-content {
+      margin-top: 10px;
+    }
+    .report-summary {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+    }
+    .report-summary div {
+      flex: 1;
+      min-width: 200px;
+      padding: 10px;
+      border: 1px solid #ddd;
+      background-color: #f9f9f9;
+    }
+    /* Expenses form */
+    .expenses-form {
+      margin-top: 20px;
+      padding: 20px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .expenses-form input, .expenses-form select {
+      width: 100%;
+      margin-bottom: 10px;
+      padding: 8px;
+    }
+    .expenses-form button {
+      width: 100%;
+      padding: 10px;
+      background-color: #FF5722;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    .expenses-form button:hover {
+      background-color: #E64A19;
+    }
   </style>
 </head>
 <body>
@@ -123,6 +182,8 @@
       <input id="chargeFirstName" placeholder="First Name" required>
       <input id="chargeLastName" placeholder="Last Name" required>
       <input id="chargeAmount" type="number" placeholder="Amount" required>
+      <input id="chargeStartDate" type="date" placeholder="Start Date" required>
+      <input id="chargeEndDate" type="date" placeholder="End Date" required>
       <input id="chargeRemarks" placeholder="Remarks">
       <button type="submit">Add Charge</button>
     </form>
@@ -132,10 +193,31 @@
       <input id="firstName" placeholder="First Name" required>
       <input id="lastName" placeholder="Last Name" required>
       <input id="amount" type="number" placeholder="Amount" required>
-      <input id="method" placeholder="Payment Method">
+      <input id="paymentDate" type="date" placeholder="Date of Payment" required>
+      <select id="paymentType" required>
+        <option value="">Select Payment Type</option>
+        <option value="cash">Cash</option>
+        <option value="bank transfer">Bank Transfer</option>
+        <option value="credit card">Credit Card</option>
+        <option value="others">Others</option>
+      </select>
+      <select id="paymentMode" required>
+        <option value="">Select Payment Mode</option>
+        <option value="full">Full Payment</option>
+        <option value="partial">Partial Payment</option>
+      </select>
       <input id="remarks" placeholder="Remarks">
       <button type="submit">Add Payment</button>
     </form>
+
+    <!-- Expenses Form -->
+    <div class="expenses-form">
+      <h3>Add Expense</h3>
+      <input id="expenseDate" type="date" placeholder="Date" required>
+      <input id="expenseAmount" type="number" placeholder="Amount" required>
+      <input id="expenseDescription" placeholder="Description" required>
+      <button id="addExpenseBtn">Add Expense</button>
+    </div>
 
     <!-- Filter Buttons -->
     <button id="filterAll">All</button>
@@ -161,6 +243,21 @@
       <tbody></tbody>
     </table>
 
+    <!-- Admin Reports Section -->
+    <div class="reports-section">
+      <h2>Admin Reports</h2>
+      <div class="report-tabs">
+        <button id="dailyReportBtn" class="active">Daily Report</button>
+        <button id="monthlyReportBtn">Monthly Report</button>
+      </div>
+      <div class="report-content">
+        <input id="reportDate" type="date" placeholder="Select Date">
+        <div class="report-summary" id="reportSummary">
+          <!-- Dynamic content will be inserted here -->
+        </div>
+      </div>
+    </div>
+
     <!-- Modal for Viewing Client Records -->
     <div id="viewModal" class="modal">
       <div class="modal-content">
@@ -179,8 +276,11 @@
               <th>Date</th>
               <th>Debit</th>
               <th>Credit</th>
-              <th>Method</th>
+              <th>Method/Type</th>
+              <th>Mode</th>
               <th>Remarks</th>
+              <th>Start Date</th>
+              <th>End Date</th>
             </tr>
           </thead>
           <tbody id="historyBody"></tbody>
@@ -198,7 +298,7 @@
       getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, signOut, onAuthStateChanged
     } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
     import { 
-      getFirestore, doc, getDoc, setDoc, onSnapshot, collection,
+      getFirestore, doc, getDoc, setDoc, onSnapshot, collection, addDoc, query, where, getDocs,
       enableIndexedDbPersistence 
     } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
@@ -227,8 +327,10 @@
 
     let currentUser = null;
     let clients = {};
+    let expenses = [];
     let currentFilter = "all";
     let searchQuery = "";
+    let reportType = "daily"; // daily or monthly
 
     // Function to generate client ID based on name (assuming unique names)
     function generateClientId(first, last) {
@@ -296,6 +398,7 @@
         currentUser = user;
         showAppContainer();
         loadClients();
+        loadExpenses();
       } else {
         console.log("No user signed in");
         currentUser = null;
@@ -304,7 +407,7 @@
     });
 
     // --- Add Charge ---
-    async function addCharge(first, last, amount, remarks) {
+    async function addCharge(first, last, amount, startDate, endDate, remarks) {
       if (!currentUser) return;
       const id = generateClientId(first, last);
       const ref = doc(db, "users", currentUser.uid, "clients", id);
@@ -319,7 +422,10 @@
           debit: amount,
           credit: 0,
           method: "charge",
-          remarks
+          paymentMode: "",
+          remarks,
+          startDate,
+          endDate
         });
 
         await setDoc(ref, { 
@@ -336,6 +442,17 @@
         alert("⚠️ Failed to save client record: " + err.message);
       }
     }
+
+    // --- Add Payment ---
+    async function addPayment(first, last, amount, paymentDate, paymentType, paymentMode, remarks) {
+      if (!currentUser) return;
+      const id = generateClientId(first, last);
+      const ref = doc(db, "users", currentUser.uid, "clients", id);
+      try {
+        const snap = await getDoc(ref);
+        const c = snap.exists() 
+          ? snap.data() 
+          : { firstName: first, lastName: last, debit: 0, credit: 
 
     // --- Add Payment ---
     async function addPayment(first, last, amount, method, remarks) {
@@ -514,6 +631,7 @@
   </script>
 </body>
 </html>
+
 
 
 
