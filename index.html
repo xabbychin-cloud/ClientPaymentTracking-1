@@ -85,13 +85,13 @@
 </div>
 
 <!-- ADD CHARGE -->
+<!-- ADD CHARGE -->
 <div id="chargeSection" class="section">
   <h3>Add Charge</h3>
   <div class="autocomplete-box">
-    <input id="chargeSearch" placeholder="Search Client">
+    <input id="chargeName" placeholder="Client Full Name">
     <div id="chargeAuto" class="autocomplete-list"></div>
   </div>
-  <input id="chargeName" class="readonly" readonly placeholder="Client Full Name (populated from search)">
   <input id="chargeAmount" type="number" placeholder="Amount">
   <input id="chargeStart" type="date">
   <input id="chargeEnd" type="date">
@@ -292,9 +292,9 @@ clientSearchBtn.onclick = renderClientTable;
 clientFilter.onchange = renderClientTable;
 
 // AUTOCOMPLETE FOR CHARGE (search clients and populate chargeName)
-chargeSearch.oninput = () => {
+chargeName.oninput = () => {
   chargeAuto.innerHTML = "";
-  const q = chargeSearch.value.toLowerCase();
+  const q = chargeName.value.toLowerCase();
   Object.values(clients).forEach(c => {
     if (c.name.toLowerCase().includes(q)) {
       const d = document.createElement("div");
@@ -314,7 +314,7 @@ function selectChargeClient(name) {
 // ADD CHARGE
 addChargeBtn.onclick = async () => {
   const name = chargeName.value;
-  if (!name) return alert("Please select a client.");
+  if (!name) return alert("Please enter a client name.");
   const ref = doc(db, "users", currentUser.uid, "clients", cid(name));
   const s = await getDoc(ref);
   const c = s.exists() ? s.data() : { name, debit: 0, credit: 0, history: [] };
@@ -322,7 +322,6 @@ addChargeBtn.onclick = async () => {
   await setDoc(ref, { name, debit: c.debit + +chargeAmount.value, credit: c.credit, history: c.history });
   alert("Charge added");
   // Clear form
-  chargeSearch.value = "";
   chargeName.value = "";
   chargeAmount.value = "";
   chargeStart.value = "";
@@ -424,4 +423,5 @@ window.showSection = id => {
 
 </body>
 </html>
+
 
