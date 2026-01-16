@@ -264,7 +264,7 @@ window.viewClient=name=>{
     viewBody.innerHTML+=`
     <tr>
       <td>${h.date}</td>
-      <td class="${h.debit>0&&bal>0?'debit-red':''}">${h.debit||0}</td>
+      <td>${h.debit||0}</td>
       <td>${h.credit||0}</td>
       <td>${h.method||''}</td>
       <td>${h.mode||''}</td>
@@ -299,8 +299,9 @@ function selectClient(name){
     d+=h.debit||0;cr+=h.credit||0;
     if(h.debit>0&&h.remarks)remarks.push(h.remarks);
   });
+  const bal = d - cr;
   paymentClientName.value=name;
-  paymentBalance.value=`Balance: ${d-cr}${remarks.length?' ('+remarks.join(', ')+')':''}`;
+  paymentBalance.value=`Balance: ${bal}${bal > 0 && remarks.length ? ' (' + remarks.join(', ') + ')' : ''}`;
   paymentAuto.innerHTML="";
 }
 
@@ -313,6 +314,15 @@ addPaymentBtn.onclick=async()=>{
   c.history.push({date:paymentDate.value,debit:0,credit:+paymentAmount.value,method:"payment",mode:paymentMode.value,remarks:paymentRemarks.value});
   await setDoc(ref,{...c,credit:c.credit+ +paymentAmount.value});
   alert("Payment added");
+  // Clear form after save
+  paymentSearch.value = '';
+  paymentClientName.value = '';
+  paymentBalance.value = '';
+  paymentAmount.value = '';
+  paymentType.value = '';
+  paymentMode.value = '';
+  paymentDate.value = '';
+  paymentRemarks.value = '';
 };
 
 // EXPENSE
