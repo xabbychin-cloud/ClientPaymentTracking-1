@@ -103,8 +103,3 @@ tr.paid {
   background: #e8f5e9; /* light green */
 }
 
-.highlight { font-weight: bold; background-color: yellow; }
-
-.outstanding-row { background-color: #ffe6e6; } /* Light red background for outstanding rows */
-.balance-outstanding { color: red; font-weight: bold; }
-.balance-paid { color: black; }
