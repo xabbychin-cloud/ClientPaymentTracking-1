@@ -173,23 +173,6 @@
     </table>
   </div>
 </div>
-  <h3>Transaction History</h3>
-        <table class="history-table" id="historyTable">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Debit</th>
-              <th>Credit</th>
-              <th>Method</th>
-              <th>Remarks</th>
-            </tr>
-          </thead>
-          <tbody id="historyBody"></tbody>
-        </table>
-      </div>
-    </div>
-
-
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
@@ -210,6 +193,11 @@ let currentUser=null, clients={}, expenses=[];
 const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
   // Add this helper function near the top (after const cid = ...)
 const formatDate = (isoString) => {
+const highlightText = (text, query) => {
+  if (!query) return text;
+  const regex = new RegExp(`(${query})`, 'gi');
+  return text.replace(regex, '<span class="highlight">$1</span>');
+};
   if (!isoString) return '';
   const d = new Date(isoString);
   return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
@@ -318,9 +306,10 @@ function renderClientTable() {
     if (q && !c.name.toLowerCase().includes(q)) return;
     if (f !== "all" && f !== s) return;
     hasMatches = true;
+    const highlightedName = highlightText(c.name, q);
     clientsBody.innerHTML += `
       <tr>
-        <td>${c.name}</td>
+        <td>${highlightedName}</td>
         <td class="${bal > 0 ? 'debit-red' : ''}">${c.debit || 0}</td>
         <td>${c.credit || 0}</td>
         <td class="${bal > 0 ? 'debit-red' : ''}">${bal}</td>
@@ -501,6 +490,7 @@ window.showSection = id => {
 
 </body>
 </html>
+
 
 
 
