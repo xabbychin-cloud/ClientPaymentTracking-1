@@ -371,10 +371,13 @@ generateReportBtn.onclick=()=>{
       else otherSales+=h.credit;
     }
   }));
+  // Merge otherSales into cashSales
+  cashSales += otherSales;
+  otherSales = 0;
   const totalCollection = cashSales + bankTransferSales + creditCardSales + otherSales;
   const totalExpenses = expenses.filter(x=>new Date(x.date)>=s&&new Date(x.date)<=e).reduce((a,b)=>a+b.amount,0);
-  const netIncome = totalCollection - totalExpenses;
-  const cashOnHand = netIncome - (bankTransferSales + creditCardSales + otherSales);
+  const netSales = totalCollection - totalExpenses;
+  const cashOnHand = netSales - (bankTransferSales + creditCardSales + otherSales);
   reportResult.innerHTML=`
     <strong>Sales Breakdown:</strong><br>
     Total Cash Sales: ${cashSales}<br>
@@ -383,7 +386,7 @@ generateReportBtn.onclick=()=>{
     Total Other Sales: ${otherSales}<br><br>
     <strong>Total Collection: ${totalCollection}</strong><br>
     <strong>Total Expenses: ${totalExpenses}</strong><br>
-    <strong>Net Income: ${netIncome}</strong><br>
+    <strong>Net Sales: ${netSales}</strong><br>
     <strong>Cash on Hand: ${cashOnHand}</strong>
   `;
 };
