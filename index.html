@@ -373,8 +373,8 @@ generateReportBtn.onclick=()=>{
   }));
   const totalCollection = cashSales + bankTransferSales + creditCardSales + otherSales;
   const totalExpenses = expenses.filter(x=>new Date(x.date)>=s&&new Date(x.date)<=e).reduce((a,b)=>a+b.amount,0);
-  const net = totalCollection - totalExpenses;
-  const cashOnHand = cashSales - totalExpenses;
+  const netIncome = totalCollection - totalExpenses;
+  const cashOnHand = netIncome - (bankTransferSales + creditCardSales + otherSales);
   reportResult.innerHTML=`
     <strong>Sales Breakdown:</strong><br>
     Total Cash Sales: ${cashSales}<br>
@@ -383,7 +383,7 @@ generateReportBtn.onclick=()=>{
     Total Other Sales: ${otherSales}<br><br>
     <strong>Total Collection: ${totalCollection}</strong><br>
     <strong>Total Expenses: ${totalExpenses}</strong><br>
-    <strong>Net: ${net}</strong><br>
+    <strong>Net Income: ${netIncome}</strong><br>
     <strong>Cash on Hand: ${cashOnHand}</strong>
   `;
 };
