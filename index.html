@@ -261,15 +261,45 @@ window.viewClient = (name)=>{
 
   viewTitle.textContent = name;
   viewBody.innerHTML="";
-  let totalDebit=0, totalCredit=0;
-  c.history.forEach(h=>{ totalDebit+=(h.debit||0); totalCredit+=(h.credit||0); });
+
+  // Compute totals
+  let totalDebit = 0, totalCredit = 0;
+  c.history.forEach(h => { totalDebit += h.debit||0; totalCredit += h.credit||0; });
   let remainingBalance = totalDebit - totalCredit;
 
   // SUMMARY
   viewSummary.innerHTML=`<strong>Total Add Charge:</strong> ${totalDebit}<br>
   <strong>Total Paid:</strong> ${totalCredit}<br>
-  <strong>Balance:</strong> <span class="${remainingBalance>0?'balance-outstanding':'balance-paid'}">${remainingBalance}</span><br>
+  <strong>Balance:</strong> ${remainingBalance}<br>
   <strong>Status:</strong> ${remainingBalance>0?'Outstanding':'Paid'}`;
+
+  // Sort history latest first
+  const historySorted = [...c.history].sort((a,b)=>new Date(b.date) - new Date(a.date));
+
+  // Loop to render table rows
+  historySorted.forEach(h=>{
+    let highlightRow = false;
+
+    if(h.debit>0 && remainingBalance>0){
+      // This charge contributes to remaining balance
+      highlightRow = true;
+      remainingBalance -= h.debit > remainingBalance ? remainingBalance : h.debit;
+    }
+
+    viewBody.innerHTML += `<tr style="${highlightRow?'background-color: #ffcccc':''}">
+      <td>${formatDate(h.date)}</td>
+      <td>${h.debit||0}</td>
+      <td>${h.credit||0}</td>
+      <td>${h.method||''}</td>
+      <td>${h.mode||''}</td>
+      <td>${h.remarks||''}</td>
+      <td>${h.start||''}</td>
+      <td>${h.end||''}</td>
+    </tr>`;
+  });
+
+  viewModal.style.display="block";
+};
 
   // HISTORY TABLE
   c.history.forEach(h=>{
@@ -367,3 +397,4 @@ window.showSection=id=>{ document.querySelectorAll(".section").forEach(s=>s.styl
 </script>
 </body>
 </html>
+
