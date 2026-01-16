@@ -27,18 +27,16 @@ th{background:#eee;color:black}
 .autocomplete-item:hover{background:#f0f0f0}
 #logoutBtn{background:#c62828;color:white;margin:15px}
 .highlight { font-weight: bold; background-color: yellow; }
-.outstanding-row { } /* styling handled via debit-red only */
 .balance-outstanding { color: red; font-weight: bold; }
 .balance-paid { color: black; }
 </style>
 </head>
-
 <body>
 
 <h1>Client Payment Tracker</h1>
 
 <div id="toolbar">
-  <button onclick="showSection('clientSection')">Client Info</button>
+  <button onclick="showSection('clientSection')">Client Information</button>
   <button onclick="showSection('chargeSection')">Add Charge</button>
   <button onclick="showSection('paymentSection')">Add Payment</button>
   <button onclick="showSection('expenseSection')">Expenses</button>
@@ -66,9 +64,9 @@ th{background:#eee;color:black}
     <option value="paid">Paid</option>
   </select>
   <table>
-    <thead><tr>
-      <th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Status</th><th>Action</th>
-    </tr></thead>
+    <thead>
+      <tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Status</th><th>Action</th></tr>
+    </thead>
     <tbody id="clientsBody"></tbody>
   </table>
 </div>
@@ -117,7 +115,8 @@ th{background:#eee;color:black}
 <!-- EXPENSE -->
 <div id="expenseSection" class="section">
   <h3>Add Expense</h3>
-  <input id="expenseDate" type="date">
+  <input id="expenseStart" type="date" placeholder="Start Date">
+  <input id="expenseEnd" type="date" placeholder="End Date">
   <input id="expenseAmount" type="number" placeholder="Amount">
   <input id="expenseDesc" placeholder="Description">
   <input id="expenseInvoice" placeholder="Invoice (optional)">
@@ -134,9 +133,7 @@ th{background:#eee;color:black}
   <div id="expensesTable" style="display:none; margin-top: 15px;">
     <h4>Expenses List</h4>
     <table>
-      <thead>
-        <tr><th>Date</th><th>Amount</th><th>Description</th><th>Invoice</th></tr>
-      </thead>
+      <thead><tr><th>Date</th><th>Amount</th><th>Description</th><th>Invoice</th></tr></thead>
       <tbody id="expensesBody"></tbody>
     </table>
   </div>
@@ -153,10 +150,7 @@ th{background:#eee;color:black}
     <div id="viewSummary" style="margin-bottom: 15px; padding: 10px; background: #f9f9f9; border-radius: 4px;"></div>
     <table>
       <thead>
-        <tr>
-          <th>Date</th><th>Debit</th><th>Credit</th><th>Method</th>
-          <th>Mode</th><th>Remarks</th><th>Start</th><th>End</th>
-        </tr>
+        <tr><th>Date</th><th>Debit</th><th>Credit</th><th>Method</th><th>Mode</th><th>Remarks</th><th>Start</th><th>End</th></tr>
       </thead>
       <tbody id="viewBody"></tbody>
     </table>
@@ -168,73 +162,58 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebas
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
+// ===== KEEP YOUR EXISTING FIREBASE CONFIG =====
 const app = initializeApp({
-  apiKey:"YOUR_API_KEY",
-  authDomain:"YOUR_PROJECT.firebaseapp.com",
-  projectId:"YOUR_PROJECT_ID"
+  apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
+  authDomain:"client-payment-tracker-3572b.firebaseapp.com",
+  projectId:"client-payment-tracker-3572b"
 });
 
 const auth = getAuth(app);
 const db = getFirestore(app);
 
 let currentUser = null, clients = {}, expenses = [];
+
 const cid = n => n.toLowerCase().replace(/\s+/g, '_');
+const formatDate = (isoString) => { if (!isoString) return ''; const d = new Date(isoString); return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`; };
+const highlightText = (text, query) => { if (!query) return text; const regex = new RegExp(`(${query})`, 'gi'); return text.replace(regex, '<span class="highlight">$1</span>'); };
 
-// LOGIN
-loginBtn.onclick = () => {
-  signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value)
-    .catch(e => alert(e.message));
-};
+// ===== LOGIN =====
+loginBtn.onclick = () => { signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value).catch(e=>alert(e.message)); };
 
-// AUTH STATE
-onAuthStateChanged(auth, u => {
-  if(u){
-    currentUser = u;
-    authSection.style.display = "none";
-    appSection.style.display = "block";
-    loadClients();
-    loadExpenses();
-  } else {
-    currentUser = null;
-    authSection.style.display = "block";
-    appSection.style.display = "none";
-  }
+// ===== AUTH STATE =====
+onAuthStateChanged(auth,u=>{
+  if(u){ currentUser=u; authSection.style.display="none"; appSection.style.display="block"; loadClients(); loadExpenses(); }
+  else{ currentUser=null; authSection.style.display="block"; appSection.style.display="none"; }
 });
 
-// LOGOUT FIX
-logoutBtn.onclick = async () => {
-  try{
-    await signOut(auth);
-    currentUser=null;
-    authSection.style.display="block";
-    appSection.style.display="none";
-    loginEmail.value="";
-    loginPassword.value="";
-  } catch(e){alert(e.message);}
-};
+// ===== LOGOUT =====
+logoutBtn.onclick = () => { signOut(auth).then(()=>{ alert("Logged out"); }).catch(e=>alert(e.message)); };
 
-// LOAD CLIENTS
+// ===== LOAD CLIENTS =====
 function loadClients(){
-  onSnapshot(collection(db, "users", currentUser.uid, "clients"), snap=>{
+  onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
     clients={};
     snap.forEach(d=>clients[d.id]=d.data());
     renderClientTable();
   });
 }
 
-// CLIENT TABLE
+// ===== CLIENT TABLE =====
 function renderClientTable(){
   const q = clientSearchInput.value.toLowerCase();
   const f = clientFilter.value;
   clientsBody.innerHTML="";
+  let hasMatches=false;
   Object.values(clients).forEach(c=>{
     const bal=(c.debit||0)-(c.credit||0);
-    const s = bal>0?"outstanding":"paid";
+    const s=bal>0?"outstanding":"paid";
     if(q && !c.name.toLowerCase().includes(q)) return;
     if(f!=="all" && f!==s) return;
-    const highlightName = q?c.name.replace(new RegExp(`(${q})`,"gi"),'<span class="highlight">$1</span>'):c.name;
+    hasMatches=true;
+    const highlightedName = highlightText(c.name,q);
     clientsBody.innerHTML+=`<tr>
-      <td>${highlightName}</td>
+      <td>${highlightedName}</td>
       <td class="${bal>0?'debit-red':''}">${c.debit||0}</td>
       <td>${c.credit||0}</td>
       <td class="${bal>0?'debit-red':''}">${bal}</td>
@@ -242,26 +221,80 @@ function renderClientTable(){
       <td><button onclick="viewClient('${c.name}')">View</button></td>
     </tr>`;
   });
+  if(!hasMatches) clientsBody.innerHTML="<tr><td colspan='6' style='text-align:center;'>No records found matching your search and filter criteria.</td></tr>";
 }
-clientSearchBtn.onclick = renderClientTable;
-clientFilter.onchange = renderClientTable;
+clientSearchBtn.onclick=renderClientTable;
+clientFilter.onchange=renderClientTable;
 
-// AUTOCOMPLETE
-chargeName.oninput = () => {
+// ===== AUTOCOMPLETE CHARGE =====
+chargeName.oninput = ()=>{
   chargeAuto.innerHTML="";
-  const q=chargeName.value.toLowerCase();
+  const q = chargeName.value.toLowerCase();
   Object.values(clients).forEach(c=>{
     if(c.name.toLowerCase().includes(q)){
-      const d=document.createElement("div");
+      const d = document.createElement("div");
       d.className="autocomplete-item";
       d.textContent=c.name;
-      d.onclick=()=>{chargeName.value=c.name;chargeAuto.innerHTML="";};
+      d.onclick=()=>{ chargeName.value=c.name; chargeAuto.innerHTML=""; };
       chargeAuto.appendChild(d);
     }
   });
 };
 
-paymentSearch.oninput = () => {
+// ===== ADD CHARGE =====
+addChargeBtn.onclick=async()=>{
+  const name=chargeName.value;
+  if(!name) return alert("Please enter a client name.");
+  const ref=doc(db,"users",currentUser.uid,"clients",cid(name));
+  const s=await getDoc(ref);
+  const c=s.exists()?s.data():{name,debit:0,credit:0,history:[]};
+  c.history.push({date:new Date().toISOString(),debit:+chargeAmount.value,credit:0,method:"charge",remarks:chargeRemarks.value,start:chargeStart.value,end:chargeEnd.value});
+  await setDoc(ref,{name,debit:c.debit+ +chargeAmount.value,credit:c.credit,history:c.history});
+  alert("Charge added");
+  chargeName.value=""; chargeAmount.value=""; chargeStart.value=""; chargeEnd.value=""; chargeRemarks.value="";
+};
+
+// ===== VIEW CLIENT (FIXED: row highlighting only unpaid charges) =====
+window.viewClient = (name)=>{
+  const c = clients[cid(name)];
+  if(!c){ alert("Client not found"); return; }
+
+  viewTitle.textContent = name;
+  viewBody.innerHTML="";
+  let totalDebit=0, totalCredit=0;
+  c.history.forEach(h=>{ totalDebit+=(h.debit||0); totalCredit+=(h.credit||0); });
+  let remainingBalance = totalDebit - totalCredit;
+
+  // SUMMARY
+  viewSummary.innerHTML=`<strong>Total Add Charge:</strong> ${totalDebit}<br>
+  <strong>Total Paid:</strong> ${totalCredit}<br>
+  <strong>Balance:</strong> <span class="${remainingBalance>0?'balance-outstanding':'balance-paid'}">${remainingBalance}</span><br>
+  <strong>Status:</strong> ${remainingBalance>0?'Outstanding':'Paid'}`;
+
+  // HISTORY TABLE
+  c.history.forEach(h=>{
+    let highlight="";
+    if(h.debit>0 && remainingBalance>0){
+      highlight="debit-red";
+      remainingBalance -= h.debit>remainingBalance?remainingBalance:h.debit;
+    }
+    viewBody.innerHTML+=`<tr>
+      <td>${formatDate(h.date)}</td>
+      <td class="${highlight}">${h.debit||0}</td>
+      <td>${h.credit||0}</td>
+      <td>${h.method||''}</td>
+      <td>${h.mode||''}</td>
+      <td>${h.remarks||''}</td>
+      <td>${h.start||''}</td>
+      <td>${h.end||''}</td>
+    </tr>`;
+  });
+  viewModal.style.display="block";
+};
+window.closeViewModal=()=>viewModal.style.display="none";
+
+// ===== AUTOCOMPLETE PAYMENT =====
+paymentSearch.oninput=()=>{
   paymentAuto.innerHTML="";
   const q=paymentSearch.value.toLowerCase();
   Object.values(clients).forEach(c=>{
@@ -269,48 +302,33 @@ paymentSearch.oninput = () => {
       const d=document.createElement("div");
       d.className="autocomplete-item";
       d.textContent=c.name;
-      d.onclick=()=>{selectClient(c.name); paymentAuto.innerHTML="";};
+      d.onclick=()=>{ paymentClientName.value=c.name; const client=clients[cid(c.name)]; paymentBalance.value=client.debit-client.credit; paymentAuto.innerHTML=""; };
       paymentAuto.appendChild(d);
     }
   });
 };
 
-function selectClient(name){
-  paymentClientName.value=name;
-  const c=clients[cid(name)];
-  const bal=(c.debit||0)-(c.credit||0);
-  paymentBalance.value=bal;
-}
-
-// ADD CHARGE
-addChargeBtn.onclick=async()=>{
-  const name=chargeName.value;
-  if(!name) return alert("Enter client name");
-  const ref=doc(db,"users",currentUser.uid,"clients",cid(name));
-  const s=await getDoc(ref);
-  const c=s.exists()?s.data():{name,debit:0,credit:0,history:[]};
-  const debitAmt=+chargeAmount.value;
-  c.history.push({date:new Date().toISOString(), debit:debitAmt, credit:0, method:"charge", remarks:chargeRemarks.value, start:chargeStart.value, end:chargeEnd.value});
-  await setDoc(ref,{name, debit:c.debit+debitAmt, credit:c.credit, history:c.history});
-  alert("Charge added");
-  chargeName.value=""; chargeAmount.value=""; chargeStart.value=""; chargeEnd.value=""; chargeRemarks.value="";
-};
-
-// ADD PAYMENT (with overpayment lock)
+// ===== ADD PAYMENT (CLEAR FIELDS + LOCK OVERPAYMENT) =====
 addPaymentBtn.onclick=async()=>{
-  const name=paymentClientName.value;
-  if(!name) return alert("Select client");
-  const amount=+paymentAmount.value;
-  const c=clients[cid(name)];
-  const bal=(c.debit||0)-(c.credit||0);
-  if(amount>bal) return alert("Cannot pay more than balance");
-  c.history.push({date:paymentDate.value, debit:0, credit:amount, method:"payment", mode:paymentMode.value, remarks:paymentRemarks.value});
-  await setDoc(doc(db,"users",currentUser.uid,"clients",cid(name)),{...c, credit:c.credit+amount});
+  const name = paymentClientName.value;
+  const amount = +paymentAmount.value;
+  if(!name) return alert("Select a client first.");
+  const ref = doc(db,"users",currentUser.uid,"clients",cid(name));
+  const snap = await getDoc(ref);
+  const client = snap.data();
+  const balance = client.debit - client.credit;
+  if(amount>balance) return alert("Payment exceeds balance. Overpayment is not allowed.");
+
+  client.history.push({date:paymentDate.value,debit:0,credit:amount,method:"payment",mode:paymentMode.value,remarks:paymentRemarks.value});
+  await setDoc(ref,{...client,credit:client.credit+amount});
   alert("Payment added");
-  paymentClientName.value=""; paymentBalance.value=""; paymentAmount.value=""; paymentType.value=""; paymentMode.value=""; paymentDate.value=""; paymentRemarks.value="";
+
+  // CLEAR FIELDS
+  paymentClientName.value=""; paymentBalance.value=""; paymentSearch.value="";
+  paymentAmount.value=""; paymentType.value=""; paymentMode.value=""; paymentDate.value=""; paymentRemarks.value="";
 };
 
-// EXPENSES
+// ===== EXPENSE =====
 function loadExpenses(){
   onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
     expenses=[];
@@ -319,77 +337,33 @@ function loadExpenses(){
 }
 addExpenseBtn.onclick=async()=>{
   await addDoc(collection(db,"users",currentUser.uid,"expenses"),{
-    date:expenseDate.value, amount:+expenseAmount.value, desc:expenseDesc.value, invoice:expenseInvoice.value
+    date:expenseStart.value,
+    amount:+expenseAmount.value,
+    desc:expenseDesc.value,
+    invoice:expenseInvoice.value
   });
   alert("Expense saved");
-  expenseDate.value=""; expenseAmount.value=""; expenseDesc.value=""; expenseInvoice.value="";
+  expenseStart.value=""; expenseEnd.value=""; expenseAmount.value=""; expenseDesc.value=""; expenseInvoice.value="";
 };
 
-// REPORT
+// ===== REPORT =====
 generateReportBtn.onclick=()=>{
-  const s=new Date(reportStart.value), e=new Date(reportEnd.value);
+  const s=new Date(reportStart.value);
+  const e=new Date(reportEnd.value);
   let sales=0;
-  Object.values(clients).forEach(c=>c.history.forEach(h=>{
-    const d=new Date(h.date);
-    if(h.credit && d>=s && d<=e) sales+=h.credit;
-  }));
-  const exp=expenses.filter(x=>new Date(x.date)>=s && new Date(x.date)<=e).reduce((a,b)=>a+b.amount,0);
-  reportResult.innerHTML=`Sales:${sales}<br>Expenses:${exp}<br>Net:${sales-exp}`;
-  expensesTable.style.display="none";
-};
-
-// VIEW EXPENSES
-viewExpensesBtn.onclick=()=>{
-  const s=new Date(reportStart.value), e=new Date(reportEnd.value);
-  const filtered=expenses.filter(x=>new Date(x.date)>=s && new Date(x.date)<=e);
+  Object.values(clients).forEach(c=>c.history.forEach(h=>{ const d=new Date(h.date); if(h.credit&&d>=s&&d<=e) sales+=h.credit; }));
+  const exp = expenses.filter(x=>new Date(x.date)>=s && new Date(x.date)<=e).reduce((a,b)=>a+b.amount,0);
+  reportResult.innerHTML=`Sales: ${sales}<br>Expenses: ${exp}<br>Net: ${sales-exp}`;
+  expensesTable.style.display="block"; // show expenses below report
+  const filteredExpenses = expenses.filter(x=>new Date(x.date)>=s && new Date(x.date)<=e);
   expensesBody.innerHTML="";
-  if(filtered.length===0) expensesBody.innerHTML="<tr><td colspan='4' style='text-align:center;'>No expenses found.</td></tr>";
-  else filtered.forEach(exp=>{
-    expensesBody.innerHTML+=`<tr><td>${exp.date}</td><td>${exp.amount}</td><td>${exp.desc}</td><td>${exp.invoice||""}</td></tr>`;
-  });
-  expensesTable.style.display="block";
+  if(filteredExpenses.length===0) expensesBody.innerHTML="<tr><td colspan='4' style='text-align:center;'>No expenses found.</td></tr>";
+  else filteredExpenses.forEach(exp=>{ expensesBody.innerHTML+=`<tr><td>${formatDate(exp.date)}</td><td>${exp.amount}</td><td>${exp.desc||''}</td><td>${exp.invoice||''}</td></tr>`; });
 };
 
-// SHOW/HIDE SECTION
-window.showSection=id=>{document.querySelectorAll(".section").forEach(s=>s.style.display="none"); document.getElementById(id).style.display="block";};
+// ===== SHOW SECTION =====
+window.showSection=id=>{ document.querySelectorAll(".section").forEach(s=>s.style.display="none"); document.getElementById(id).style.display="block"; };
 
-// VIEW MODAL FIX (row-level highlighting)
-window.viewClient = function(name){
-  const c = clients[cid(name)];
-  if(!c) return;
-  viewTitle.textContent = name;
-  viewBody.innerHTML="";
-  let totalDebit=0, totalCredit=0;
-  c.history.forEach(h=>{totalDebit+=h.debit||0; totalCredit+=h.credit||0;});
-  let remainingBalance = totalDebit - totalCredit;
-
-  viewSummary.innerHTML=`<strong>Total Add Charge:</strong> ${totalDebit}<br>
-  <strong>Total Paid:</strong> ${totalCredit}<br>
-  <strong>Balance:</strong> <span class="${remainingBalance>0?'balance-outstanding':'balance-paid'}">${remainingBalance}</span><br>
-  <strong>Status:</strong> ${remainingBalance>0?'Outstanding':'Paid'}`;
-
-  // ROW HIGHLIGHT LOGIC
-  c.history.forEach(h=>{
-    let highlight="";
-    if(h.debit>0 && remainingBalance>0){
-      highlight="debit-red";
-      if(remainingBalance>=h.debit) remainingBalance-=h.debit;
-      else remainingBalance=0;
-    }
-    viewBody.innerHTML+=`<tr>
-      <td>${h.date||""}</td>
-      <td class="${highlight}">${h.debit||0}</td>
-      <td>${h.credit||0}</td>
-      <td>${h.method||""}</td>
-      <td>${h.mode||""}</td>
-      <td>${h.remarks||""}</td>
-      <td>${h.start||""}</td>
-      <td>${h.end||""}</td>
-    </tr>`;
-  });
-  viewModal.style.display="block";
-};
-window.closeViewModal = ()=>{viewModal.style.display="none";}
 </script>
 </body>
 </html>
