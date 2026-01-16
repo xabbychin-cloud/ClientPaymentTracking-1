@@ -154,7 +154,19 @@
   <input id="reportStart" type="date">
   <input id="reportEnd" type="date">
   <button id="generateReportBtn">Generate Report</button>
+  <button id="viewExpensesBtn">View Expenses</button>
   <div id="reportResult"></div>
+  <div id="expensesTable" style="display:none; margin-top: 15px;">
+    <h4>Expenses List</h4>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th><th>Amount</th><th>Description</th><th>Invoice</th>
+        </tr>
+      </thead>
+      <tbody id="expensesBody"></tbody>
+    </table>
+  </div>
 </div>
 
 <button id="logoutBtn">Logout</button>
@@ -444,10 +456,49 @@ window.showSection = id => {
   document.querySelectorAll(".section").forEach(s => s.style.display = "none");
   document.getElementById(id).style.display = "block";
 };
+
+  // REPORT
+generateReportBtn.onclick = () => {
+  const s = new Date(reportStart.value);
+  const e = new Date(reportEnd.value);
+  let sales = 0;
+  Object.values(clients).forEach(c => c.history.forEach(h => {
+    const d = new Date(h.date);
+    if (h.credit && d >= s && d <= e) sales += h.credit;
+  }));
+  const exp = expenses.filter(x => new Date(x.date) >= s && new Date(x.date) <= e)
+    .reduce((a, b) => a + b.amount, 0);
+  reportResult.innerHTML = `Sales: ${sales}<br>Expenses: ${exp}<br>Net: ${sales - exp}`;
+  // Hide expenses table when generating report
+  expensesTable.style.display = "none";
+};
+
+// VIEW EXPENSES
+viewExpensesBtn.onclick = () => {
+  const s = new Date(reportStart.value);
+  const e = new Date(reportEnd.value);
+  const filteredExpenses = expenses.filter(x => new Date(x.date) >= s && new Date(x.date) <= e);
+  expensesBody.innerHTML = "";
+  if (filteredExpenses.length === 0) {
+    expensesBody.innerHTML = "<tr><td colspan='4' style='text-align:center;'>No expenses found for the selected date range.</td></tr>";
+  } else {
+    filteredExpenses.forEach(exp => {
+      expensesBody.innerHTML += `
+        <tr>
+          <td>${formatDate(exp.date)}</td>
+          <td>${exp.amount}</td>
+          <td>${exp.desc || ''}</td>
+          <td>${exp.invoice || ''}</td>
+        </tr>`;
+    });
+  }
+  expensesTable.style.display = "block";
+};
 </script>
 
 </body>
 </html>
+
 
 
 
