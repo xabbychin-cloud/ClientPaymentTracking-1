@@ -21,8 +21,8 @@ table{width:100%;border-collapse:collapse;margin-top:10px}
 th,td{border:1px solid #ccc;padding:6px;text-align:left}
 th{background:#eee;color:black}
 
-.debit-red{color:red;font-weight:bold}
-.balance-paid{color:black}
+.balance-red{color:red;font-weight:bold}
+.balance-black{color:black}
 
 .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5)}
 .modal-content{background:white;width:95%;max-width:900px;margin:5% auto;padding:15px;max-height:80vh;overflow:auto}
@@ -37,6 +37,8 @@ th{background:#eee;color:black}
 }
 .autocomplete-item{padding:6px;cursor:pointer}
 .autocomplete-item:hover{background:#f0f0f0}
+
+.remark-red{color:red;font-weight:bold}
 
 .highlight{background:yellow;font-weight:bold}
 
@@ -90,10 +92,7 @@ th{background:#eee;color:black}
 <!-- ADD CHARGE -->
 <div id="chargeSection" class="section">
   <h3>Add Charge</h3>
-  <div class="autocomplete-box">
-    <input id="chargeName" placeholder="Client Full Name">
-    <div id="chargeAuto" class="autocomplete-list"></div>
-  </div>
+  <input id="chargeName" placeholder="Client Full Name">
   <input id="chargeAmount" type="number" placeholder="Amount">
   <input id="chargeStart" type="date">
   <input id="chargeEnd" type="date">
@@ -111,16 +110,11 @@ th{background:#eee;color:black}
   </div>
 
   <input id="paymentClientName" class="readonly" readonly>
-  <input id="paymentBalance" class="readonly" readonly>
+
+  <!-- balance rendered as HTML -->
+  <div id="paymentBalance" class="readonly" style="padding:8px;margin-top:6px"></div>
 
   <input id="paymentAmount" type="number" placeholder="Payment Amount">
-  <select id="paymentType">
-    <option value="">Payment Type</option>
-    <option>Cash</option>
-    <option>Bank Transfer</option>
-    <option>Credit Card</option>
-    <option>Others</option>
-  </select>
   <select id="paymentMode">
     <option value="">Payment Mode</option>
     <option>Full</option>
@@ -182,13 +176,11 @@ const app = initializeApp({
   projectId:"client-payment-tracker-3572b"
 });
 
-const auth = getAuth(app);
-const db = getFirestore(app);
+const auth=getAuth(app);
+const db=getFirestore(app);
 
 let currentUser=null, clients={}, expenses=[];
 const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
-
-const highlight=(t,q)=>!q?t:t.replace(new RegExp(`(${q})`,'gi'),'<span class="highlight">$1</span>');
 
 // LOGIN
 loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value)
@@ -200,13 +192,10 @@ onAuthStateChanged(auth,u=>{
     authSection.style.display="none";
     appSection.style.display="block";
     loadClients(); loadExpenses();
-  }else{
-    authSection.style.display="block";
-    appSection.style.display="none";
   }
 });
 
-// CLIENTS
+// LOAD CLIENTS
 function loadClients(){
   onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
     clients={};
@@ -215,56 +204,56 @@ function loadClients(){
   });
 }
 
+// CLIENT LIST
 function renderClients(){
   const q=clientSearchInput.value.toLowerCase();
   const f=clientFilter.value;
   clientsBody.innerHTML="";
   Object.values(clients).forEach(c=>{
     const bal=(c.debit||0)-(c.credit||0);
-    const s=bal>0?"outstanding":"paid";
+    const status=bal>0?"outstanding":"paid";
     if(q&&!c.name.toLowerCase().includes(q))return;
-    if(f!=="all"&&f!==s)return;
+    if(f!=="all"&&f!==status)return;
     clientsBody.innerHTML+=`
     <tr>
-      <td>${highlight(c.name,q)}</td>
-      <td class="${bal>0?'debit-red':''}">${c.debit||0}</td>
+      <td>${c.name}</td>
+      <td>${c.debit||0}</td>
       <td>${c.credit||0}</td>
-      <td class="${bal>0?'debit-red':'balance-paid'}">${bal}</td>
-      <td>${s}</td>
+      <td class="${bal>0?'balance-red':'balance-black'}">${bal}</td>
+      <td>${status}</td>
       <td><button onclick="viewClient('${c.name}')">View</button></td>
     </tr>`;
   });
 }
-
 clientSearchBtn.onclick=renderClients;
 clientFilter.onchange=renderClients;
 
 // ADD CHARGE
 addChargeBtn.onclick=async()=>{
   const name=chargeName.value;
-  if(!name)return alert("Enter client name");
   const ref=doc(db,"users",currentUser.uid,"clients",cid(name));
   const s=await getDoc(ref);
   const c=s.exists()?s.data():{name,debit:0,credit:0,history:[]};
-  c.history.push({date:new Date().toISOString(),debit:+chargeAmount.value,credit:0,method:"charge",remarks:chargeRemarks.value,start:chargeStart.value,end:chargeEnd.value});
+  c.history.push({date:new Date().toISOString(),debit:+chargeAmount.value,credit:0,remarks:chargeRemarks.value,start:chargeStart.value,end:chargeEnd.value});
   await setDoc(ref,{name,debit:c.debit+ +chargeAmount.value,credit:c.credit,history:c.history});
   alert("Charge added");
 };
 
-// VIEW CLIENT
+// VIEW CLIENT (ONLY BALANCE COLORED)
 window.viewClient=name=>{
   const c=clients[cid(name)];
   let d=0,cr=0;
   c.history.forEach(h=>{d+=h.debit||0;cr+=h.credit||0});
   const bal=d-cr;
+
   viewTitle.textContent=name;
-  viewSummary.innerHTML=`Total Debit: ${d}<br>Total Credit: ${cr}<br>Balance: <span class="${bal>0?'debit-red':'balance-paid'}">${bal}</span>`;
+  viewSummary.innerHTML=`Balance: <span class="${bal>0?'balance-red':'balance-black'}">${bal}</span>`;
   viewBody.innerHTML="";
   c.history.forEach(h=>{
     viewBody.innerHTML+=`
     <tr>
       <td>${h.date}</td>
-      <td class="${h.debit>0&&bal>0?'debit-red':''}">${h.debit||0}</td>
+      <td>${h.debit||0}</td>
       <td>${h.credit||0}</td>
       <td>${h.method||''}</td>
       <td>${h.mode||''}</td>
@@ -296,11 +285,12 @@ function selectClient(name){
   const c=clients[cid(name)];
   let d=0,cr=0,remarks=[];
   c.history.forEach(h=>{
-    d+=h.debit||0;cr+=h.credit||0;
-    if(h.debit>0&&h.remarks)remarks.push(h.remarks);
+    d+=h.debit||0; cr+=h.credit||0;
+    if(h.debit>0 && h.remarks) remarks.push(h.remarks);
   });
+  const bal=d-cr;
   paymentClientName.value=name;
-  paymentBalance.value=`Balance: ${d-cr}${remarks.length?' ('+remarks.join(', ')+')':''}`;
+  paymentBalance.innerHTML=`Balance: ${bal} ${remarks.length?'<span class="remark-red">('+remarks.join(', ')+')</span>':''}`;
   paymentAuto.innerHTML="";
 }
 
@@ -310,7 +300,7 @@ addPaymentBtn.onclick=async()=>{
   const ref=doc(db,"users",currentUser.uid,"clients",cid(name));
   const s=await getDoc(ref);
   const c=s.data();
-  c.history.push({date:paymentDate.value,debit:0,credit:+paymentAmount.value,method:"payment",mode:paymentMode.value,remarks:paymentRemarks.value});
+  c.history.push({date:paymentDate.value,debit:0,credit:+paymentAmount.value,remarks:paymentRemarks.value});
   await setDoc(ref,{...c,credit:c.credit+ +paymentAmount.value});
   alert("Payment added");
 };
