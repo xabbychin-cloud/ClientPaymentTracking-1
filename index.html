@@ -43,15 +43,19 @@ th{background:#eee;color:black}
   <button onclick="showSection('reportSection')">Admin Report</button>
 </div>
 
-<!-- LOGIN -->
-<div id="authSection" class="section" style="display:block">
-  <h3>Login</h3>
-  <input id="loginEmail" placeholder="Email">
-  <input id="loginPassword" type="password" placeholder="Password">
-  <button id="loginBtn">Login</button>
-</div>
+// ===== LOGIN =====
+const loginBtn = document.getElementById("loginBtn");
+const loginEmail = document.getElementById("loginEmail");
+const loginPassword = document.getElementById("loginPassword");
 
-<div id="appSection" style="display:none">
+loginBtn.onclick = () => {
+  const email = loginEmail.value.trim();
+  const password = loginPassword.value.trim();
+  if(!email || !password){
+    alert("Please enter email and password");
+    return;
+  }
+
 
 <!-- CLIENT INFORMATION -->
 <div id="clientSection" class="section">
@@ -178,8 +182,14 @@ const cid = n => n.toLowerCase().replace(/\s+/g, '_');
 const formatDate = (isoString) => { if (!isoString) return ''; const d = new Date(isoString); return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`; };
 const highlightText = (text, query) => { if (!query) return text; const regex = new RegExp(`(${query})`, 'gi'); return text.replace(regex, '<span class="highlight">$1</span>'); };
 
-// ===== LOGIN =====
-loginBtn.onclick = () => { signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value).catch(e=>alert(e.message)); };
+  signInWithEmailAndPassword(auth, email, password)
+    .then(userCredential => {
+      // login successful, Firebase onAuthStateChanged will handle showing app
+      console.log("Logged in as:", userCredential.user.email);
+    })
+    .catch(e => alert("Login failed: " + e.message));
+};
+
 
 // ===== AUTH STATE =====
 onAuthStateChanged(auth,u=>{
@@ -397,4 +407,5 @@ window.showSection=id=>{ document.querySelectorAll(".section").forEach(s=>s.styl
 </script>
 </body>
 </html>
+
 
