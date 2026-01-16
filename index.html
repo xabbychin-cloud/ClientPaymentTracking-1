@@ -203,7 +203,7 @@ const highlightText = (text, query) => {
   return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
 };
 
-// VIEW CLIENT (updated with summary and conditional debit color)
+// VIEW CLIENT (updated summary styling and row highlighting)
 window.viewClient = name => {
   const clientId = cid(name);
   const c = clients[clientId];
@@ -223,12 +223,13 @@ window.viewClient = name => {
   }
   const balance = totalDebit - totalCredit;
   const status = balance > 0 ? "Outstanding" : "Paid";
+  const balanceClass = balance > 0 ? "balance-outstanding" : "balance-paid";
   
   // Display summary
   viewSummary.innerHTML = `
     <strong>Total Add Charge:</strong> ${totalDebit}<br>
     <strong>Total Paid:</strong> ${totalCredit}<br>
-    <strong>Balance:</strong> ${balance}<br>
+    <strong>Balance:</strong> <span class="${balanceClass}">${balance}</span><br>
     <strong>Status:</strong> ${status}
   `;
   
@@ -238,11 +239,11 @@ window.viewClient = name => {
     viewBody.innerHTML = "<tr><td colspan='8' style='text-align:center;'>No transaction history available for this client.</td></tr>";
   } else {
     c.history.forEach(h => {
-      const debitClass = (balance <= 0) ? '' : (h.debit > 0 ? 'debit-red' : '');
+      const rowClass = balance > 0 ? "outstanding-row" : "";
       viewBody.innerHTML += `
-      <tr>
+      <tr class="${rowClass}">
         <td>${formatDate(h.date)}</td>
-        <td class="${debitClass}">${h.debit || 0}</td>
+        <td>${h.debit || 0}</td>
         <td>${h.credit || 0}</td>
         <td>${h.method || ''}</td>
         <td>${h.mode || ''}</td>
@@ -253,6 +254,10 @@ window.viewClient = name => {
     });
   }
   viewModal.style.display = "block";
+  // Optional: For debugging, remove in production
+  console.log("Viewing client:", name, c);
+};
+   viewModal.style.display = "block";
   // Optional: For debugging, remove in production
   console.log("Viewing client:", name, c);
 };
@@ -490,6 +495,7 @@ window.showSection = id => {
 
 </body>
 </html>
+
 
 
 
