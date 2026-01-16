@@ -419,6 +419,11 @@ addExpenseBtn.onclick = async () => {
     date: expenseDate.value, amount: +expenseAmount.value, desc: expenseDesc.value, invoice: expenseInvoice.value
   });
   alert("Expense saved");
+  // Clear form
+  expenseDate.value = "";
+  expenseAmount.value = "";
+  expenseDesc.value = "";
+  expenseInvoice.value = "";
 };
 
 // REPORT
@@ -443,6 +448,7 @@ window.showSection = id => {
 
 </body>
 </html>
+
 
 
 
