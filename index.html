@@ -4,36 +4,32 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Client Payment Tracker</title>
-
 <style>
 body{margin:0;font-family:Arial;background:#f4f4f4}
 h1{background:#2e7d32;color:white;padding:15px;text-align:center;margin:0}
-
 #toolbar{display:flex;gap:8px;padding:10px;background:#333;overflow-x:auto}
 #toolbar button{background:#4CAF50;color:white;border:none;padding:10px 14px;border-radius:4px;cursor:pointer}
-
+#toolbar button:hover{background:#43a047}
 .section{display:none;background:white;margin:10px;padding:15px;border-radius:6px}
 input,select,button{width:100%;padding:8px;margin-top:6px}
-
+button{cursor:pointer}
 table{width:100%;border-collapse:collapse;margin-top:10px}
-th,td{border:1px solid #ccc;padding:6px}
+th,td{border:1px solid #ccc;padding:6px;text-align:left}
 th{background:#eee;color:black}
-
-.highlight{background:yellow;font-weight:bold}
-.balance-red{color:red;font-weight:bold}
-.balance-black{color:black}
-
-.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5)}
+.debit-red{color:red;font-weight:bold}
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5)}
 .modal-content{background:white;width:95%;max-width:900px;margin:5% auto;padding:15px;max-height:80vh;overflow:auto}
-
+.close{float:right;font-size:22px;cursor:pointer}
+.readonly{background:#eee}
 .autocomplete-box{position:relative}
-.autocomplete-list{position:absolute;background:white;border:1px solid #ccc;width:100%;max-height:150px;overflow:auto;z-index:10}
+.autocomplete-list{position:absolute;background:white;border:1px solid #ccc;width:100%;max-height:150px;overflow:auto;z-index:100}
 .autocomplete-item{padding:6px;cursor:pointer}
-.autocomplete-item:hover{background:#eee}
-
-.unpaid-row{background:#ffe6e6}
-
+.autocomplete-item:hover{background:#f0f0f0}
 #logoutBtn{background:#c62828;color:white;margin:15px}
+.highlight { font-weight: bold; background-color: yellow; }
+.outstanding-row { } /* styling handled via debit-red only */
+.balance-outstanding { color: red; font-weight: bold; }
+.balance-paid { color: black; }
 </style>
 </head>
 
@@ -42,7 +38,7 @@ th{background:#eee;color:black}
 <h1>Client Payment Tracker</h1>
 
 <div id="toolbar">
-  <button onclick="showSection('clientSection')">Clients</button>
+  <button onclick="showSection('clientSection')">Client Info</button>
   <button onclick="showSection('chargeSection')">Add Charge</button>
   <button onclick="showSection('paymentSection')">Add Payment</button>
   <button onclick="showSection('expenseSection')">Expenses</button>
@@ -53,32 +49,33 @@ th{background:#eee;color:black}
 <div id="authSection" class="section" style="display:block">
   <h3>Login</h3>
   <input id="loginEmail" placeholder="Email">
-  <input id="loginPassword" type="password">
+  <input id="loginPassword" type="password" placeholder="Password">
   <button id="loginBtn">Login</button>
 </div>
 
 <div id="appSection" style="display:none">
 
-<!-- CLIENTS -->
+<!-- CLIENT INFORMATION -->
 <div id="clientSection" class="section">
-  <input id="clientSearchInput" placeholder="Search client">
+  <h3>Client Information</h3>
+  <input id="clientSearchInput" placeholder="Search full name">
   <button id="clientSearchBtn">Search</button>
   <select id="clientFilter">
     <option value="all">All</option>
     <option value="outstanding">Outstanding</option>
     <option value="paid">Paid</option>
   </select>
-
   <table>
-    <thead>
-      <tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Status</th><th></th></tr>
-    </thead>
+    <thead><tr>
+      <th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Status</th><th>Action</th>
+    </tr></thead>
     <tbody id="clientsBody"></tbody>
   </table>
 </div>
 
 <!-- ADD CHARGE -->
 <div id="chargeSection" class="section">
+  <h3>Add Charge</h3>
   <div class="autocomplete-box">
     <input id="chargeName" placeholder="Client Full Name">
     <div id="chargeAuto" class="autocomplete-list"></div>
@@ -92,13 +89,13 @@ th{background:#eee;color:black}
 
 <!-- ADD PAYMENT -->
 <div id="paymentSection" class="section">
+  <h3>Add Payment</h3>
   <div class="autocomplete-box">
-    <input id="paymentSearch" placeholder="Search client">
+    <input id="paymentSearch" placeholder="Search Client">
     <div id="paymentAuto" class="autocomplete-list"></div>
   </div>
-
-  <div id="paymentBalance"></div>
-
+  <input id="paymentClientName" class="readonly" readonly>
+  <input id="paymentBalance" class="readonly" readonly>
   <input id="paymentAmount" type="number" placeholder="Payment Amount">
   <select id="paymentType">
     <option value="">Payment Type</option>
@@ -119,166 +116,138 @@ th{background:#eee;color:black}
 
 <!-- EXPENSE -->
 <div id="expenseSection" class="section">
-  <h4>Add Expense</h4>
+  <h3>Add Expense</h3>
   <input id="expenseDate" type="date">
   <input id="expenseAmount" type="number" placeholder="Amount">
   <input id="expenseDesc" placeholder="Description">
+  <input id="expenseInvoice" placeholder="Invoice (optional)">
   <button id="addExpenseBtn">Save Expense</button>
-
-  <h4>View Expenses</h4>
-  <input id="expenseStart" type="date">
-  <input id="expenseEnd" type="date">
-  <button id="filterExpensesBtn">View Expenses</button>
-
-  <table>
-    <thead><tr><th>Date</th><th>Amount</th><th>Description</th></tr></thead>
-    <tbody id="expensesBody"></tbody>
-  </table>
 </div>
 
 <!-- REPORT -->
 <div id="reportSection" class="section">
+  <h3>Admin Report</h3>
   <input id="reportStart" type="date">
   <input id="reportEnd" type="date">
   <button id="generateReportBtn">Generate Report</button>
   <div id="reportResult"></div>
+  <div id="expensesTable" style="display:none; margin-top: 15px;">
+    <h4>Expenses List</h4>
+    <table>
+      <thead>
+        <tr><th>Date</th><th>Amount</th><th>Description</th><th>Invoice</th></tr>
+      </thead>
+      <tbody id="expensesBody"></tbody>
+    </table>
+  </div>
 </div>
 
 <button id="logoutBtn">Logout</button>
 </div>
 
+<!-- VIEW MODAL -->
+<div id="viewModal" class="modal">
+  <div class="modal-content">
+    <span class="close" onclick="closeViewModal()">&times;</span>
+    <h3 id="viewTitle"></h3>
+    <div id="viewSummary" style="margin-bottom: 15px; padding: 10px; background: #f9f9f9; border-radius: 4px;"></div>
+    <table>
+      <thead>
+        <tr>
+          <th>Date</th><th>Debit</th><th>Credit</th><th>Method</th>
+          <th>Mode</th><th>Remarks</th><th>Start</th><th>End</th>
+        </tr>
+      </thead>
+      <tbody id="viewBody"></tbody>
+    </table>
+  </div>
+</div>
+
 <script type="module">
-import {initializeApp} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import {getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import {getFirestore,doc,setDoc,getDoc,collection,onSnapshot,addDoc} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-const app=initializeApp({
-  apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
-  authDomain:"client-payment-tracker-3572b.firebaseapp.com",
-  projectId:"client-payment-tracker-3572b"
+const app = initializeApp({
+  apiKey:"YOUR_API_KEY",
+  authDomain:"YOUR_PROJECT.firebaseapp.com",
+  projectId:"YOUR_PROJECT_ID"
 });
 
-const auth=getAuth(app), db=getFirestore(app);
-let currentUser=null, clients={}, expenses=[];
-const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value)
-.catch(e=>alert(e.message));
+let currentUser = null, clients = {}, expenses = [];
+const cid = n => n.toLowerCase().replace(/\s+/g, '_');
 
-onAuthStateChanged(auth,u=>{
-  if(u){
-    currentUser=u;
-    authSection.style.display="none";
-    appSection.style.display="block";
-    loadClients(); loadExpenses();
-  }
-});
-
-logoutBtn.onclick = async () => {
-  try {
-    await signOut(auth);
-
-    // Force UI reset
-    currentUser = null;
-    appSection.style.display = "none";
-    authSection.style.display = "block";
-
-    // Clear sensitive fields
-    loginEmail.value = "";
-    loginPassword.value = "";
-
-  } catch (e) {
-    alert("Logout failed: " + e.message);
-  }
+// LOGIN
+loginBtn.onclick = () => {
+  signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value)
+    .catch(e => alert(e.message));
 };
 
-  function viewClient(name){
-  const c = clients[cid(name)];
-  if(!c) return;
+// AUTH STATE
+onAuthStateChanged(auth, u => {
+  if(u){
+    currentUser = u;
+    authSection.style.display = "none";
+    appSection.style.display = "block";
+    loadClients();
+    loadExpenses();
+  } else {
+    currentUser = null;
+    authSection.style.display = "block";
+    appSection.style.display = "none";
+  }
+});
 
-  viewTitle.textContent = name;
-  viewBody.innerHTML = "";
-
-  // 1️⃣ Compute totals
-  let totalDebit = 0;
-  let totalCredit = 0;
-
-  c.history.forEach(h => {
-    totalDebit += h.debit || 0;
-    totalCredit += h.credit || 0;
-  });
-
-  let remainingBalance = totalDebit - totalCredit;
-
-  // 2️⃣ Process charges FIFO
-  c.history.forEach(h => {
-    let highlight = "";
-
-    if (h.debit > 0 && remainingBalance > 0) {
-      if (remainingBalance >= h.debit) {
-        // Entire charge still unpaid
-        highlight = "debit-red";
-        remainingBalance -= h.debit;
-      } else {
-        // Partially unpaid charge
-        highlight = "debit-red";
-        remainingBalance = 0;
-      }
-    }
-
-    viewBody.innerHTML += `
-      <tr>
-        <td>${h.date || ""}</td>
-        <td class="${highlight}">${h.debit || 0}</td>
-        <td>${h.credit || 0}</td>
-        <td>${h.method || ""}</td>
-        <td>${h.mode || ""}</td>
-        <td>${h.remarks || ""}</td>
-        <td>${h.start || ""}</td>
-        <td>${h.end || ""}</td>
-      </tr>`;
-  });
-
-  viewModal.style.display = "block";
-}
-
-
+// LOGOUT FIX
+logoutBtn.onclick = async () => {
+  try{
+    await signOut(auth);
+    currentUser=null;
+    authSection.style.display="block";
+    appSection.style.display="none";
+    loginEmail.value="";
+    loginPassword.value="";
+  } catch(e){alert(e.message);}
+};
 
 // LOAD CLIENTS
 function loadClients(){
-  onSnapshot(collection(db,"users",currentUser.uid,"clients"),s=>{
-    clients={}; s.forEach(d=>clients[d.id]=d.data());
-    renderClients();
+  onSnapshot(collection(db, "users", currentUser.uid, "clients"), snap=>{
+    clients={};
+    snap.forEach(d=>clients[d.id]=d.data());
+    renderClientTable();
   });
 }
 
-// CLIENT SEARCH
-function renderClients(){
-  const q=clientSearchInput.value.toLowerCase();
-  const f=clientFilter.value;
+// CLIENT TABLE
+function renderClientTable(){
+  const q = clientSearchInput.value.toLowerCase();
+  const f = clientFilter.value;
   clientsBody.innerHTML="";
   Object.values(clients).forEach(c=>{
     const bal=(c.debit||0)-(c.credit||0);
-    const status=bal>0?"outstanding":"paid";
-    if(q&&!c.name.toLowerCase().includes(q))return;
-    if(f!=="all"&&f!==status)return;
-    clientsBody.innerHTML+=`
-    <tr>
-      <td>${q?c.name.replace(new RegExp(q,"gi"),m=>`<span class="highlight">${m}</span>`):c.name}</td>
-      <td>${c.debit||0}</td>
+    const s = bal>0?"outstanding":"paid";
+    if(q && !c.name.toLowerCase().includes(q)) return;
+    if(f!=="all" && f!==s) return;
+    const highlightName = q?c.name.replace(new RegExp(`(${q})`,"gi"),'<span class="highlight">$1</span>'):c.name;
+    clientsBody.innerHTML+=`<tr>
+      <td>${highlightName}</td>
+      <td class="${bal>0?'debit-red':''}">${c.debit||0}</td>
       <td>${c.credit||0}</td>
-      <td class="${bal>0?'balance-red':'balance-black'}">${bal}</td>
-      <td>${status}</td>
+      <td class="${bal>0?'debit-red':''}">${bal}</td>
+      <td>${s}</td>
       <td><button onclick="viewClient('${c.name}')">View</button></td>
     </tr>`;
   });
 }
+clientSearchBtn.onclick = renderClientTable;
+clientFilter.onchange = renderClientTable;
 
-clientSearchBtn.onclick=renderClients;
-clientFilter.onchange=renderClients;
-
-// AUTOCOMPLETE – ADD CHARGE
-chargeName.oninput=()=>{
+// AUTOCOMPLETE
+chargeName.oninput = () => {
   chargeAuto.innerHTML="";
   const q=chargeName.value.toLowerCase();
   Object.values(clients).forEach(c=>{
@@ -286,33 +255,13 @@ chargeName.oninput=()=>{
       const d=document.createElement("div");
       d.className="autocomplete-item";
       d.textContent=c.name;
-      d.onclick=()=>{chargeName.value=c.name;chargeAuto.innerHTML="";}
+      d.onclick=()=>{chargeName.value=c.name;chargeAuto.innerHTML="";};
       chargeAuto.appendChild(d);
     }
   });
 };
 
-// ADD CHARGE
-addChargeBtn.onclick=async()=>{
-  if(!chargeName.value||!chargeAmount.value)return alert("Missing data");
-  const ref=doc(db,"users",currentUser.uid,"clients",cid(chargeName.value));
-  const s=await getDoc(ref);
-  const c=s.exists()?s.data():{name:chargeName.value,debit:0,credit:0,history:[]};
-  c.history.push({
-    date:new Date().toISOString(),
-    debit:+chargeAmount.value,
-    credit:0,
-    remarks:chargeRemarks.value,
-    start:chargeStart.value,
-    end:chargeEnd.value
-  });
-  await setDoc(ref,{...c,debit:c.debit+ +chargeAmount.value});
-  alert("Charge saved");
-  chargeName.value=chargeAmount.value=chargeStart.value=chargeEnd.value=chargeRemarks.value="";
-};
-
-// AUTOCOMPLETE – PAYMENT
-paymentSearch.oninput=()=>{
+paymentSearch.oninput = () => {
   paymentAuto.innerHTML="";
   const q=paymentSearch.value.toLowerCase();
   Object.values(clients).forEach(c=>{
@@ -320,67 +269,127 @@ paymentSearch.oninput=()=>{
       const d=document.createElement("div");
       d.className="autocomplete-item";
       d.textContent=c.name;
-      d.onclick=()=>{
-        paymentSearch.value=c.name;
-        const bal=(c.debit||0)-(c.credit||0);
-        paymentBalance.innerHTML=`Balance: <span class="${bal>0?'balance-red':'balance-black'}">${bal}</span>`;
-        paymentAuto.innerHTML="";
-      };
+      d.onclick=()=>{selectClient(c.name); paymentAuto.innerHTML="";};
       paymentAuto.appendChild(d);
     }
   });
 };
 
-// ADD PAYMENT (CLEARS INPUTS)
-addPaymentBtn.onclick=async()=>{
-  const ref=doc(db,"users",currentUser.uid,"clients",cid(paymentSearch.value));
+function selectClient(name){
+  paymentClientName.value=name;
+  const c=clients[cid(name)];
+  const bal=(c.debit||0)-(c.credit||0);
+  paymentBalance.value=bal;
+}
+
+// ADD CHARGE
+addChargeBtn.onclick=async()=>{
+  const name=chargeName.value;
+  if(!name) return alert("Enter client name");
+  const ref=doc(db,"users",currentUser.uid,"clients",cid(name));
   const s=await getDoc(ref);
-  const c=s.data();
-  c.history.push({
-    date:paymentDate.value,
-    debit:0,
-    credit:+paymentAmount.value,
-    type:paymentType.value,
-    mode:paymentMode.value,
-    remarks:paymentRemarks.value
-  });
-  await setDoc(ref,{...c,credit:c.credit+ +paymentAmount.value});
-  alert("Payment saved");
-  paymentSearch.value=paymentAmount.value=paymentDate.value=paymentRemarks.value="";
-  paymentType.value=paymentMode.value="";
-  paymentBalance.innerHTML="";
+  const c=s.exists()?s.data():{name,debit:0,credit:0,history:[]};
+  const debitAmt=+chargeAmount.value;
+  c.history.push({date:new Date().toISOString(), debit:debitAmt, credit:0, method:"charge", remarks:chargeRemarks.value, start:chargeStart.value, end:chargeEnd.value});
+  await setDoc(ref,{name, debit:c.debit+debitAmt, credit:c.credit, history:c.history});
+  alert("Charge added");
+  chargeName.value=""; chargeAmount.value=""; chargeStart.value=""; chargeEnd.value=""; chargeRemarks.value="";
+};
+
+// ADD PAYMENT (with overpayment lock)
+addPaymentBtn.onclick=async()=>{
+  const name=paymentClientName.value;
+  if(!name) return alert("Select client");
+  const amount=+paymentAmount.value;
+  const c=clients[cid(name)];
+  const bal=(c.debit||0)-(c.credit||0);
+  if(amount>bal) return alert("Cannot pay more than balance");
+  c.history.push({date:paymentDate.value, debit:0, credit:amount, method:"payment", mode:paymentMode.value, remarks:paymentRemarks.value});
+  await setDoc(doc(db,"users",currentUser.uid,"clients",cid(name)),{...c, credit:c.credit+amount});
+  alert("Payment added");
+  paymentClientName.value=""; paymentBalance.value=""; paymentAmount.value=""; paymentType.value=""; paymentMode.value=""; paymentDate.value=""; paymentRemarks.value="";
 };
 
 // EXPENSES
 function loadExpenses(){
-  onSnapshot(collection(db,"users",currentUser.uid,"expenses"),s=>{
-    expenses=[]; s.forEach(d=>expenses.push(d.data()));
+  onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
+    expenses=[];
+    snap.forEach(d=>expenses.push(d.data()));
   });
 }
-
 addExpenseBtn.onclick=async()=>{
   await addDoc(collection(db,"users",currentUser.uid,"expenses"),{
-    date:expenseDate.value,amount:+expenseAmount.value,desc:expenseDesc.value
+    date:expenseDate.value, amount:+expenseAmount.value, desc:expenseDesc.value, invoice:expenseInvoice.value
   });
   alert("Expense saved");
-  expenseDate.value=expenseAmount.value=expenseDesc.value="";
+  expenseDate.value=""; expenseAmount.value=""; expenseDesc.value=""; expenseInvoice.value="";
 };
 
-filterExpensesBtn.onclick=()=>{
-  const s=new Date(expenseStart.value), e=new Date(expenseEnd.value);
+// REPORT
+generateReportBtn.onclick=()=>{
+  const s=new Date(reportStart.value), e=new Date(reportEnd.value);
+  let sales=0;
+  Object.values(clients).forEach(c=>c.history.forEach(h=>{
+    const d=new Date(h.date);
+    if(h.credit && d>=s && d<=e) sales+=h.credit;
+  }));
+  const exp=expenses.filter(x=>new Date(x.date)>=s && new Date(x.date)<=e).reduce((a,b)=>a+b.amount,0);
+  reportResult.innerHTML=`Sales:${sales}<br>Expenses:${exp}<br>Net:${sales-exp}`;
+  expensesTable.style.display="none";
+};
+
+// VIEW EXPENSES
+viewExpensesBtn.onclick=()=>{
+  const s=new Date(reportStart.value), e=new Date(reportEnd.value);
+  const filtered=expenses.filter(x=>new Date(x.date)>=s && new Date(x.date)<=e);
   expensesBody.innerHTML="";
-  expenses.filter(x=>new Date(x.date)>=s&&new Date(x.date)<=e)
-    .forEach(x=>{
-      expensesBody.innerHTML+=`<tr><td>${x.date}</td><td>${x.amount}</td><td>${x.desc}</td></tr>`;
-    });
+  if(filtered.length===0) expensesBody.innerHTML="<tr><td colspan='4' style='text-align:center;'>No expenses found.</td></tr>";
+  else filtered.forEach(exp=>{
+    expensesBody.innerHTML+=`<tr><td>${exp.date}</td><td>${exp.amount}</td><td>${exp.desc}</td><td>${exp.invoice||""}</td></tr>`;
+  });
+  expensesTable.style.display="block";
 };
 
-window.showSection=id=>{
-  document.querySelectorAll(".section").forEach(s=>s.style.display="none");
-  document.getElementById(id).style.display="block";
+// SHOW/HIDE SECTION
+window.showSection=id=>{document.querySelectorAll(".section").forEach(s=>s.style.display="none"); document.getElementById(id).style.display="block";};
+
+// VIEW MODAL FIX (row-level highlighting)
+window.viewClient = function(name){
+  const c = clients[cid(name)];
+  if(!c) return;
+  viewTitle.textContent = name;
+  viewBody.innerHTML="";
+  let totalDebit=0, totalCredit=0;
+  c.history.forEach(h=>{totalDebit+=h.debit||0; totalCredit+=h.credit||0;});
+  let remainingBalance = totalDebit - totalCredit;
+
+  viewSummary.innerHTML=`<strong>Total Add Charge:</strong> ${totalDebit}<br>
+  <strong>Total Paid:</strong> ${totalCredit}<br>
+  <strong>Balance:</strong> <span class="${remainingBalance>0?'balance-outstanding':'balance-paid'}">${remainingBalance}</span><br>
+  <strong>Status:</strong> ${remainingBalance>0?'Outstanding':'Paid'}`;
+
+  // ROW HIGHLIGHT LOGIC
+  c.history.forEach(h=>{
+    let highlight="";
+    if(h.debit>0 && remainingBalance>0){
+      highlight="debit-red";
+      if(remainingBalance>=h.debit) remainingBalance-=h.debit;
+      else remainingBalance=0;
+    }
+    viewBody.innerHTML+=`<tr>
+      <td>${h.date||""}</td>
+      <td class="${highlight}">${h.debit||0}</td>
+      <td>${h.credit||0}</td>
+      <td>${h.method||""}</td>
+      <td>${h.mode||""}</td>
+      <td>${h.remarks||""}</td>
+      <td>${h.start||""}</td>
+      <td>${h.end||""}</td>
+    </tr>`;
+  });
+  viewModal.style.display="block";
 };
+window.closeViewModal = ()=>{viewModal.style.display="none";}
 </script>
 </body>
 </html>
-
-
