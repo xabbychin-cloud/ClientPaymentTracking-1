@@ -116,6 +116,7 @@
   <input id="paymentBalance" class="readonly" readonly>
 
   <table>
+    <thead><tr><th>Date</th><th>Unpaid</th><th>Remarks</th></tr></thead>
     <tbody id="payablesBody"></tbody>
   </table>
 
@@ -324,7 +325,7 @@ addChargeBtn.onclick = async () => {
   chargeRemarks.value = "";
 };
 
-// VIEW CLIENT (removed row highlighting, kept balance text red)
+// VIEW CLIENT (updated summary styling and row highlighting)
 window.viewClient = name => {
   const clientId = cid(name);
   const c = clients[clientId];
@@ -354,14 +355,15 @@ window.viewClient = name => {
     <strong>Status:</strong> ${status}
   `;
   
-  // Display history table (no row highlighting)
+  // Display history table
   viewBody.innerHTML = "";
   if (!c.history || c.history.length === 0) {
     viewBody.innerHTML = "<tr><td colspan='8' style='text-align:center;'>No transaction history available for this client.</td></tr>";
   } else {
     c.history.forEach(h => {
+      const rowClass = balance > 0 ? "outstanding-row" : "";
       viewBody.innerHTML += `
-      <tr>
+      <tr class="${rowClass}">
         <td>${formatDate(h.date)}</td>
         <td>${h.debit || 0}</td>
         <td>${h.credit || 0}</td>
@@ -399,9 +401,7 @@ function selectClient(name) {
   paymentClientName.value = name;
   const c = clients[cid(name)];
   const bal = (c.debit || 0) - (c.credit || 0);
-  // Get latest remarks from history (if any)
-  const latestRemarks = c.history && c.history.length > 0 ? c.history[c.history.length - 1].remarks || 'N/A' : 'N/A';
-  paymentBalance.value = `Balance: ${bal} | Remarks: ${latestRemarks}`;
+  paymentBalance.value = "Balance: " + bal;
   paymentAuto.innerHTML = "";
 }
 
@@ -414,39 +414,9 @@ addPaymentBtn.onclick = async () => {
   c.history.push({ date: paymentDate.value, debit: 0, credit: +paymentAmount.value, method: "payment", mode: paymentMode.value, remarks: paymentRemarks.value });
   await setDoc(ref, { ...c, credit: c.credit + +paymentAmount.value });
   alert("Payment added");
-  // Clear form
-  paymentSearch.value = "";
-  paymentClientName.value = "";
-  paymentBalance.value = "";
-  paymentAmount.value = "";
-  paymentType.value = "";
-  paymentMode.value = "";
-  paymentDate.value = "";
-  paymentRemarks.value = "";
 };
 
-// EXPENSE
-function loadExpenses() {
-  onSnapshot(collection(db, "users", currentUser.uid, "expenses"), snap => {
-    expenses = [];
-    snap.forEach(d => expenses.push(d.data()));
-  });
-}
-
-addExpenseBtn.onclick = async () => {
-  await addDoc(collection(db, "users", currentUser.uid, "expenses"), {
-    date: expenseDate.value, amount: +expenseAmount.value, desc: expense
-// EXPENSE
-function loadExpenses() {
-  onSnapshot(collection(db, "users", currentUser.uid, "expenses"), snap => {
-    expenses = [];
-    snap.forEach(d => expenses.push(d.data()));
-  });
-}
-
-addExpenseBtn.onclick = async () => {
-  await addDoc(collection(db, "users", currentUser.uid, "expenses"), {
-    date: expenseDate.value, amount: +expenseAmount.value, desc: expenseDesc.value, invoice: expenseInvoice.value
+// EXP
 
 // EXPENSE
 function loadExpenses() {
@@ -528,4 +498,3 @@ viewExpensesBtn.onclick = () => {
 
 </body>
 </html>
-
