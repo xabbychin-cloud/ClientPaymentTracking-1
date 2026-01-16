@@ -187,17 +187,32 @@ let currentUser=null, clients={}, expenses=[];
 const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
 
 // LOGIN
-loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value)
-  .catch(e=>alert(e.message));
+loginBtn.onclick = () => {
+  signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value)
+    .catch(e => alert(e.message));
+};
 
-onAuthStateChanged(auth,u=>{
-  if(u){
-    currentUser=u;
-    authSection.style.display="none";
-    appSection.style.display="block";
-    loadClients(); loadExpenses();
+// AUTH STATE LISTENER (handles login, logout, and initial load)
+onAuthStateChanged(auth, u => {
+  if (u) {
+    // User is logged in
+    currentUser = u;
+    authSection.style.display = "none";
+    appSection.style.display = "block";
+    loadClients();
+    loadExpenses();
+  } else {
+    // User is not logged in (show login form)
+    currentUser = null;
+    authSection.style.display = "block";
+    appSection.style.display = "none";
   }
 });
+
+// LOGOUT
+logoutBtn.onclick = () => {
+  signOut(auth).catch(e => alert(e.message));
+};
 
 // LOAD CLIENTS
 function loadClients(){
