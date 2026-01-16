@@ -67,6 +67,10 @@
 </div>
 
 <div id="appSection" style="display:none">
+  <h3>Welcome!</h3>
+</div>
+
+<div id="appSection" style="display:none">
 
 <!-- CLIENT INFORMATION (SEARCH + FILTER + TABLE) -->
 <div id="clientSection" class="section">
@@ -217,23 +221,30 @@ const highlightText = (text, query) => {
   return text.replace(regex, '<span class="highlight">$1</span>');
 };
 
-// LOGIN
+/import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
+
+const auth = getAuth();
+
+const loginBtn = document.getElementById("loginBtn");
+const loginEmail = document.getElementById("loginEmail");
+const loginPassword = document.getElementById("loginPassword");
+const authSection = document.getElementById("authSection");
+const appSection = document.getElementById("appSection");
+
 loginBtn.onclick = () => {
+  console.log("Login button clicked");
   signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value)
     .catch(e => alert(e.message));
 };
 
-// AUTH STATE LISTENER (handles login, logout, and initial load)
 onAuthStateChanged(auth, u => {
   if (u) {
-    // User is logged in
     currentUser = u;
     authSection.style.display = "none";
     appSection.style.display = "block";
     loadClients();
     loadExpenses();
   } else {
-    // User is not logged in (show login form)
     currentUser = null;
     authSection.style.display = "block";
     appSection.style.display = "none";
@@ -528,6 +539,7 @@ viewExpensesBtn.onclick = () => {
 
 </body>
 </html>
+
 
 
 
