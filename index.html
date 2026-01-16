@@ -174,7 +174,24 @@ onAuthStateChanged(auth,u=>{
   }
 });
 
-logoutBtn.onclick=()=>signOut(auth);
+logoutBtn.onclick = async () => {
+  try {
+    await signOut(auth);
+
+    // Force UI reset
+    currentUser = null;
+    appSection.style.display = "none";
+    authSection.style.display = "block";
+
+    // Clear sensitive fields
+    loginEmail.value = "";
+    loginPassword.value = "";
+
+  } catch (e) {
+    alert("Logout failed: " + e.message);
+  }
+};
+
 
 // LOAD CLIENTS
 function loadClients(){
@@ -314,3 +331,4 @@ window.showSection=id=>{
 </script>
 </body>
 </html>
+
