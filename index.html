@@ -233,11 +233,13 @@ function renderClientTable() {
   const q = clientSearchInput.value.toLowerCase();
   const f = clientFilter.value;
   clientsBody.innerHTML = "";
+  let hasMatches = false;
   Object.values(clients).forEach(c => {
     const bal = (c.debit || 0) - (c.credit || 0);
     const s = bal > 0 ? "outstanding" : "paid";
     if (q && !c.name.toLowerCase().includes(q)) return;
     if (f !== "all" && f !== s) return;
+    hasMatches = true;
     clientsBody.innerHTML += `
       <tr>
         <td>${c.name}</td>
@@ -248,7 +250,42 @@ function renderClientTable() {
         <td><button onclick="viewClient('${c.name}')">View</button></td>
       </tr>`;
   });
+  if (!hasMatches) {
+    clientsBody.innerHTML = "<tr><td colspan='6' style='text-align:center;'>No records found matching your search and filter criteria.</td></tr>";
+  }
 }
+
+// VIEW CLIENT (updated with checks)
+window.viewClient = name => {
+  const clientId = cid(name);
+  const c = clients[clientId];
+  if (!c) {
+    alert("Client not found. Please refresh and try again.");
+    return;
+  }
+  viewTitle.textContent = name;
+  viewBody.innerHTML = "";
+  if (!c.history || c.history.length === 0) {
+    viewBody.innerHTML = "<tr><td colspan='8' style='text-align:center;'>No transaction history available for this client.</td></tr>";
+  } else {
+    c.history.forEach(h => {
+      viewBody.innerHTML += `
+      <tr>
+        <td>${h.date}</td>
+        <td class="${h.debit > 0 ? 'debit-red' : ''}">${h.debit || 0}</td>
+        <td>${h.credit || 0}</td>
+        <td>${h.method || ''}</td>
+        <td>${h.mode || ''}</td>
+        <td>${h.remarks || ''}</td>
+        <td>${h.start || ''}</td>
+        <td>${h.end || ''}</td>
+      </tr>`;
+    });
+  }
+  viewModal.style.display = "block";
+  // Optional: For debugging, remove in production
+  console.log("Viewing client:", name, c);
+};
 
 // Trigger search on button click (manual) and filter on change
 clientSearchBtn.onclick = renderClientTable;
@@ -387,3 +424,4 @@ window.showSection = id => {
 
 </body>
 </html>
+
