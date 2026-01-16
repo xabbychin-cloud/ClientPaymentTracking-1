@@ -156,23 +156,33 @@
 <button id="logoutBtn">Logout</button>
 </div>
 
-<!-- VIEW MODAL -->
-<div id="viewModal" class="modal">
-  <div class="modal-content">
-    <span class="close" onclick="closeViewModal()">&times;</span>
-    <h3 id="viewTitle"></h3>
-    <div id="viewSummary" style="margin-bottom: 15px; padding: 10px; background: #f9f9f9; border-radius: 4px;"></div>
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th><th>Debit</th><th>Credit</th><th>Method</th>
-          <th>Mode</th><th>Remarks</th><th>Start</th><th>End</th>
-        </tr>
-      </thead>
-      <tbody id="viewBody"></tbody>
-    </table>
-  </div>
-</div>
+    <!-- Modal for Viewing Client Records -->
+    <div id="viewModal" class="modal">
+      <div class="modal-content">
+        <span class="close" id="closeModal">&times;</span>
+        <h2 id="modalTitle">Client Records</h2>
+        <div id="modalSummary">
+          <p><strong>Total Debit:</strong> <span id="totalDebit"></span></p>
+          <p><strong>Total Credit:</strong> <span id="totalCredit"></span></p>
+          <p><strong>Balance:</strong> <span id="balance"></span></p>
+          <p><strong>Status:</strong> <span id="status"></span></p>
+        </div>
+        <h3>Transaction History</h3>
+        <table class="history-table" id="historyTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Debit</th>
+              <th>Credit</th>
+              <th>Method</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </div>
+
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
@@ -484,6 +494,7 @@ window.showSection = id => {
 
 </body>
 </html>
+
 
 
 
