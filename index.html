@@ -435,6 +435,17 @@ function loadExpenses() {
 
 addExpenseBtn.onclick = async () => {
   await addDoc(collection(db, "users", currentUser.uid, "expenses"), {
+    date: expenseDate.value, amount: +expenseAmount.value, desc: expense
+// EXPENSE
+function loadExpenses() {
+  onSnapshot(collection(db, "users", currentUser.uid, "expenses"), snap => {
+    expenses = [];
+    snap.forEach(d => expenses.push(d.data()));
+  });
+}
+
+addExpenseBtn.onclick = async () => {
+  await addDoc(collection(db, "users", currentUser.uid, "expenses"), {
     date: expenseDate.value, amount: +expenseAmount.value, desc: expenseDesc.value, invoice: expenseInvoice.value
 
 // EXPENSE
@@ -517,6 +528,7 @@ viewExpensesBtn.onclick = () => {
 
 </body>
 </html>
+
 
 
 
