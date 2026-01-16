@@ -1,44 +1,44 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Client Payment Tracker</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Client Payment Tracker</title>
 
-<style>
-body{margin:0;font-family:Arial;background:#f4f4f4}
-h1{background:#2e7d32;color:white;padding:15px;text-align:center;margin:0}
+  <style>
+    body{margin:0;font-family:Arial;background:#f4f4f4}
+    h1{background:#2e7d32;color:white;padding:15px;text-align:center;margin:0}
 
-#toolbar{display:flex;gap:8px;padding:10px;background:#333;overflow-x:auto}
-#toolbar button{background:#4CAF50;color:white;border:none;padding:10px 14px;border-radius:4px;cursor:pointer}
-#toolbar button:hover{background:#43a047}
+    #toolbar{display:flex;gap:8px;padding:10px;background:#333;overflow-x:auto}
+    #toolbar button{background:#4CAF50;color:white;border:none;padding:10px 14px;border-radius:4px;cursor:pointer}
+    #toolbar button:hover{background:#43a047}
 
-.section{display:none;background:white;margin:10px;padding:15px;border-radius:6px}
-input,select,button{width:100%;padding:8px;margin-top:6px}
-button{cursor:pointer}
+    .section{display:none;background:white;margin:10px;padding:15px;border-radius:6px}
+    input,select,button{width:100%;padding:8px;margin-top:6px}
+    button{cursor:pointer}
 
-table{width:100%;border-collapse:collapse;margin-top:10px}
-th,td{border:1px solid #ccc;padding:6px;text-align:left}
-th{background:#eee;color:black}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    th,td{border:1px solid #ccc;padding:6px;text-align:left}
+    th{background:#eee;color:black}
 
-.debit-red{color:red;font-weight:bold}
+    .debit-red{color:red;font-weight:bold}
 
-.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5)}
-.modal-content{background:white;width:95%;max-width:900px;margin:5% auto;padding:15px;max-height:80vh;overflow:auto}
-.close{float:right;font-size:22px;cursor:pointer}
+    .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5)}
+    .modal-content{background:white;width:95%;max-width:900px;margin:5% auto;padding:15px;max-height:80vh;overflow:auto}
+    .close{float:right;font-size:22px;cursor:pointer}
 
-.readonly{background:#eee}
+    .readonly{background:#eee}
 
-.autocomplete-box{position:relative}
-.autocomplete-list{
-  position:absolute;background:white;border:1px solid #ccc;
-  width:100%;max-height:150px;overflow:auto;z-index:100
-}
-.autocomplete-item{padding:6px;cursor:pointer}
-.autocomplete-item:hover{background:#f0f0f0}
+    .autocomplete-box{position:relative}
+    .autocomplete-list{
+      position:absolute;background:white;border:1px solid #ccc;
+      width:100%;max-height:150px;overflow:auto;z-index:100
+    }
+    .autocomplete-item{padding:6px;cursor:pointer}
+    .autocomplete-item:hover{background:#f0f0f0}
 
-#logoutBtn{background:#c62828;color:white;margin:15px}
-</style>
+    #logoutBtn{background:#c62828;color:white;margin:15px}
+  </style>
 </head>
 
 <body>
@@ -62,11 +62,10 @@ th{background:#eee;color:black}
 
 <div id="appSection" style="display:none">
 
-<!-- CLIENT SEARCH + FILTER (TOP) -->
-<div class="section" style="display:block">
+<!-- CLIENT SEARCH + FILTER (TOP) - ALWAYS VISIBLE -->
+<div style="background:white;margin:10px;padding:15px;border-radius:6px">
   <h3>Clients</h3>
   <input id="clientSearchInput" placeholder="Search full name">
-  <button id="clientSearchBtn">Search</button>
   <select id="clientFilter">
     <option value="all">All</option>
     <option value="outstanding">Outstanding</option>
@@ -86,7 +85,11 @@ th{background:#eee;color:black}
 <!-- ADD CHARGE -->
 <div id="chargeSection" class="section">
   <h3>Add Charge</h3>
-  <input id="chargeName" placeholder="Client Full Name">
+  <div class="autocomplete-box">
+    <input id="chargeSearch" placeholder="Search Client">
+    <div id="chargeAuto" class="autocomplete-list"></div>
+  </div>
+  <input id="chargeName" class="readonly" readonly placeholder="Client Full Name (populated from search)">
   <input id="chargeAmount" type="number" placeholder="Amount">
   <input id="chargeStart" type="date">
   <input id="chargeEnd" type="date">
@@ -246,118 +249,139 @@ function renderClientTable() {
 }
 
 // Trigger search on input (real-time) and filter on change
-clientSearchInput.oninput = renderClientTable;  // New: Filters as you type
+clientSearchInput.oninput = renderClientTable;
 clientFilter.onchange = renderClientTable;
-// Optional: Keep button for manual search if you uncomment it in HTML
-// clientSearchBtn.onclick = renderClientTable;
 
-clientSearchBtn.onclick = renderClientTable;
-clientFilter.onchange = renderClientTable;
+// AUTOCOMPLETE FOR CHARGE (new: search clients and populate chargeName)
+chargeSearch.oninput = () => {
+  chargeAuto.innerHTML = "";
+  const q = chargeSearch.value.toLowerCase();
+  Object.values(clients).forEach(c => {
+    if (c.name.toLowerCase().includes(q)) {
+      const d = document.createElement("div");
+      d.className = "autocomplete-item";
+      d.textContent = c.name;
+      d.onclick = () => selectChargeClient(c.name);
+      chargeAuto.appendChild(d);
+    }
+  });
+};
+
+function selectChargeClient(name) {
+  chargeName.value = name;
+  chargeAuto.innerHTML = "";
+}
 
 // ADD CHARGE
-addChargeBtn.onclick=async()=>{
-  const name=chargeName.value;
-  const ref=doc(db,"users",currentUser.uid,"clients",cid(name));
-  const s=await getDoc(ref);
-  const c=s.exists()?s.data():{name,debit:0,credit:0,history:[]};
-  c.history.push({date:new Date().toISOString(),debit:+chargeAmount.value,credit:0,method:"charge",remarks:chargeRemarks.value,start:chargeStart.value,end:chargeEnd.value});
-  await setDoc(ref,{name,debit:c.debit+ +chargeAmount.value,credit:c.credit,history:c.history});
+addChargeBtn.onclick = async () => {
+  const name = chargeName.value;
+  if (!name) return alert("Please select a client.");
+  const ref = doc(db, "users", currentUser.uid, "clients", cid(name));
+  const s = await getDoc(ref);
+  const c = s.exists() ? s.data() : { name, debit: 0, credit: 0, history: [] };
+  c.history.push({ date: new Date().toISOString(), debit: +chargeAmount.value, credit: 0, method: "charge", remarks: chargeRemarks.value, start: chargeStart.value, end: chargeEnd.value });
+  await setDoc(ref, { name, debit: c.debit + +chargeAmount.value, credit: c.credit, history: c.history });
   alert("Charge added");
+  // Clear form
+  chargeSearch.value = "";
+  chargeName.value = "";
+  chargeAmount.value = "";
+  chargeStart.value = "";
+  chargeEnd.value = "";
+  chargeRemarks.value = "";
 };
 
 // VIEW CLIENT
-window.viewClient=name=>{
-  const c=clients[cid(name)];
-  viewTitle.textContent=name;
-  viewBody.innerHTML="";
-  c.history.forEach(h=>{
-    viewBody.innerHTML+=`
+window.viewClient = name => {
+  const c = clients[cid(name)];
+  viewTitle.textContent = name;
+  viewBody.innerHTML = "";
+  c.history.forEach(h => {
+    viewBody.innerHTML += `
     <tr>
       <td>${h.date}</td>
-      <td class="${h.debit>0?'debit-red':''}">${h.debit||0}</td>
-      <td>${h.credit||0}</td>
-      <td>${h.method||''}</td>
-      <td>${h.mode||''}</td>
-      <td>${h.remarks||''}</td>
-      <td>${h.start||''}</td>
-      <td>${h.end||''}</td>
+      <td class="${h.debit > 0 ? 'debit-red' : ''}">${h.debit || 0}</td>
+      <td>${h.credit || 0}</td>
+      <td>${h.method || ''}</td>
+      <td>${h.mode || ''}</td>
+      <td>${h.remarks || ''}</td>
+      <td>${h.start || ''}</td>
+      <td>${h.end || ''}</td>
     </tr>`;
   });
-  viewModal.style.display="block";
+  viewModal.style.display = "block";
 };
 
-window.closeViewModal=()=>viewModal.style.display="none";
+window.closeViewModal = () => viewModal.style.display = "none";
 
-// AUTOCOMPLETE
-paymentSearch.oninput=()=>{
-  paymentAuto.innerHTML="";
-  const q=paymentSearch.value.toLowerCase();
-  Object.values(clients).forEach(c=>{
-    if(c.name.toLowerCase().includes(q)){
-      const d=document.createElement("div");
-      d.className="autocomplete-item";
-      d.textContent=c.name;
-      d.onclick=()=>selectClient(c.name);
+// AUTOCOMPLETE FOR PAYMENT (existing)
+paymentSearch.oninput = () => {
+  paymentAuto.innerHTML = "";
+  const q = paymentSearch.value.toLowerCase();
+  Object.values(clients).forEach(c => {
+    if (c.name.toLowerCase().includes(q)) {
+      const d = document.createElement("div");
+      d.className = "autocomplete-item";
+      d.textContent = c.name;
+      d.onclick = () => selectClient(c.name);
       paymentAuto.appendChild(d);
     }
   });
 };
 
-function selectClient(name){
-  paymentClientName.value=name;
-  const c=clients[cid(name)];
-  const bal=(c.debit||0)-(c.credit||0);
-  paymentBalance.value="Balance: "+bal;
-  paymentAuto.innerHTML="";
+function selectClient(name) {
+  paymentClientName.value = name;
+  const c = clients[cid(name)];
+  const bal = (c.debit || 0) - (c.credit || 0);
+  paymentBalance.value = "Balance: " + bal;
+  paymentAuto.innerHTML = "";
 }
 
 // PAYMENT
-addPaymentBtn.onclick=async()=>{
-  const name=paymentClientName.value;
-  const ref=doc(db,"users",currentUser.uid,"clients",cid(name));
-  const s=await getDoc(ref);
-  const c=s.data();
-  c.history.push({date:paymentDate.value,debit:0,credit:+paymentAmount.value,method:"payment",mode:paymentMode.value,remarks:paymentRemarks.value});
-  await setDoc(ref,{...c,credit:c.credit+ +paymentAmount.value});
+addPaymentBtn.onclick = async () => {
+  const name = paymentClientName.value;
+  const ref = doc(db, "users", currentUser.uid, "clients", cid(name));
+  const s = await getDoc(ref);
+  const c = s.data();
+  c.history.push({ date: paymentDate.value, debit: 0, credit: +paymentAmount.value, method: "payment", mode: paymentMode.value, remarks: paymentRemarks.value });
+  await setDoc(ref, { ...c, credit: c.credit + +paymentAmount.value });
   alert("Payment added");
 };
 
 // EXPENSE
-function loadExpenses(){
-  onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
-    expenses=[];
-    snap.forEach(d=>expenses.push(d.data()));
+function loadExpenses() {
+  onSnapshot(collection(db, "users", currentUser.uid, "expenses"), snap => {
+    expenses = [];
+    snap.forEach(d => expenses.push(d.data()));
   });
 }
 
-addExpenseBtn.onclick=async()=>{
-  await addDoc(collection(db,"users",currentUser.uid,"expenses"),{
-    date:expenseDate.value,amount:+expenseAmount.value,desc:expenseDesc.value,invoice:expenseInvoice.value
+addExpenseBtn.onclick = async () => {
+  await addDoc(collection(db, "users", currentUser.uid, "expenses"), {
+    date: expenseDate.value, amount: +expenseAmount.value, desc: expenseDesc.value, invoice: expenseInvoice.value
   });
   alert("Expense saved");
 };
 
 // REPORT
-generateReportBtn.onclick=()=>{
-  const s=new Date(reportStart.value);
-  const e=new Date(reportEnd.value);
-  let sales=0;
-  Object.values(clients).forEach(c=>c.history.forEach(h=>{
-    const d=new Date(h.date);
-    if(h.credit && d>=s && d<=e) sales+=h.credit;
+generateReportBtn.onclick = () => {
+  const s = new Date(reportStart.value);
+  const e = new Date(reportEnd.value);
+  let sales = 0;
+  Object.values(clients).forEach(c => c.history.forEach(h => {
+    const d = new Date(h.date);
+    if (h.credit && d >= s && d <= e) sales += h.credit;
   }));
-  const exp=expenses.filter(x=>new Date(x.date)>=s&&new Date(x.date)<=e)
-    .reduce((a,b)=>a+b.amount,0);
-  reportResult.innerHTML=`Sales: ${sales}<br>Expenses: ${exp}<br>Net: ${sales-exp}`;
+  const exp = expenses.filter(x => new Date(x.date) >= s && new Date(x.date) <= e)
+    .reduce((a, b) => a + b.amount, 0);
+  reportResult.innerHTML = `Sales: ${sales}<br>Expenses: ${exp}<br>Net: ${sales - exp}`;
 };
 
-logoutBtn.onclick=()=>signOut(auth);
-window.showSection=id=>{
-  document.querySelectorAll(".section").forEach(s=>s.style.display="none");
-  document.getElementById(id).style.display="block";
+window.showSection = id => {
+  document.querySelectorAll(".section").forEach(s => s.style.display = "none");
+  document.getElementById(id).style.display = "block";
 };
 </script>
 
 </body>
 </html>
-
