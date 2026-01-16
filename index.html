@@ -190,6 +190,44 @@ const db = getFirestore(app);
 let currentUser=null, clients={}, expenses=[];
 
 const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
+  // Add this helper function near the top (after const cid = ...)
+const formatDate = (isoString) => {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+};
+
+// VIEW CLIENT (updated with date formatting)
+window.viewClient = name => {
+  const clientId = cid(name);
+  const c = clients[clientId];
+  if (!c) {
+    alert("Client not found. Please refresh and try again.");
+    return;
+  }
+  viewTitle.textContent = name;
+  viewBody.innerHTML = "";
+  if (!c.history || c.history.length === 0) {
+    viewBody.innerHTML = "<tr><td colspan='8' style='text-align:center;'>No transaction history available for this client.</td></tr>";
+  } else {
+    c.history.forEach(h => {
+      viewBody.innerHTML += `
+      <tr>
+        <td>${formatDate(h.date)}</td>
+        <td class="${h.debit > 0 ? 'debit-red' : ''}">${h.debit || 0}</td>
+        <td>${h.credit || 0}</td>
+        <td>${h.method || ''}</td>
+        <td>${h.mode || ''}</td>
+        <td>${h.remarks || ''}</td>
+        <td>${h.start || ''}</td>
+        <td>${h.end || ''}</td>
+      </tr>`;
+    });
+  }
+  viewModal.style.display = "block";
+  // Optional: For debugging, remove in production
+  console.log("Viewing client:", name, c);
+};
 
 // LOGIN
 loginBtn.onclick = () => {
@@ -423,5 +461,6 @@ window.showSection = id => {
 
 </body>
 </html>
+
 
 
