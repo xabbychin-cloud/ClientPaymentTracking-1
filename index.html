@@ -11,36 +11,27 @@ h1{background:#2e7d32;color:white;padding:15px;text-align:center;margin:0}
 
 #toolbar{display:flex;gap:8px;padding:10px;background:#333;overflow-x:auto}
 #toolbar button{background:#4CAF50;color:white;border:none;padding:10px 14px;border-radius:4px;cursor:pointer}
-#toolbar button:hover{background:#43a047}
 
 .section{display:none;background:white;margin:10px;padding:15px;border-radius:6px}
 input,select,button{width:100%;padding:8px;margin-top:6px}
-button{cursor:pointer}
 
 table{width:100%;border-collapse:collapse;margin-top:10px}
-th,td{border:1px solid #ccc;padding:6px;text-align:left}
+th,td{border:1px solid #ccc;padding:6px}
 th{background:#eee;color:black}
 
+.highlight{background:yellow;font-weight:bold}
 .balance-red{color:red;font-weight:bold}
 .balance-black{color:black}
 
-.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5)}
+.modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5)}
 .modal-content{background:white;width:95%;max-width:900px;margin:5% auto;padding:15px;max-height:80vh;overflow:auto}
-.close{float:right;font-size:22px;cursor:pointer}
-
-.readonly{background:#eee}
 
 .autocomplete-box{position:relative}
-.autocomplete-list{
-  position:absolute;background:white;border:1px solid #ccc;
-  width:100%;max-height:150px;overflow:auto;z-index:100
-}
+.autocomplete-list{position:absolute;background:white;border:1px solid #ccc;width:100%;max-height:150px;overflow:auto;z-index:10}
 .autocomplete-item{padding:6px;cursor:pointer}
-.autocomplete-item:hover{background:#f0f0f0}
+.autocomplete-item:hover{background:#eee}
 
-.remark-red{color:red;font-weight:bold}
-
-.highlight{background:yellow;font-weight:bold}
+.unpaid-row{background:#ffe6e6}
 
 #logoutBtn{background:#c62828;color:white;margin:15px}
 </style>
@@ -68,10 +59,9 @@ th{background:#eee;color:black}
 
 <div id="appSection" style="display:none">
 
-<!-- CLIENT LIST -->
+<!-- CLIENTS -->
 <div id="clientSection" class="section">
-  <h3>Client Information</h3>
-  <input id="clientSearchInput" placeholder="Search full name">
+  <input id="clientSearchInput" placeholder="Search client">
   <button id="clientSearchBtn">Search</button>
   <select id="clientFilter">
     <option value="all">All</option>
@@ -81,9 +71,7 @@ th{background:#eee;color:black}
 
   <table>
     <thead>
-      <tr>
-        <th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Status</th><th>Action</th>
-      </tr>
+      <tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Status</th><th></th></tr>
     </thead>
     <tbody id="clientsBody"></tbody>
   </table>
@@ -91,7 +79,6 @@ th{background:#eee;color:black}
 
 <!-- ADD CHARGE -->
 <div id="chargeSection" class="section">
-  <h3>Add Charge</h3>
   <input id="chargeName" placeholder="Client Full Name">
   <input id="chargeAmount" type="number" placeholder="Amount">
   <input id="chargeStart" type="date">
@@ -102,46 +89,34 @@ th{background:#eee;color:black}
 
 <!-- ADD PAYMENT -->
 <div id="paymentSection" class="section">
-  <h3>Add Payment</h3>
-
   <div class="autocomplete-box">
-    <input id="paymentSearch" placeholder="Search Client">
+    <input id="paymentSearch" placeholder="Search client">
     <div id="paymentAuto" class="autocomplete-list"></div>
   </div>
-
-  <input id="paymentClientName" class="readonly" readonly>
-
-  <!-- balance rendered as HTML -->
-  <div id="paymentBalance" class="readonly" style="padding:8px;margin-top:6px"></div>
-
+  <div id="paymentBalance"></div>
   <input id="paymentAmount" type="number" placeholder="Payment Amount">
-  <select id="paymentMode">
-    <option value="">Payment Mode</option>
-    <option>Full</option>
-    <option>Partial</option>
-  </select>
   <input id="paymentDate" type="date">
-  <input id="paymentRemarks" placeholder="Remarks">
   <button id="addPaymentBtn">Save Payment</button>
 </div>
 
 <!-- EXPENSE -->
 <div id="expenseSection" class="section">
-  <h3>Add Expense</h3>
   <input id="expenseDate" type="date">
   <input id="expenseAmount" type="number" placeholder="Amount">
   <input id="expenseDesc" placeholder="Description">
-  <input id="expenseInvoice" placeholder="Invoice (optional)">
   <button id="addExpenseBtn">Save Expense</button>
 </div>
 
 <!-- REPORT -->
 <div id="reportSection" class="section">
-  <h3>Admin Report</h3>
   <input id="reportStart" type="date">
   <input id="reportEnd" type="date">
-  <button id="generateReportBtn">Generate Report</button>
+  <button id="generateReportBtn">Generate</button>
+  <button id="viewExpensesBtn">View Expenses</button>
   <div id="reportResult"></div>
+  <table>
+    <tbody id="expensesBody"></tbody>
+  </table>
 </div>
 
 <button id="logoutBtn">Logout</button>
@@ -150,39 +125,33 @@ th{background:#eee;color:black}
 <!-- VIEW MODAL -->
 <div id="viewModal" class="modal">
   <div class="modal-content">
-    <span class="close" onclick="closeViewModal()">&times;</span>
     <h3 id="viewTitle"></h3>
-    <div id="viewSummary"></div>
+    <div id="viewBalance"></div>
     <table>
       <thead>
-        <tr>
-          <th>Date</th><th>Debit</th><th>Credit</th>
-          <th>Method</th><th>Mode</th><th>Remarks</th><th>Start</th><th>End</th>
-        </tr>
+        <tr><th>Date</th><th>Debit</th><th>Credit</th><th>Remarks</th></tr>
       </thead>
       <tbody id="viewBody"></tbody>
     </table>
+    <button onclick="viewModal.style.display='none'">Close</button>
   </div>
 </div>
 
 <script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import {initializeApp} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
+import {getAuth,signInWithEmailAndPassword,onAuthStateChanged,signOut} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import {getFirestore,doc,setDoc,getDoc,collection,onSnapshot,addDoc} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-const app = initializeApp({
+const app=initializeApp({
   apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
   authDomain:"client-payment-tracker-3572b.firebaseapp.com",
   projectId:"client-payment-tracker-3572b"
 });
 
-const auth=getAuth(app);
-const db=getFirestore(app);
-
+const auth=getAuth(app), db=getFirestore(app);
 let currentUser=null, clients={}, expenses=[];
 const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
 
-// LOGIN
 loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value)
 .catch(e=>alert(e.message));
 
@@ -192,19 +161,21 @@ onAuthStateChanged(auth,u=>{
     authSection.style.display="none";
     appSection.style.display="block";
     loadClients(); loadExpenses();
+  } else {
+    appSection.style.display="none";
+    authSection.style.display="block";
   }
 });
 
-// LOAD CLIENTS
+logoutBtn.onclick=()=>signOut(auth);
+
 function loadClients(){
-  onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
-    clients={};
-    snap.forEach(d=>clients[d.id]=d.data());
+  onSnapshot(collection(db,"users",currentUser.uid,"clients"),s=>{
+    clients={}; s.forEach(d=>clients[d.id]=d.data());
     renderClients();
   });
 }
 
-// CLIENT LIST
 function renderClients(){
   const q=clientSearchInput.value.toLowerCase();
   const f=clientFilter.value;
@@ -216,7 +187,7 @@ function renderClients(){
     if(f!=="all"&&f!==status)return;
     clientsBody.innerHTML+=`
     <tr>
-      <td>${c.name}</td>
+      <td>${q?c.name.replace(new RegExp(q,"gi"),m=>`<span class="highlight">${m}</span>`):c.name}</td>
       <td>${c.debit||0}</td>
       <td>${c.credit||0}</td>
       <td class="${bal>0?'balance-red':'balance-black'}">${bal}</td>
@@ -225,48 +196,34 @@ function renderClients(){
     </tr>`;
   });
 }
+
 clientSearchBtn.onclick=renderClients;
 clientFilter.onchange=renderClients;
 
-// ADD CHARGE
-addChargeBtn.onclick=async()=>{
-  const name=chargeName.value;
-  const ref=doc(db,"users",currentUser.uid,"clients",cid(name));
-  const s=await getDoc(ref);
-  const c=s.exists()?s.data():{name,debit:0,credit:0,history:[]};
-  c.history.push({date:new Date().toISOString(),debit:+chargeAmount.value,credit:0,remarks:chargeRemarks.value,start:chargeStart.value,end:chargeEnd.value});
-  await setDoc(ref,{name,debit:c.debit+ +chargeAmount.value,credit:c.credit,history:c.history});
-  alert("Charge added");
-};
-
-// VIEW CLIENT (ONLY BALANCE COLORED)
 window.viewClient=name=>{
   const c=clients[cid(name)];
-  let d=0,cr=0;
-  c.history.forEach(h=>{d+=h.debit||0;cr+=h.credit||0});
-  const bal=d-cr;
-
+  let bal=(c.debit||0)-(c.credit||0);
   viewTitle.textContent=name;
-  viewSummary.innerHTML=`Balance: <span class="${bal>0?'balance-red':'balance-black'}">${bal}</span>`;
+  viewBalance.innerHTML=`Balance: <span class="${bal>0?'balance-red':'balance-black'}">${bal}</span>`;
   viewBody.innerHTML="";
-  c.history.forEach(h=>{
+  let running=bal;
+  [...c.history].reverse().forEach(h=>{
+    let unpaid=false;
+    if(h.debit && running>0){
+      unpaid=true;
+      running-=h.debit;
+    }
     viewBody.innerHTML+=`
-    <tr>
+    <tr class="${unpaid?'unpaid-row':''}">
       <td>${h.date}</td>
       <td>${h.debit||0}</td>
       <td>${h.credit||0}</td>
-      <td>${h.method||''}</td>
-      <td>${h.mode||''}</td>
       <td>${h.remarks||''}</td>
-      <td>${h.start||''}</td>
-      <td>${h.end||''}</td>
     </tr>`;
   });
   viewModal.style.display="block";
 };
-window.closeViewModal=()=>viewModal.style.display="none";
 
-// AUTOCOMPLETE PAYMENT
 paymentSearch.oninput=()=>{
   paymentAuto.innerHTML="";
   const q=paymentSearch.value.toLowerCase();
@@ -275,53 +232,42 @@ paymentSearch.oninput=()=>{
       const d=document.createElement("div");
       d.className="autocomplete-item";
       d.textContent=c.name;
-      d.onclick=()=>selectClient(c.name);
+      d.onclick=()=>{
+        paymentSearch.value=c.name;
+        const bal=(c.debit||0)-(c.credit||0);
+        paymentBalance.innerHTML=`Balance: <span class="${bal>0?'balance-red':'balance-black'}">${bal}</span>`;
+        paymentAuto.innerHTML="";
+      };
       paymentAuto.appendChild(d);
     }
   });
 };
 
-function selectClient(name){
-  const c=clients[cid(name)];
-  let d=0,cr=0,remarks=[];
-  c.history.forEach(h=>{
-    d+=h.debit||0; cr+=h.credit||0;
-    if(h.debit>0 && h.remarks) remarks.push(h.remarks);
-  });
-  const bal=d-cr;
-  paymentClientName.value=name;
-  paymentBalance.innerHTML=`Balance: ${bal} ${remarks.length?'<span class="remark-red">('+remarks.join(', ')+')</span>':''}`;
-  paymentAuto.innerHTML="";
-}
-
-// PAYMENT
 addPaymentBtn.onclick=async()=>{
-  const name=paymentClientName.value;
+  const name=paymentSearch.value;
   const ref=doc(db,"users",currentUser.uid,"clients",cid(name));
   const s=await getDoc(ref);
   const c=s.data();
-  c.history.push({date:paymentDate.value,debit:0,credit:+paymentAmount.value,remarks:paymentRemarks.value});
+  c.history.push({date:paymentDate.value,debit:0,credit:+paymentAmount.value});
   await setDoc(ref,{...c,credit:c.credit+ +paymentAmount.value});
-  alert("Payment added");
+  alert("Payment saved");
 };
 
-// EXPENSE
 function loadExpenses(){
-  onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
-    expenses=[];snap.forEach(d=>expenses.push(d.data()));
+  onSnapshot(collection(db,"users",currentUser.uid,"expenses"),s=>{
+    expenses=[]; s.forEach(d=>expenses.push(d.data()));
   });
 }
+
 addExpenseBtn.onclick=async()=>{
   await addDoc(collection(db,"users",currentUser.uid,"expenses"),{
-    date:expenseDate.value,amount:+expenseAmount.value,desc:expenseDesc.value,invoice:expenseInvoice.value
+    date:expenseDate.value,amount:+expenseAmount.value,desc:expenseDesc.value
   });
   alert("Expense saved");
 };
 
-// REPORT
 generateReportBtn.onclick=()=>{
-  const s=new Date(reportStart.value);
-  const e=new Date(reportEnd.value);
+  const s=new Date(reportStart.value), e=new Date(reportEnd.value);
   let sales=0;
   Object.values(clients).forEach(c=>c.history.forEach(h=>{
     const d=new Date(h.date);
@@ -332,12 +278,17 @@ generateReportBtn.onclick=()=>{
   reportResult.innerHTML=`Sales: ${sales}<br>Expenses: ${exp}<br>Net: ${sales-exp}`;
 };
 
-logoutBtn.onclick=()=>signOut(auth);
+viewExpensesBtn.onclick=()=>{
+  expensesBody.innerHTML="";
+  expenses.forEach(e=>{
+    expensesBody.innerHTML+=`<tr><td>${e.date}</td><td>${e.amount}</td><td>${e.desc}</td></tr>`;
+  });
+};
+
 window.showSection=id=>{
   document.querySelectorAll(".section").forEach(s=>s.style.display="none");
   document.getElementById(id).style.display="block";
 };
 </script>
-
 </body>
 </html>
