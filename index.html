@@ -53,7 +53,8 @@ th{background:#eee;color:black}
   <button onclick="showSection('clientSection')" class="active">Clients</button>
   <button onclick="showSection('chargeSection')">Add Charge</button>
   <button onclick="showSection('paymentSection')">Add Payment</button>
-  <button onclick="showSection('expenseSection')">Expenses</button>
+  <button onclick="showSection('expenseSection')">Add Expense</button>
+  <button onclick="showSection('viewExpenseSection')">View Expenses</button>
   <button onclick="showSection('reportSection')">Admin Report</button>
 </div>
 
@@ -131,7 +132,7 @@ th{background:#eee;color:black}
   <button id="addPaymentBtn">Save Payment</button>
 </div>
 
-<!-- EXPENSE -->
+<!-- ADD EXPENSE -->
 <div id="expenseSection" class="section">
   <h3>Add Expense</h3>
   <input id="expenseDate" type="date">
@@ -139,6 +140,15 @@ th{background:#eee;color:black}
   <input id="expenseDesc" placeholder="Description">
   <input id="expenseInvoice" placeholder="Invoice (optional)">
   <button id="addExpenseBtn">Save Expense</button>
+</div>
+
+<!-- VIEW EXPENSES -->
+<div id="viewExpenseSection" class="section">
+  <h3>View Expenses</h3>
+  <input id="viewExpenseStart" type="date">
+  <input id="viewExpenseEnd" type="date">
+  <button id="viewExpenseBtn">Generate</button>
+  <div id="viewExpenseResult"></div>
 </div>
 
 <!-- REPORT -->
@@ -335,6 +345,16 @@ addExpenseBtn.onclick=async()=>{
     date:expenseDate.value,amount:+expenseAmount.value,desc:expenseDesc.value,invoice:expenseInvoice.value
   });
   alert("Expense saved");
+};
+
+// VIEW EXPENSES
+viewExpenseBtn.onclick=()=>{
+  const s=new Date(viewExpenseStart.value);
+  const e=new Date(viewExpenseEnd.value);
+  const filtered=expenses.filter(x=>new Date(x.date)>=s&&new Date(x.date)<=e);
+  viewExpenseResult.innerHTML="<table><thead><tr><th>Date</th><th>Amount</th><th>Description</th><th>Invoice</th></tr></thead><tbody>";
+  filtered.forEach(x=>viewExpenseResult.innerHTML+=`<tr><td>${x.date}</td><td>${x.amount}</td><td>${x.desc}</td><td>${x.invoice||''}</td></tr>`);
+  viewExpenseResult.innerHTML+="</tbody></table>";
 };
 
 // REPORT
