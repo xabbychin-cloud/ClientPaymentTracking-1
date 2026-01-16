@@ -93,9 +93,28 @@ th{background:#eee;color:black}
     <input id="paymentSearch" placeholder="Search client">
     <div id="paymentAuto" class="autocomplete-list"></div>
   </div>
+
   <div id="paymentBalance"></div>
+
   <input id="paymentAmount" type="number" placeholder="Payment Amount">
+
+  <select id="paymentType">
+    <option value="">Payment Type</option>
+    <option>Cash</option>
+    <option>Bank Transfer</option>
+    <option>Credit Card</option>
+    <option>Others</option>
+  </select>
+
+  <select id="paymentMode">
+    <option value="">Payment Mode</option>
+    <option>Full</option>
+    <option>Partial</option>
+  </select>
+
   <input id="paymentDate" type="date">
+  <input id="paymentRemarks" placeholder="Remarks">
+
   <button id="addPaymentBtn">Save Payment</button>
 </div>
 
@@ -111,10 +130,15 @@ th{background:#eee;color:black}
 <div id="reportSection" class="section">
   <input id="reportStart" type="date">
   <input id="reportEnd" type="date">
-  <button id="generateReportBtn">Generate</button>
-  <button id="viewExpensesBtn">View Expenses</button>
-  <div id="reportResult"></div>
+  <button id="generateReportBtn">Generate Report</button>
+
+  <div id="reportResult" style="margin-top:10px"></div>
+
+  <h4>Expenses</h4>
   <table>
+    <thead>
+      <tr><th>Date</th><th>Amount</th><th>Description</th></tr>
+    </thead>
     <tbody id="expensesBody"></tbody>
   </table>
 </div>
@@ -129,7 +153,16 @@ th{background:#eee;color:black}
     <div id="viewBalance"></div>
     <table>
       <thead>
-        <tr><th>Date</th><th>Debit</th><th>Credit</th><th>Remarks</th></tr>
+        <tr>
+          <th>Date</th>
+          <th>Debit</th>
+          <th>Credit</th>
+          <th>Type</th>
+          <th>Mode</th>
+          <th>Remarks</th>
+          <th>Start</th>
+          <th>End</th>
+        </tr>
       </thead>
       <tbody id="viewBody"></tbody>
     </table>
@@ -218,7 +251,11 @@ window.viewClient=name=>{
       <td>${h.date}</td>
       <td>${h.debit||0}</td>
       <td>${h.credit||0}</td>
+      <td>${h.type||''}</td>
+      <td>${h.mode||''}</td>
       <td>${h.remarks||''}</td>
+      <td>${h.start||''}</td>
+      <td>${h.end||''}</td>
     </tr>`;
   });
   viewModal.style.display="block";
@@ -248,7 +285,14 @@ addPaymentBtn.onclick=async()=>{
   const ref=doc(db,"users",currentUser.uid,"clients",cid(name));
   const s=await getDoc(ref);
   const c=s.data();
-  c.history.push({date:paymentDate.value,debit:0,credit:+paymentAmount.value});
+  c.history.push({
+    date:paymentDate.value,
+    debit:0,
+    credit:+paymentAmount.value,
+    type:paymentType.value,
+    mode:paymentMode.value,
+    remarks:paymentRemarks.value
+  });
   await setDoc(ref,{...c,credit:c.credit+ +paymentAmount.value});
   alert("Payment saved");
 };
@@ -261,7 +305,9 @@ function loadExpenses(){
 
 addExpenseBtn.onclick=async()=>{
   await addDoc(collection(db,"users",currentUser.uid,"expenses"),{
-    date:expenseDate.value,amount:+expenseAmount.value,desc:expenseDesc.value
+    date:expenseDate.value,
+    amount:+expenseAmount.value,
+    desc:expenseDesc.value
   });
   alert("Expense saved");
 };
@@ -273,14 +319,11 @@ generateReportBtn.onclick=()=>{
     const d=new Date(h.date);
     if(h.credit&&d>=s&&d<=e)sales+=h.credit;
   }));
-  const exp=expenses.filter(x=>new Date(x.date)>=s&&new Date(x.date)<=e)
-    .reduce((a,b)=>a+b.amount,0);
+  const filtered=expenses.filter(x=>new Date(x.date)>=s&&new Date(x.date)<=e);
+  const exp=filtered.reduce((a,b)=>a+b.amount,0);
   reportResult.innerHTML=`Sales: ${sales}<br>Expenses: ${exp}<br>Net: ${sales-exp}`;
-};
-
-viewExpensesBtn.onclick=()=>{
   expensesBody.innerHTML="";
-  expenses.forEach(e=>{
+  filtered.forEach(e=>{
     expensesBody.innerHTML+=`<tr><td>${e.date}</td><td>${e.amount}</td><td>${e.desc}</td></tr>`;
   });
 };
