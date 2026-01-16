@@ -38,6 +38,11 @@
     .autocomplete-item:hover{background:#f0f0f0}
 
     #logoutBtn{background:#c62828;color:white;margin:15px}
+
+    .highlight { font-weight: bold; background-color: yellow; }
+    .outstanding-row { background-color: #ffe6e6; } /* Light red background for outstanding rows */
+    .balance-outstanding { color: red; font-weight: bold; }
+    .balance-paid { color: black; }
   </style>
 </head>
 
@@ -84,7 +89,6 @@
   </table>
 </div>
 
-<!-- ADD CHARGE -->
 <!-- ADD CHARGE -->
 <div id="chargeSection" class="section">
   <h3>Add Charge</h3>
@@ -156,7 +160,7 @@
 <button id="logoutBtn">Logout</button>
 </div>
 
-   <!-- VIEW MODAL -->
+<!-- VIEW MODAL -->
 <div id="viewModal" class="modal">
   <div class="modal-content">
     <span class="close" onclick="closeViewModal()">&times;</span>
@@ -188,19 +192,125 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let currentUser=null, clients={}, expenses=[];
+let currentUser = null, clients = {}, expenses = [];
 
-const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
-  // Add this helper function near the top (after const cid = ...)
+const cid = n => n.toLowerCase().replace(/\s+/g, '_');
 const formatDate = (isoString) => {
+  if (!isoString) return '';
+  const d = new Date(isoString);
+  return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+};
 const highlightText = (text, query) => {
   if (!query) return text;
   const regex = new RegExp(`(${query})`, 'gi');
   return text.replace(regex, '<span class="highlight">$1</span>');
 };
-  if (!isoString) return '';
-  const d = new Date(isoString);
-  return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
+
+// LOGIN
+loginBtn.onclick = () => {
+  signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value)
+    .catch(e => alert(e.message));
+};
+
+// AUTH STATE LISTENER (handles login, logout, and initial load)
+onAuthStateChanged(auth, u => {
+  if (u) {
+    // User is logged in
+    currentUser = u;
+    authSection.style.display = "none";
+    appSection.style.display = "block";
+    loadClients();
+    loadExpenses();
+  } else {
+    // User is not logged in (show login form)
+    currentUser = null;
+    authSection.style.display = "block";
+    appSection.style.display = "none";
+  }
+});
+
+// LOGOUT
+logoutBtn.onclick = () => {
+  signOut(auth).catch(e => alert(e.message));
+};
+
+// LOAD CLIENTS
+function loadClients() {
+  onSnapshot(collection(db, "users", currentUser.uid, "clients"), snap => {
+    clients = {};
+    snap.forEach(d => clients[d.id] = d.data());
+    renderClientTable();
+  });
+}
+
+// CLIENT TABLE
+function renderClientTable() {
+  const q = clientSearchInput.value.toLowerCase();
+  const f = clientFilter.value;
+  clientsBody.innerHTML = "";
+  let hasMatches = false;
+  Object.values(clients).forEach(c => {
+    const bal = (c.debit || 0) - (c.credit || 0);
+    const s = bal > 0 ? "outstanding" : "paid";
+    if (q && !c.name.toLowerCase().includes(q)) return;
+    if (f !== "all" && f !== s) return;
+    hasMatches = true;
+    const highlightedName = highlightText(c.name, q);
+    clientsBody.innerHTML += `
+      <tr>
+        <td>${highlightedName}</td>
+        <td class="${bal > 0 ? 'debit-red' : ''}">${c.debit || 0}</td>
+        <td>${c.credit || 0}</td>
+        <td class="${bal > 0 ? 'debit-red' : ''}">${bal}</td>
+        <td>${s}</td>
+        <td><button onclick="viewClient('${c.name}')">View</button></td>
+      </tr>`;
+  });
+  if (!hasMatches) {
+    clientsBody.innerHTML = "<tr><td colspan='6' style='text-align:center;'>No records found matching your search and filter criteria.</td></tr>";
+  }
+}
+
+// Trigger search on button click (manual) and filter on change
+clientSearchBtn.onclick = renderClientTable;
+clientFilter.onchange = renderClientTable;
+
+// AUTOCOMPLETE FOR CHARGE (search clients and populate chargeName)
+chargeName.oninput = () => {
+  chargeAuto.innerHTML = "";
+  const q = chargeName.value.toLowerCase();
+  Object.values(clients).forEach(c => {
+    if (c.name.toLowerCase().includes(q)) {
+      const d = document.createElement("div");
+      d.className = "autocomplete-item";
+      d.textContent = c.name;
+      d.onclick = () => selectChargeClient(c.name);
+      chargeAuto.appendChild(d);
+    }
+  });
+};
+
+function selectChargeClient(name) {
+  chargeName.value = name;
+  chargeAuto.innerHTML = "";
+}
+
+// ADD CHARGE
+addChargeBtn.onclick = async () => {
+  const name = chargeName.value;
+  if (!name) return alert("Please enter a client name.");
+  const ref = doc(db, "users", currentUser.uid, "clients", cid(name));
+  const s = await getDoc(ref);
+  const c = s.exists() ? s.data() : { name, debit: 0, credit: 0, history: [] };
+  c.history.push({ date: new Date().toISOString(), debit: +chargeAmount.value, credit: 0, method: "charge", remarks: chargeRemarks.value, start: chargeStart.value, end: chargeEnd.value });
+  await setDoc(ref, { name, debit: c.debit + +chargeAmount.value, credit: c.credit, history: c.history });
+  alert("Charge added");
+  // Clear form
+  chargeName.value = "";
+  chargeAmount.value = "";
+  chargeStart.value = "";
+  chargeEnd.value = "";
+  chargeRemarks.value = "";
 };
 
 // VIEW CLIENT (updated summary styling and row highlighting)
@@ -257,170 +367,6 @@ window.viewClient = name => {
   // Optional: For debugging, remove in production
   console.log("Viewing client:", name, c);
 };
-   viewModal.style.display = "block";
-  // Optional: For debugging, remove in production
-  console.log("Viewing client:", name, c);
-};
-
-// LOGIN
-loginBtn.onclick = () => {
-  signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value)
-    .catch(e => alert(e.message));
-};
-
-// AUTH STATE LISTENER (handles login, logout, and initial load)
-onAuthStateChanged(auth, u => {
-  if (u) {
-    // User is logged in
-    currentUser = u;
-    authSection.style.display = "none";
-    appSection.style.display = "block";
-    loadClients();
-    loadExpenses();
-  } else {
-    // User is not logged in (show login form)
-    currentUser = null;
-    authSection.style.display = "block";
-    appSection.style.display = "none";
-  }
-});
-
-// LOGOUT
-logoutBtn.onclick = () => {
-  signOut(auth).catch(e => alert(e.message));
-};
-
-// LOAD CLIENTS
-function loadClients(){
-  onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
-    clients={};
-    snap.forEach(d=>clients[d.id]=d.data());
-    renderClientTable();
-  });
-}
-
-// CLIENT TABLE
-function renderClientTable() {
-  const q = clientSearchInput.value.toLowerCase();
-  const f = clientFilter.value;
-  clientsBody.innerHTML = "";
-  let hasMatches = false;
-  Object.values(clients).forEach(c => {
-    const bal = (c.debit || 0) - (c.credit || 0);
-    const s = bal > 0 ? "outstanding" : "paid";
-    if (q && !c.name.toLowerCase().includes(q)) return;
-    if (f !== "all" && f !== s) return;
-    hasMatches = true;
-    const highlightedName = highlightText(c.name, q);
-    clientsBody.innerHTML += `
-      <tr>
-        <td>${highlightedName}</td>
-        <td class="${bal > 0 ? 'debit-red' : ''}">${c.debit || 0}</td>
-        <td>${c.credit || 0}</td>
-        <td class="${bal > 0 ? 'debit-red' : ''}">${bal}</td>
-        <td>${s}</td>
-        <td><button onclick="viewClient('${c.name}')">View</button></td>
-      </tr>`;
-  });
-  if (!hasMatches) {
-    clientsBody.innerHTML = "<tr><td colspan='6' style='text-align:center;'>No records found matching your search and filter criteria.</td></tr>";
-  }
-}
-
-// VIEW CLIENT (updated with checks)
-window.viewClient = name => {
-  const clientId = cid(name);
-  const c = clients[clientId];
-  if (!c) {
-    alert("Client not found. Please refresh and try again.");
-    return;
-  }
-  viewTitle.textContent = name;
-  viewBody.innerHTML = "";
-  if (!c.history || c.history.length === 0) {
-    viewBody.innerHTML = "<tr><td colspan='8' style='text-align:center;'>No transaction history available for this client.</td></tr>";
-  } else {
-    c.history.forEach(h => {
-      viewBody.innerHTML += `
-      <tr>
-        <td>${h.date}</td>
-        <td class="${h.debit > 0 ? 'debit-red' : ''}">${h.debit || 0}</td>
-        <td>${h.credit || 0}</td>
-        <td>${h.method || ''}</td>
-        <td>${h.mode || ''}</td>
-        <td>${h.remarks || ''}</td>
-        <td>${h.start || ''}</td>
-        <td>${h.end || ''}</td>
-      </tr>`;
-    });
-  }
-  viewModal.style.display = "block";
-  // Optional: For debugging, remove in production
-  console.log("Viewing client:", name, c);
-};
-
-// Trigger search on button click (manual) and filter on change
-clientSearchBtn.onclick = renderClientTable;
-clientFilter.onchange = renderClientTable;
-
-// AUTOCOMPLETE FOR CHARGE (search clients and populate chargeName)
-chargeName.oninput = () => {
-  chargeAuto.innerHTML = "";
-  const q = chargeName.value.toLowerCase();
-  Object.values(clients).forEach(c => {
-    if (c.name.toLowerCase().includes(q)) {
-      const d = document.createElement("div");
-      d.className = "autocomplete-item";
-      d.textContent = c.name;
-      d.onclick = () => selectChargeClient(c.name);
-      chargeAuto.appendChild(d);
-    }
-  });
-};
-
-function selectChargeClient(name) {
-  chargeName.value = name;
-  chargeAuto.innerHTML = "";
-}
-
-// ADD CHARGE
-addChargeBtn.onclick = async () => {
-  const name = chargeName.value;
-  if (!name) return alert("Please enter a client name.");
-  const ref = doc(db, "users", currentUser.uid, "clients", cid(name));
-  const s = await getDoc(ref);
-  const c = s.exists() ? s.data() : { name, debit: 0, credit: 0, history: [] };
-  c.history.push({ date: new Date().toISOString(), debit: +chargeAmount.value, credit: 0, method: "charge", remarks: chargeRemarks.value, start: chargeStart.value, end: chargeEnd.value });
-  await setDoc(ref, { name, debit: c.debit + +chargeAmount.value, credit: c.credit, history: c.history });
-  alert("Charge added");
-  // Clear form
-  chargeName.value = "";
-  chargeAmount.value = "";
-  chargeStart.value = "";
-  chargeEnd.value = "";
-  chargeRemarks.value = "";
-};
-
-// VIEW CLIENT
-window.viewClient = name => {
-  const c = clients[cid(name)];
-  viewTitle.textContent = name;
-  viewBody.innerHTML = "";
-  c.history.forEach(h => {
-    viewBody.innerHTML += `
-    <tr>
-      <td>${h.date}</td>
-      <td class="${h.debit > 0 ? 'debit-red' : ''}">${h.debit || 0}</td>
-      <td>${h.credit || 0}</td>
-      <td>${h.method || ''}</td>
-      <td>${h.mode || ''}</td>
-      <td>${h.remarks || ''}</td>
-      <td>${h.start || ''}</td>
-      <td>${h.end || ''}</td>
-    </tr>`;
-  });
-  viewModal.style.display = "block";
-};
 
 window.closeViewModal = () => viewModal.style.display = "none";
 
@@ -457,6 +403,8 @@ addPaymentBtn.onclick = async () => {
   await setDoc(ref, { ...c, credit: c.credit + +paymentAmount.value });
   alert("Payment added");
 };
+
+// EXP
 
 // EXPENSE
 function loadExpenses() {
@@ -495,6 +443,7 @@ window.showSection = id => {
 
 </body>
 </html>
+
 
 
 
