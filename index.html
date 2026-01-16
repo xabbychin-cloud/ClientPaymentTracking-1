@@ -128,6 +128,7 @@ th{background:#eee;color:black}
     <option>Partial</option>
   </select>
   <input id="paymentDate" type="date">
+  <input id="paymentRemarks" placeholder="Remarks">
   <button id="addPaymentBtn">Save Payment</button>
 </div>
 
@@ -318,7 +319,7 @@ addPaymentBtn.onclick=async()=>{
   const ref=doc(db,"users",currentUser.uid,"clients",cid(name));
   const s=await getDoc(ref);
   const c=s.data();
-  c.history.push({date:paymentDate.value,debit:0,credit:+paymentAmount.value,method:"payment",mode:paymentMode.value,remarks:''}); // Remarks removed, set to empty
+  c.history.push({date:paymentDate.value,debit:0,credit:+paymentAmount.value,method:"payment",mode:paymentMode.value,type:paymentType.value,remarks:paymentRemarks.value});
   await setDoc(ref,{...c,credit:c.credit+ +paymentAmount.value});
   alert("Payment added");
   // Clear form after save
@@ -329,6 +330,7 @@ addPaymentBtn.onclick=async()=>{
   paymentType.value = '';
   paymentMode.value = '';
   paymentDate.value = '';
+  paymentRemarks.value = '';
 };
 
 // EXPENSE
@@ -359,14 +361,31 @@ viewExpenseBtn.onclick=()=>{
 generateReportBtn.onclick=()=>{
   const s=new Date(reportStart.value);
   const e=new Date(reportEnd.value);
-  let sales=0;
+  let cashSales=0, bankTransferSales=0, creditCardSales=0, otherSales=0;
   Object.values(clients).forEach(c=>c.history.forEach(h=>{
     const d=new Date(h.date);
-    if(h.credit&&d>=s&&d<=e)sales+=h.credit;
+    if(h.credit&&d>=s&&d<=e){
+      if(h.type==="Cash") cashSales+=h.credit;
+      else if(h.type==="Bank Transfer") bankTransferSales+=h.credit;
+      else if(h.type==="Credit Card") creditCardSales+=h.credit;
+      else otherSales+=h.credit;
+    }
   }));
-  const exp=expenses.filter(x=>new Date(x.date)>=s&&new Date(x.date)<=e)
-    .reduce((a,b)=>a+b.amount,0);
-  reportResult.innerHTML=`Sales: ${sales}<br>Expenses: ${exp}<br>Net: ${sales-exp}`;
+  const totalCollection = cashSales + bankTransferSales + creditCardSales + otherSales;
+  const totalExpenses = expenses.filter(x=>new Date(x.date)>=s&&new Date(x.date)<=e).reduce((a,b)=>a+b.amount,0);
+  const net = totalCollection - totalExpenses;
+  const cashOnHand = cashSales - totalExpenses;
+  reportResult.innerHTML=`
+    <strong>Sales Breakdown:</strong><br>
+    Total Cash Sales: ${cashSales}<br>
+    Total Bank Transfer Sales: ${bankTransferSales}<br>
+    Total Credit Card Sales: ${creditCardSales}<br>
+    Total Other Sales: ${otherSales}<br><br>
+    <strong>Total Collection: ${totalCollection}</strong><br>
+    <strong>Total Expenses: ${totalExpenses}</strong><br>
+    <strong>Net: ${net}</strong><br>
+    <strong>Cash on Hand: ${cashOnHand}</strong>
+  `;
 };
 
 logoutBtn.onclick=()=>signOut(auth);
