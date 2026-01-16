@@ -224,26 +224,32 @@ function loadClients(){
 }
 
 // CLIENT TABLE
-function renderClientTable(){
-  const q=clientSearchInput.value.toLowerCase();
-  const f=clientFilter.value;
-  clientsBody.innerHTML="";
-  Object.values(clients).forEach(c=>{
-    const bal=(c.debit||0)-(c.credit||0);
-    const s=bal>0?"outstanding":"paid";
-    if(q && !c.name.toLowerCase().includes(q)) return;
-    if(f!=="all" && f!==s) return;
-    clientsBody.innerHTML+=`
+function renderClientTable() {
+  const q = clientSearchInput.value.toLowerCase();
+  const f = clientFilter.value;
+  clientsBody.innerHTML = "";
+  Object.values(clients).forEach(c => {
+    const bal = (c.debit || 0) - (c.credit || 0);
+    const s = bal > 0 ? "outstanding" : "paid";
+    if (q && !c.name.toLowerCase().includes(q)) return;
+    if (f !== "all" && f !== s) return;
+    clientsBody.innerHTML += `
       <tr>
         <td>${c.name}</td>
-        <td class="${bal>0?'debit-red':''}">${c.debit||0}</td>
-        <td>${c.credit||0}</td>
-        <td class="${bal>0?'debit-red':''}">${bal}</td>
+        <td class="${bal > 0 ? 'debit-red' : ''}">${c.debit || 0}</td>
+        <td>${c.credit || 0}</td>
+        <td class="${bal > 0 ? 'debit-red' : ''}">${bal}</td>
         <td>${s}</td>
         <td><button onclick="viewClient('${c.name}')">View</button></td>
       </tr>`;
   });
 }
+
+// Trigger search on input (real-time) and filter on change
+clientSearchInput.oninput = renderClientTable;  // New: Filters as you type
+clientFilter.onchange = renderClientTable;
+// Optional: Keep button for manual search if you uncomment it in HTML
+// clientSearchBtn.onclick = renderClientTable;
 
 clientSearchBtn.onclick = renderClientTable;
 clientFilter.onchange = renderClientTable;
@@ -354,3 +360,4 @@ window.showSection=id=>{
 
 </body>
 </html>
+
