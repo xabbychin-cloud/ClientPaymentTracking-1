@@ -38,11 +38,6 @@
     .autocomplete-item:hover{background:#f0f0f0}
 
     #logoutBtn{background:#c62828;color:white;margin:15px}
-
-    .highlight { font-weight: bold; background-color: yellow; }
-    .outstanding-row { background-color: #ffe6e6; } /* Light red background for outstanding rows */
-    .balance-outstanding { color: red; font-weight: bold; }
-    .balance-paid { color: black; }
   </style>
 </head>
 
@@ -64,10 +59,6 @@
   <input id="loginEmail" placeholder="Email">
   <input id="loginPassword" type="password" placeholder="Password">
   <button id="loginBtn">Login</button>
-</div>
-
-<div id="appSection" style="display:none">
-  <h3>Welcome!</h3>
 </div>
 
 <div id="appSection" style="display:none">
@@ -93,6 +84,7 @@
   </table>
 </div>
 
+<!-- ADD CHARGE -->
 <!-- ADD CHARGE -->
 <div id="chargeSection" class="section">
   <h3>Add Charge</h3>
@@ -120,6 +112,7 @@
   <input id="paymentBalance" class="readonly" readonly>
 
   <table>
+    <thead><tr><th>Date</th><th>Unpaid</th><th>Remarks</th></tr></thead>
     <tbody id="payablesBody"></tbody>
   </table>
 
@@ -157,25 +150,13 @@
   <input id="reportStart" type="date">
   <input id="reportEnd" type="date">
   <button id="generateReportBtn">Generate Report</button>
-  <button id="viewExpensesBtn">View Expenses</button>
   <div id="reportResult"></div>
-  <div id="expensesTable" style="display:none; margin-top: 15px;">
-    <h4>Expenses List</h4>
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th><th>Amount</th><th>Description</th><th>Invoice</th>
-        </tr>
-      </thead>
-      <tbody id="expensesBody"></tbody>
-    </table>
-  </div>
 </div>
 
 <button id="logoutBtn">Logout</button>
 </div>
 
-<!-- VIEW MODAL -->
+   <!-- VIEW MODAL -->
 <div id="viewModal" class="modal">
   <div class="modal-content">
     <span class="close" onclick="closeViewModal()">&times;</span>
@@ -192,6 +173,23 @@
     </table>
   </div>
 </div>
+  <h3>Transaction History</h3>
+        <table class="history-table" id="historyTable">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Debit</th>
+              <th>Credit</th>
+              <th>Method</th>
+              <th>Remarks</th>
+            </tr>
+          </thead>
+          <tbody id="historyBody"></tbody>
+        </table>
+      </div>
+    </div>
+
+
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
@@ -207,46 +205,78 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let currentUser = null, clients = {}, expenses = [];
+let currentUser=null, clients={}, expenses=[];
 
-const cid = n => n.toLowerCase().replace(/\s+/g, '_');
+const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
+  // Add this helper function near the top (after const cid = ...)
 const formatDate = (isoString) => {
   if (!isoString) return '';
   const d = new Date(isoString);
   return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
 };
-const highlightText = (text, query) => {
-  if (!query) return text;
-  const regex = new RegExp(`(${query})`, 'gi');
-  return text.replace(regex, '<span class="highlight">$1</span>');
+
+// VIEW CLIENT (updated with summary and conditional debit color)
+window.viewClient = name => {
+  const clientId = cid(name);
+  const c = clients[clientId];
+  if (!c) {
+    alert("Client not found. Please refresh and try again.");
+    return;
+  }
+  viewTitle.textContent = name;
+  
+  // Calculate totals
+  let totalDebit = 0, totalCredit = 0;
+  if (c.history) {
+    c.history.forEach(h => {
+      totalDebit += h.debit || 0;
+      totalCredit += h.credit || 0;
+    });
+  }
+  const balance = totalDebit - totalCredit;
+  const status = balance > 0 ? "Outstanding" : "Paid";
+  
+  // Display summary
+  viewSummary.innerHTML = `
+    <strong>Total Add Charge:</strong> ${totalDebit}<br>
+    <strong>Total Paid:</strong> ${totalCredit}<br>
+    <strong>Balance:</strong> ${balance}<br>
+    <strong>Status:</strong> ${status}
+  `;
+  
+  // Display history table
+  viewBody.innerHTML = "";
+  if (!c.history || c.history.length === 0) {
+    viewBody.innerHTML = "<tr><td colspan='8' style='text-align:center;'>No transaction history available for this client.</td></tr>";
+  } else {
+    c.history.forEach(h => {
+      const debitClass = (balance <= 0) ? '' : (h.debit > 0 ? 'debit-red' : '');
+      viewBody.innerHTML += `
+      <tr>
+        <td>${formatDate(h.date)}</td>
+        <td class="${debitClass}">${h.debit || 0}</td>
+        <td>${h.credit || 0}</td>
+        <td>${h.method || ''}</td>
+        <td>${h.mode || ''}</td>
+        <td>${h.remarks || ''}</td>
+        <td>${h.start || ''}</td>
+        <td>${h.end || ''}</td>
+      </tr>`;
+    });
+  }
+  viewModal.style.display = "block";
+  // Optional: For debugging, remove in production
+  console.log("Viewing client:", name, c);
 };
-
-/import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "firebase/auth";
-
-const auth = getAuth();
-
-const loginBtn = document.getElementById("loginBtn");
-const loginEmail = document.getElementById("loginEmail");
-const loginPassword = document.getElementById("loginPassword");
-const authSection = document.getElementById("authSection");
-const appSection = document.getElementById("appSection");
 
 // LOGIN
 loginBtn.onclick = () => {
-  console.log("Login button clicked"); // Debugging
   signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value)
-    .then(userCredential => {
-      console.log("Login successful:", userCredential.user); // Debugging
-    })
-    .catch(e => {
-      console.error("Login error:", e.message); // Debugging
-      alert(e.message);
-    });
+    .catch(e => alert(e.message));
 };
 
 // AUTH STATE LISTENER (handles login, logout, and initial load)
 onAuthStateChanged(auth, u => {
-  console.log("Auth state changed:", u ? "Logged in" : "Logged out"); // Debugging
   if (u) {
     // User is logged in
     currentUser = u;
@@ -262,30 +292,16 @@ onAuthStateChanged(auth, u => {
   }
 });
 
-onAuthStateChanged(auth, u => {
-  if (u) {
-    currentUser = u;
-    authSection.style.display = "none";
-    appSection.style.display = "block";
-    loadClients();
-    loadExpenses();
-  } else {
-    currentUser = null;
-    authSection.style.display = "block";
-    appSection.style.display = "none";
-  }
-});
-
 // LOGOUT
 logoutBtn.onclick = () => {
   signOut(auth).catch(e => alert(e.message));
 };
 
 // LOAD CLIENTS
-function loadClients() {
-  onSnapshot(collection(db, "users", currentUser.uid, "clients"), snap => {
-    clients = {};
-    snap.forEach(d => clients[d.id] = d.data());
+function loadClients(){
+  onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
+    clients={};
+    snap.forEach(d=>clients[d.id]=d.data());
     renderClientTable();
   });
 }
@@ -302,10 +318,9 @@ function renderClientTable() {
     if (q && !c.name.toLowerCase().includes(q)) return;
     if (f !== "all" && f !== s) return;
     hasMatches = true;
-    const highlightedName = highlightText(c.name, q);
     clientsBody.innerHTML += `
       <tr>
-        <td>${highlightedName}</td>
+        <td>${c.name}</td>
         <td class="${bal > 0 ? 'debit-red' : ''}">${c.debit || 0}</td>
         <td>${c.credit || 0}</td>
         <td class="${bal > 0 ? 'debit-red' : ''}">${bal}</td>
@@ -317,6 +332,38 @@ function renderClientTable() {
     clientsBody.innerHTML = "<tr><td colspan='6' style='text-align:center;'>No records found matching your search and filter criteria.</td></tr>";
   }
 }
+
+// VIEW CLIENT (updated with checks)
+window.viewClient = name => {
+  const clientId = cid(name);
+  const c = clients[clientId];
+  if (!c) {
+    alert("Client not found. Please refresh and try again.");
+    return;
+  }
+  viewTitle.textContent = name;
+  viewBody.innerHTML = "";
+  if (!c.history || c.history.length === 0) {
+    viewBody.innerHTML = "<tr><td colspan='8' style='text-align:center;'>No transaction history available for this client.</td></tr>";
+  } else {
+    c.history.forEach(h => {
+      viewBody.innerHTML += `
+      <tr>
+        <td>${h.date}</td>
+        <td class="${h.debit > 0 ? 'debit-red' : ''}">${h.debit || 0}</td>
+        <td>${h.credit || 0}</td>
+        <td>${h.method || ''}</td>
+        <td>${h.mode || ''}</td>
+        <td>${h.remarks || ''}</td>
+        <td>${h.start || ''}</td>
+        <td>${h.end || ''}</td>
+      </tr>`;
+    });
+  }
+  viewModal.style.display = "block";
+  // Optional: For debugging, remove in production
+  console.log("Viewing client:", name, c);
+};
 
 // Trigger search on button click (manual) and filter on change
 clientSearchBtn.onclick = renderClientTable;
@@ -360,58 +407,25 @@ addChargeBtn.onclick = async () => {
   chargeRemarks.value = "";
 };
 
-// VIEW CLIENT (removed row highlighting, kept balance text red)
+// VIEW CLIENT
 window.viewClient = name => {
-  const clientId = cid(name);
-  const c = clients[clientId];
-  if (!c) {
-    alert("Client not found. Please refresh and try again.");
-    return;
-  }
+  const c = clients[cid(name)];
   viewTitle.textContent = name;
-  
-  // Calculate totals
-  let totalDebit = 0, totalCredit = 0;
-  if (c.history) {
-    c.history.forEach(h => {
-      totalDebit += h.debit || 0;
-      totalCredit += h.credit || 0;
-    });
-  }
-  const balance = totalDebit - totalCredit;
-  const status = balance > 0 ? "Outstanding" : "Paid";
-  const balanceClass = balance > 0 ? "balance-outstanding" : "balance-paid";
-  
-  // Display summary
-  viewSummary.innerHTML = `
-    <strong>Total Add Charge:</strong> ${totalDebit}<br>
-    <strong>Total Paid:</strong> ${totalCredit}<br>
-    <strong>Balance:</strong> <span class="${balanceClass}">${balance}</span><br>
-    <strong>Status:</strong> ${status}
-  `;
-  
-  // Display history table (no row highlighting)
   viewBody.innerHTML = "";
-  if (!c.history || c.history.length === 0) {
-    viewBody.innerHTML = "<tr><td colspan='8' style='text-align:center;'>No transaction history available for this client.</td></tr>";
-  } else {
-    c.history.forEach(h => {
-      viewBody.innerHTML += `
-      <tr>
-        <td>${formatDate(h.date)}</td>
-        <td>${h.debit || 0}</td>
-        <td>${h.credit || 0}</td>
-        <td>${h.method || ''}</td>
-        <td>${h.mode || ''}</td>
-        <td>${h.remarks || ''}</td>
-        <td>${h.start || ''}</td>
-        <td>${h.end || ''}</td>
-      </tr>`;
-    });
-  }
+  c.history.forEach(h => {
+    viewBody.innerHTML += `
+    <tr>
+      <td>${h.date}</td>
+      <td class="${h.debit > 0 ? 'debit-red' : ''}">${h.debit || 0}</td>
+      <td>${h.credit || 0}</td>
+      <td>${h.method || ''}</td>
+      <td>${h.mode || ''}</td>
+      <td>${h.remarks || ''}</td>
+      <td>${h.start || ''}</td>
+      <td>${h.end || ''}</td>
+    </tr>`;
+  });
   viewModal.style.display = "block";
-  // Optional: For debugging, remove in production
-  console.log("Viewing client:", name, c);
 };
 
 window.closeViewModal = () => viewModal.style.display = "none";
@@ -435,9 +449,7 @@ function selectClient(name) {
   paymentClientName.value = name;
   const c = clients[cid(name)];
   const bal = (c.debit || 0) - (c.credit || 0);
-  // Get latest remarks from history (if any)
-  const latestRemarks = c.history && c.history.length > 0 ? c.history[c.history.length - 1].remarks || 'N/A' : 'N/A';
-  paymentBalance.value = `Balance: ${bal} | Remarks: ${latestRemarks}`;
+  paymentBalance.value = "Balance: " + bal;
   paymentAuto.innerHTML = "";
 }
 
@@ -450,39 +462,7 @@ addPaymentBtn.onclick = async () => {
   c.history.push({ date: paymentDate.value, debit: 0, credit: +paymentAmount.value, method: "payment", mode: paymentMode.value, remarks: paymentRemarks.value });
   await setDoc(ref, { ...c, credit: c.credit + +paymentAmount.value });
   alert("Payment added");
-  // Clear form
-  paymentSearch.value = "";
-  paymentClientName.value = "";
-  paymentBalance.value = "";
-  paymentAmount.value = "";
-  paymentType.value = "";
-  paymentMode.value = "";
-  paymentDate.value = "";
-  paymentRemarks.value = "";
 };
-
-// EXPENSE
-function loadExpenses() {
-  onSnapshot(collection(db, "users", currentUser.uid, "expenses"), snap => {
-    expenses = [];
-    snap.forEach(d => expenses.push(d.data()));
-  });
-}
-
-addExpenseBtn.onclick = async () => {
-  await addDoc(collection(db, "users", currentUser.uid, "expenses"), {
-    date: expenseDate.value, amount: +expenseAmount.value, desc: expense
-// EXPENSE
-function loadExpenses() {
-  onSnapshot(collection(db, "users", currentUser.uid, "expenses"), snap => {
-    expenses = [];
-    snap.forEach(d => expenses.push(d.data()));
-  });
-}
-
-addExpenseBtn.onclick = async () => {
-  await addDoc(collection(db, "users", currentUser.uid, "expenses"), {
-    date: expenseDate.value, amount: +expenseAmount.value, desc: expenseDesc.value, invoice: expenseInvoice.value
 
 // EXPENSE
 function loadExpenses() {
@@ -497,11 +477,6 @@ addExpenseBtn.onclick = async () => {
     date: expenseDate.value, amount: +expenseAmount.value, desc: expenseDesc.value, invoice: expenseInvoice.value
   });
   alert("Expense saved");
-  // Clear form
-  expenseDate.value = "";
-  expenseAmount.value = "";
-  expenseDesc.value = "";
-  expenseInvoice.value = "";
 };
 
 // REPORT
@@ -522,59 +497,10 @@ window.showSection = id => {
   document.querySelectorAll(".section").forEach(s => s.style.display = "none");
   document.getElementById(id).style.display = "block";
 };
-
-  // REPORT
-generateReportBtn.onclick = () => {
-  const s = new Date(reportStart.value);
-  const e = new Date(reportEnd.value);
-  let sales = 0;
-  Object.values(clients).forEach(c => c.history.forEach(h => {
-    const d = new Date(h.date);
-    if (h.credit && d >= s && d <= e) sales += h.credit;
-  }));
-  const exp = expenses.filter(x => new Date(x.date) >= s && new Date(x.date) <= e)
-    .reduce((a, b) => a + b.amount, 0);
-  reportResult.innerHTML = `Sales: ${sales}<br>Expenses: ${exp}<br>Net: ${sales - exp}`;
-  // Hide expenses table when generating report
-  expensesTable.style.display = "none";
-};
-
-// VIEW EXPENSES
-viewExpensesBtn.onclick = () => {
-  const s = new Date(reportStart.value);
-  const e = new Date(reportEnd.value);
-  const filteredExpenses = expenses.filter(x => new Date(x.date) >= s && new Date(x.date) <= e);
-  expensesBody.innerHTML = "";
-  if (filteredExpenses.length === 0) {
-    expensesBody.innerHTML = "<tr><td colspan='4' style='text-align:center;'>No expenses found for the selected date range.</td></tr>";
-  } else {
-    filteredExpenses.forEach(exp => {
-      expensesBody.innerHTML += `
-        <tr>
-          <td>${formatDate(exp.date)}</td>
-          <td>${exp.amount}</td>
-          <td>${exp.desc || ''}</td>
-          <td>${exp.invoice || ''}</td>
-        </tr>`;
-    });
-  }
-  expensesTable.style.display = "block";
-};
 </script>
 
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
 
 
 
