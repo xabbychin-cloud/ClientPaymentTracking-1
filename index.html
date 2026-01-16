@@ -325,7 +325,7 @@ addChargeBtn.onclick = async () => {
   chargeRemarks.value = "";
 };
 
-// VIEW CLIENT (updated summary styling and row highlighting)
+/ VIEW CLIENT (removed row highlighting, kept balance text red)
 window.viewClient = name => {
   const clientId = cid(name);
   const c = clients[clientId];
@@ -335,7 +335,7 @@ window.viewClient = name => {
   }
   viewTitle.textContent = name;
   
-  // Calculate totals
+   // Calculate totals
   let totalDebit = 0, totalCredit = 0;
   if (c.history) {
     c.history.forEach(h => {
@@ -355,15 +355,14 @@ window.viewClient = name => {
     <strong>Status:</strong> ${status}
   `;
   
-  // Display history table
+  // Display history table (no row highlighting)
   viewBody.innerHTML = "";
   if (!c.history || c.history.length === 0) {
     viewBody.innerHTML = "<tr><td colspan='8' style='text-align:center;'>No transaction history available for this client.</td></tr>";
   } else {
     c.history.forEach(h => {
-      const rowClass = balance > 0 ? "outstanding-row" : "";
       viewBody.innerHTML += `
-      <tr class="${rowClass}">
+      <tr>
         <td>${formatDate(h.date)}</td>
         <td>${h.debit || 0}</td>
         <td>${h.credit || 0}</td>
@@ -379,8 +378,6 @@ window.viewClient = name => {
   // Optional: For debugging, remove in production
   console.log("Viewing client:", name, c);
 };
-
-window.closeViewModal = () => viewModal.style.display = "none";
 
 // AUTOCOMPLETE FOR PAYMENT (existing)
 paymentSearch.oninput = () => {
@@ -401,20 +398,46 @@ function selectClient(name) {
   paymentClientName.value = name;
   const c = clients[cid(name)];
   const bal = (c.debit || 0) - (c.credit || 0);
-  paymentBalance.value = "Balance: " + bal;
+  // Get latest remarks from history (if any)
+  const latestRemarks = c.history && c.history.length > 0 ? c.history[c.history.length - 1].remarks || 'N/A' : 'N/A';
+  paymentBalance.value = `Balance: ${bal} | Remarks: ${latestRemarks}`;
   paymentAuto.innerHTML = "";
 }
 
-// PAYMENT
-addPaymentBtn.onclick = async () => {
-  const name = paymentClientName.value;
-  const ref = doc(db, "users", currentUser.uid, "clients", cid(name));
-  const s = await getDoc(ref);
-  const c = s.data();
-  c.history.push({ date: paymentDate.value, debit: 0, credit: +paymentAmount.value, method: "payment", mode: paymentMode.value, remarks: paymentRemarks.value });
-  await setDoc(ref, { ...c, credit: c.credit + +paymentAmount.value });
-  alert("Payment added");
-};
+
+<!-- ADD PAYMENT -->
+<div id="paymentSection" class="section">
+  <h3>Add Payment</h3>
+
+  <div class="autocomplete-box">
+    <input id="paymentSearch" placeholder="Search Client">
+    <div id="paymentAuto" class="autocomplete-list"></div>
+  </div>
+
+  <input id="paymentClientName" class="readonly" readonly>
+  <input id="paymentBalance" class="readonly" readonly>
+
+  <table>
+    <tbody id="payablesBody"></tbody>
+  </table>
+
+  <input id="paymentAmount" type="number" placeholder="Payment Amount">
+  <select id="paymentType">
+    <option value="">Payment Type</option>
+    <option>Cash</option>
+    <option>Bank Transfer</option>
+    <option>Credit Card</option>
+    <option>Others</option>
+  </select>
+  <select id="paymentMode">
+    <option value="">Payment Mode</option>
+    <option>Full</option>
+    <option>Partial</option>
+  </select>
+  <input id="paymentDate" type="date">
+  <input id="paymentRemarks" placeholder="Remarks">
+  <button id="addPaymentBtn">Save Payment</button>
+</div>
 
 // EXP
 
@@ -498,6 +521,7 @@ viewExpensesBtn.onclick = () => {
 
 </body>
 </html>
+
 
 
 
