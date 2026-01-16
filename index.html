@@ -60,101 +60,6 @@ th{background:#eee;color:black}
 <div id="expenseSection" class="section">...</div>
 <div id="reportSection" class="section">...</div>
 
-<script>
-window.showSection = function(id){
-  document.querySelectorAll(".section").forEach(s => s.style.display="none");
-  const section = document.getElementById(id);
-  if(section) section.style.display = "block";
-};
-</script>
-
-
-<!-- CLIENT INFORMATION -->
-<div id="clientSection" class="section">
-  <h3>Client Information</h3>
-  <input id="clientSearchInput" placeholder="Search full name">
-  <button id="clientSearchBtn">Search</button>
-  <select id="clientFilter">
-    <option value="all">All</option>
-    <option value="outstanding">Outstanding</option>
-    <option value="paid">Paid</option>
-  </select>
-  <table>
-    <thead>
-      <tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Status</th><th>Action</th></tr>
-    </thead>
-    <tbody id="clientsBody"></tbody>
-  </table>
-</div>
-
-<!-- ADD CHARGE -->
-<div id="chargeSection" class="section">
-  <h3>Add Charge</h3>
-  <div class="autocomplete-box">
-    <input id="chargeName" placeholder="Client Full Name">
-    <div id="chargeAuto" class="autocomplete-list"></div>
-  </div>
-  <input id="chargeAmount" type="number" placeholder="Amount">
-  <input id="chargeStart" type="date">
-  <input id="chargeEnd" type="date">
-  <input id="chargeRemarks" placeholder="Remarks">
-  <button id="addChargeBtn">Save Charge</button>
-</div>
-
-<!-- ADD PAYMENT -->
-<div id="paymentSection" class="section">
-  <h3>Add Payment</h3>
-  <div class="autocomplete-box">
-    <input id="paymentSearch" placeholder="Search Client">
-    <div id="paymentAuto" class="autocomplete-list"></div>
-  </div>
-  <input id="paymentClientName" class="readonly" readonly>
-  <input id="paymentBalance" class="readonly" readonly>
-  <input id="paymentAmount" type="number" placeholder="Payment Amount">
-  <select id="paymentType">
-    <option value="">Payment Type</option>
-    <option>Cash</option>
-    <option>Bank Transfer</option>
-    <option>Credit Card</option>
-    <option>Others</option>
-  </select>
-  <select id="paymentMode">
-    <option value="">Payment Mode</option>
-    <option>Full</option>
-    <option>Partial</option>
-  </select>
-  <input id="paymentDate" type="date">
-  <input id="paymentRemarks" placeholder="Remarks">
-  <button id="addPaymentBtn">Save Payment</button>
-</div>
-
-<!-- EXPENSE -->
-<div id="expenseSection" class="section">
-  <h3>Add Expense</h3>
-  <input id="expenseStart" type="date" placeholder="Start Date">
-  <input id="expenseEnd" type="date" placeholder="End Date">
-  <input id="expenseAmount" type="number" placeholder="Amount">
-  <input id="expenseDesc" placeholder="Description">
-  <input id="expenseInvoice" placeholder="Invoice (optional)">
-  <button id="addExpenseBtn">Save Expense</button>
-</div>
-
-<!-- REPORT -->
-<div id="reportSection" class="section">
-  <h3>Admin Report</h3>
-  <input id="reportStart" type="date">
-  <input id="reportEnd" type="date">
-  <button id="generateReportBtn">Generate Report</button>
-  <div id="reportResult"></div>
-  <div id="expensesTable" style="display:none; margin-top: 15px;">
-    <h4>Expenses List</h4>
-    <table>
-      <thead><tr><th>Date</th><th>Amount</th><th>Description</th><th>Invoice</th></tr></thead>
-      <tbody id="expensesBody"></tbody>
-    </table>
-  </div>
-</div>
-
 <button id="logoutBtn">Logout</button>
 
 <!-- VIEW MODAL -->
@@ -176,29 +81,6 @@ window.showSection = function(id){
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
-<script>
-// ===== SHOW SECTION + HIGHLIGHT ACTIVE BUTTON =====
-window.showSection = function(id) {
-  // Hide all sections
-  document.querySelectorAll(".section").forEach(s => s.style.display = "none");
-
-  // Show the requested section
-  const section = document.getElementById(id);
-  if(section) section.style.display = "block";
-
-  // Remove active highlight from all toolbar buttons
-  document.querySelectorAll("#toolbar button").forEach(b => b.style.backgroundColor = "#4CAF50");
-
-  // Highlight the active button
-  const activeBtn = Array.from(document.querySelectorAll("#toolbar button")).find(b => b.getAttribute("onclick")?.includes(`'${id}'`));
-  if(activeBtn) activeBtn.style.backgroundColor = "#43a047";
-};
-
-// Optional: automatically show "Client Information" on page load
-window.addEventListener("DOMContentLoaded", () => {
-  showSection('clientSection');
-});
-</script>
 
 // ===== FIREBASE CONFIG =====
 const app = initializeApp({
@@ -267,14 +149,23 @@ logoutBtn.onclick = () => {
     .catch(e => alert(e.message));
 };
 
-// ===== EXISTING SCRIPT CONTINUES BELOW =====
-// All your other scripts (clients, charges, payments, expenses, report, view modal) remain unchanged.
+// ===== SHOW SECTION + HIGHLIGHT ACTIVE BUTTON =====
+window.showSection = function(id) {
+  document.querySelectorAll(".section").forEach(s => s.style.display = "none");
+  const section = document.getElementById(id);
+  if(section) section.style.display = "block";
+
+  document.querySelectorAll("#toolbar button").forEach(b => b.style.backgroundColor = "#4CAF50");
+  const activeBtn = Array.from(document.querySelectorAll("#toolbar button")).find(b => b.getAttribute("onclick")?.includes(`'${id}'`));
+  if(activeBtn) activeBtn.style.backgroundColor = "#43a047";
+};
+
+// Optional: show "Client Information" on page load
+window.addEventListener("DOMContentLoaded", () => {
+  showSection('clientSection');
+});
 </script>
 
 </div> <!-- End appSection -->
 </body>
 </html>
-
-
-
-
