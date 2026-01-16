@@ -102,3 +102,5 @@ tr.outstanding {
 tr.paid {
   background: #e8f5e9; /* light green */
 }
+
+.highlight { font-weight: bold; background-color: yellow; }
