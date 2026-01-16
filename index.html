@@ -144,6 +144,7 @@ onAuthStateChanged(auth, u => {
     appSection.style.display = "block";
     loadClients();
     loadExpenses();
+    showSection('clientSection'); // Show initial section after login
   } else {
     currentUser = null;
     authSection.style.display = "block";
@@ -173,6 +174,40 @@ toolbarButtons.forEach(btn => {
   btn.addEventListener("click", ()=> showSection(btn.dataset.section));
 });
 
+// ===== LOAD CLIENTS =====
+function loadClients() {
+  const clientsRef = collection(db, 'clients');
+  onSnapshot(clientsRef, (snapshot) => {
+    clients = {};
+    snapshot.forEach((doc) => {
+      clients[doc.id] = doc.data();
+    });
+    renderClients();
+  });
+}
+
+// ===== LOAD EXPENSES =====
+function loadExpenses() {
+  const expensesRef = collection(db, 'expenses');
+  onSnapshot(expensesRef, (snapshot) => {
+    expenses = [];
+    snapshot.forEach((doc) => {
+      expenses.push(doc.data());
+    });
+    // Add rendering logic here if needed
+  });
+}
+
+// ===== RENDER CLIENTS =====
+function renderClients() {
+  const clientsBody = document.getElementById('clientsBody');
+  clientsBody.innerHTML = '';
+  Object.values(clients).forEach(client => {
+    const tr = renderClientRow(client);
+    clientsBody.appendChild(tr);
+  });
+}
+
 // ===== CLIENT ROW HIGHLIGHT FUNCTION =====
 function renderClientRow(client){
   const tr = document.createElement("tr");
@@ -184,15 +219,11 @@ function renderClientRow(client){
     <td>${client.status}</td>
     <td><button>View</button></td>
   `;
-  // Highlight if balance equals debit- credit (current balance matches amount)
   if(Number(client.balance) === Number(client.debit)-Number(client.credit)){
     tr.classList.add("balance-outstanding");
   }
   return tr;
 }
-
-// Optional: automatically show Client Information on load
-window.addEventListener("DOMContentLoaded", ()=>showSection('clientSection'));
 </script>
 
 </div>
