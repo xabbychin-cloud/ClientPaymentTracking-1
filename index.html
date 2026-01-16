@@ -27,7 +27,7 @@ th{background:#eee;color:black}
 .autocomplete-item:hover{background:#f0f0f0}
 #logoutBtn{background:#c62828;color:white;margin:15px}
 .highlight { font-weight: bold; background-color: yellow; }
-.balance-outstanding { color: red; font-weight: bold; }
+.balance-outstanding { background-color: yellow; font-weight: bold; }
 .balance-paid { color: black; }
 </style>
 </head>
@@ -47,14 +47,30 @@ th{background:#eee;color:black}
 <div id="appSection" style="display:none">
 
 <div id="toolbar">
-  <button onclick="showSection('clientSection')">Client Information</button>
-  <button onclick="showSection('chargeSection')">Add Charge</button>
-  <button onclick="showSection('paymentSection')">Add Payment</button>
-  <button onclick="showSection('expenseSection')">Expenses</button>
-  <button onclick="showSection('reportSection')">Admin Report</button>
+  <button data-section="clientSection">Client Information</button>
+  <button data-section="chargeSection">Add Charge</button>
+  <button data-section="paymentSection">Add Payment</button>
+  <button data-section="expenseSection">Expenses</button>
+  <button data-section="reportSection">Admin Report</button>
 </div>
 
-<div id="clientSection" class="section">...</div>
+<div id="clientSection" class="section">
+  <h3>Client Information</h3>
+  <input id="clientSearchInput" placeholder="Search full name">
+  <button id="clientSearchBtn">Search</button>
+  <select id="clientFilter">
+    <option value="all">All</option>
+    <option value="outstanding">Outstanding</option>
+    <option value="paid">Paid</option>
+  </select>
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Status</th><th>Action</th></tr>
+    </thead>
+    <tbody id="clientsBody"></tbody>
+  </table>
+</div>
+
 <div id="chargeSection" class="section">...</div>
 <div id="paymentSection" class="section">...</div>
 <div id="expenseSection" class="section">...</div>
@@ -114,16 +130,9 @@ const logoutBtn = document.getElementById("logoutBtn");
 loginBtn.onclick = () => {
   const email = loginEmail.value.trim();
   const password = loginPassword.value.trim();
-  if (!email || !password) {
-    alert("Please enter email and password");
-    return;
-  }
-
+  if (!email || !password) { alert("Please enter email and password"); return; }
   signInWithEmailAndPassword(auth, email, password)
-    .then(userCredential => {
-      console.log("Logged in as:", userCredential.user.email);
-      loginEmail.value = ""; loginPassword.value = "";
-    })
+    .then(userCredential => { console.log("Logged in as:", userCredential.user.email); loginEmail.value = ""; loginPassword.value = ""; })
     .catch(e => alert("Login failed: " + e.message));
 };
 
@@ -144,28 +153,48 @@ onAuthStateChanged(auth, u => {
 
 // ===== LOGOUT =====
 logoutBtn.onclick = () => {
-  signOut(auth)
-    .then(() => alert("Logged out"))
-    .catch(e => alert(e.message));
+  signOut(auth).then(() => alert("Logged out")).catch(e => alert(e.message));
 };
 
-// ===== SHOW SECTION + HIGHLIGHT ACTIVE BUTTON =====
-window.showSection = function(id) {
-  document.querySelectorAll(".section").forEach(s => s.style.display = "none");
+// ===== TOOLBAR FUNCTION =====
+const toolbarButtons = document.querySelectorAll("#toolbar button");
+function showSection(id){
+  document.querySelectorAll(".section").forEach(s=>s.style.display="none");
   const section = document.getElementById(id);
-  if(section) section.style.display = "block";
+  if(section) section.style.display="block";
+  
+  toolbarButtons.forEach(b => b.style.backgroundColor="#4CAF50");
+  const active = Array.from(toolbarButtons).find(b => b.dataset.section === id);
+  if(active) active.style.backgroundColor="#43a047";
+}
 
-  document.querySelectorAll("#toolbar button").forEach(b => b.style.backgroundColor = "#4CAF50");
-  const activeBtn = Array.from(document.querySelectorAll("#toolbar button")).find(b => b.getAttribute("onclick")?.includes(`'${id}'`));
-  if(activeBtn) activeBtn.style.backgroundColor = "#43a047";
-};
-
-// Optional: show "Client Information" on page load
-window.addEventListener("DOMContentLoaded", () => {
-  showSection('clientSection');
+// Assign click events to toolbar buttons
+toolbarButtons.forEach(btn => {
+  btn.addEventListener("click", ()=> showSection(btn.dataset.section));
 });
+
+// ===== CLIENT ROW HIGHLIGHT FUNCTION =====
+function renderClientRow(client){
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>${client.name}</td>
+    <td>${client.debit}</td>
+    <td>${client.credit}</td>
+    <td>${client.balance}</td>
+    <td>${client.status}</td>
+    <td><button>View</button></td>
+  `;
+  // Highlight if balance equals debit- credit (current balance matches amount)
+  if(Number(client.balance) === Number(client.debit)-Number(client.credit)){
+    tr.classList.add("balance-outstanding");
+  }
+  return tr;
+}
+
+// Optional: automatically show Client Information on load
+window.addEventListener("DOMContentLoaded", ()=>showSection('clientSection'));
 </script>
 
-</div> <!-- End appSection -->
+</div>
 </body>
 </html>
