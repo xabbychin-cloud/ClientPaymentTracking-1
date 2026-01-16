@@ -161,6 +161,7 @@
   <div class="modal-content">
     <span class="close" onclick="closeViewModal()">&times;</span>
     <h3 id="viewTitle"></h3>
+    <div id="viewSummary" style="margin-bottom: 15px; padding: 10px; background: #f9f9f9; border-radius: 4px;"></div>
     <table>
       <thead>
         <tr>
@@ -197,7 +198,7 @@ const formatDate = (isoString) => {
   return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
 };
 
-// VIEW CLIENT (updated with date formatting)
+// VIEW CLIENT (updated with summary and conditional debit color)
 window.viewClient = name => {
   const clientId = cid(name);
   const c = clients[clientId];
@@ -206,15 +207,37 @@ window.viewClient = name => {
     return;
   }
   viewTitle.textContent = name;
+  
+  // Calculate totals
+  let totalDebit = 0, totalCredit = 0;
+  if (c.history) {
+    c.history.forEach(h => {
+      totalDebit += h.debit || 0;
+      totalCredit += h.credit || 0;
+    });
+  }
+  const balance = totalDebit - totalCredit;
+  const status = balance > 0 ? "Outstanding" : "Paid";
+  
+  // Display summary
+  viewSummary.innerHTML = `
+    <strong>Total Add Charge:</strong> ${totalDebit}<br>
+    <strong>Total Paid:</strong> ${totalCredit}<br>
+    <strong>Balance:</strong> ${balance}<br>
+    <strong>Status:</strong> ${status}
+  `;
+  
+  // Display history table
   viewBody.innerHTML = "";
   if (!c.history || c.history.length === 0) {
     viewBody.innerHTML = "<tr><td colspan='8' style='text-align:center;'>No transaction history available for this client.</td></tr>";
   } else {
     c.history.forEach(h => {
+      const debitClass = (balance <= 0) ? '' : (h.debit > 0 ? 'debit-red' : '');
       viewBody.innerHTML += `
       <tr>
         <td>${formatDate(h.date)}</td>
-        <td class="${h.debit > 0 ? 'debit-red' : ''}">${h.debit || 0}</td>
+        <td class="${debitClass}">${h.debit || 0}</td>
         <td>${h.credit || 0}</td>
         <td>${h.method || ''}</td>
         <td>${h.mode || ''}</td>
@@ -461,6 +484,7 @@ window.showSection = id => {
 
 </body>
 </html>
+
 
 
 
