@@ -54,6 +54,21 @@ th{background:#eee;color:black}
   <button onclick="showSection('reportSection')">Admin Report</button>
 </div>
 
+<div id="clientSection" class="section">...</div>
+<div id="chargeSection" class="section">...</div>
+<div id="paymentSection" class="section">...</div>
+<div id="expenseSection" class="section">...</div>
+<div id="reportSection" class="section">...</div>
+
+<script>
+window.showSection = function(id){
+  document.querySelectorAll(".section").forEach(s => s.style.display="none");
+  const section = document.getElementById(id);
+  if(section) section.style.display = "block";
+};
+</script>
+
+
 <!-- CLIENT INFORMATION -->
 <div id="clientSection" class="section">
   <h3>Client Information</h3>
@@ -172,9 +187,6 @@ const app = initializeApp({
   appId: "1:151091330895:web:d23440ad57a386da720f3a",
   measurementId: "G-NH7D18261Q"
 });
-  // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const analytics = getAnalytics(app);
 
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -239,5 +251,6 @@ logoutBtn.onclick = () => {
 </div> <!-- End appSection -->
 </body>
 </html>
+
 
 
