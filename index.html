@@ -192,6 +192,57 @@ logoutBtn.onclick = async () => {
   }
 };
 
+  function viewClient(name){
+  const c = clients[cid(name)];
+  if(!c) return;
+
+  viewTitle.textContent = name;
+  viewBody.innerHTML = "";
+
+  // 1️⃣ Compute totals
+  let totalDebit = 0;
+  let totalCredit = 0;
+
+  c.history.forEach(h => {
+    totalDebit += h.debit || 0;
+    totalCredit += h.credit || 0;
+  });
+
+  let remainingBalance = totalDebit - totalCredit;
+
+  // 2️⃣ Process charges FIFO
+  c.history.forEach(h => {
+    let highlight = "";
+
+    if (h.debit > 0 && remainingBalance > 0) {
+      if (remainingBalance >= h.debit) {
+        // Entire charge still unpaid
+        highlight = "debit-red";
+        remainingBalance -= h.debit;
+      } else {
+        // Partially unpaid charge
+        highlight = "debit-red";
+        remainingBalance = 0;
+      }
+    }
+
+    viewBody.innerHTML += `
+      <tr>
+        <td>${h.date || ""}</td>
+        <td class="${highlight}">${h.debit || 0}</td>
+        <td>${h.credit || 0}</td>
+        <td>${h.method || ""}</td>
+        <td>${h.mode || ""}</td>
+        <td>${h.remarks || ""}</td>
+        <td>${h.start || ""}</td>
+        <td>${h.end || ""}</td>
+      </tr>`;
+  });
+
+  viewModal.style.display = "block";
+}
+
+
 
 // LOAD CLIENTS
 function loadClients(){
@@ -331,4 +382,5 @@ window.showSection=id=>{
 </script>
 </body>
 </html>
+
 
