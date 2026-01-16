@@ -176,6 +176,29 @@ window.showSection = function(id){
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+<script>
+// ===== SHOW SECTION + HIGHLIGHT ACTIVE BUTTON =====
+window.showSection = function(id) {
+  // Hide all sections
+  document.querySelectorAll(".section").forEach(s => s.style.display = "none");
+
+  // Show the requested section
+  const section = document.getElementById(id);
+  if(section) section.style.display = "block";
+
+  // Remove active highlight from all toolbar buttons
+  document.querySelectorAll("#toolbar button").forEach(b => b.style.backgroundColor = "#4CAF50");
+
+  // Highlight the active button
+  const activeBtn = Array.from(document.querySelectorAll("#toolbar button")).find(b => b.getAttribute("onclick")?.includes(`'${id}'`));
+  if(activeBtn) activeBtn.style.backgroundColor = "#43a047";
+};
+
+// Optional: automatically show "Client Information" on page load
+window.addEventListener("DOMContentLoaded", () => {
+  showSection('clientSection');
+});
+</script>
 
 // ===== FIREBASE CONFIG =====
 const app = initializeApp({
@@ -251,6 +274,7 @@ logoutBtn.onclick = () => {
 </div> <!-- End appSection -->
 </body>
 </html>
+
 
 
 
