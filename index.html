@@ -116,7 +116,6 @@
   <input id="paymentBalance" class="readonly" readonly>
 
   <table>
-    <thead><tr><th>Date</th><th>Unpaid</th><th>Remarks</th></tr></thead>
     <tbody id="payablesBody"></tbody>
   </table>
 
@@ -325,7 +324,7 @@ addChargeBtn.onclick = async () => {
   chargeRemarks.value = "";
 };
 
-/ VIEW CLIENT (removed row highlighting, kept balance text red)
+// VIEW CLIENT (removed row highlighting, kept balance text red)
 window.viewClient = name => {
   const clientId = cid(name);
   const c = clients[clientId];
@@ -335,7 +334,7 @@ window.viewClient = name => {
   }
   viewTitle.textContent = name;
   
-   // Calculate totals
+  // Calculate totals
   let totalDebit = 0, totalCredit = 0;
   if (c.history) {
     c.history.forEach(h => {
@@ -379,6 +378,8 @@ window.viewClient = name => {
   console.log("Viewing client:", name, c);
 };
 
+window.closeViewModal = () => viewModal.style.display = "none";
+
 // AUTOCOMPLETE FOR PAYMENT (existing)
 paymentSearch.oninput = () => {
   paymentAuto.innerHTML = "";
@@ -404,42 +405,48 @@ function selectClient(name) {
   paymentAuto.innerHTML = "";
 }
 
+// PAYMENT
+addPaymentBtn.onclick = async () => {
+  const name = paymentClientName.value;
+  const ref = doc(db, "users", currentUser.uid, "clients", cid(name));
+  const s = await getDoc(ref);
+  const c = s.data();
+  c.history.push({ date: paymentDate.value, debit: 0, credit: +paymentAmount.value, method: "payment", mode: paymentMode.value, remarks: paymentRemarks.value });
+  await setDoc(ref, { ...c, credit: c.credit + +paymentAmount.value });
+  alert("Payment added");
+  // Clear form
+  paymentSearch.value = "";
+  paymentClientName.value = "";
+  paymentBalance.value = "";
+  paymentAmount.value = "";
+  paymentType.value = "";
+  paymentMode.value = "";
+  paymentDate.value = "";
+  paymentRemarks.value = "";
+};
 
-<!-- ADD PAYMENT -->
-<div id="paymentSection" class="section">
-  <h3>Add Payment</h3>
+// EXPENSE
+function loadExpenses() {
+  onSnapshot(collection(db, "users", currentUser.uid, "expenses"), snap => {
+    expenses = [];
+    snap.forEach(d => expenses.push(d.data()));
+  });
+}
 
-  <div class="autocomplete-box">
-    <input id="paymentSearch" placeholder="Search Client">
-    <div id="paymentAuto" class="autocomplete-list"></div>
-  </div>
+addExpenseBtn.onclick = async () => {
+  await addDoc(collection(db, "users", currentUser.uid, "expenses"), {
+    date: expenseDate.value, amount: +expenseAmount.value, desc: expense
+// EXPENSE
+function loadExpenses() {
+  onSnapshot(collection(db, "users", currentUser.uid, "expenses"), snap => {
+    expenses = [];
+    snap.forEach(d => expenses.push(d.data()));
+  });
+}
 
-  <input id="paymentClientName" class="readonly" readonly>
-  <input id="paymentBalance" class="readonly" readonly>
-
-  <table>
-    <tbody id="payablesBody"></tbody>
-  </table>
-
-  <input id="paymentAmount" type="number" placeholder="Payment Amount">
-  <select id="paymentType">
-    <option value="">Payment Type</option>
-    <option>Cash</option>
-    <option>Bank Transfer</option>
-    <option>Credit Card</option>
-    <option>Others</option>
-  </select>
-  <select id="paymentMode">
-    <option value="">Payment Mode</option>
-    <option>Full</option>
-    <option>Partial</option>
-  </select>
-  <input id="paymentDate" type="date">
-  <input id="paymentRemarks" placeholder="Remarks">
-  <button id="addPaymentBtn">Save Payment</button>
-</div>
-
-// EXP
+addExpenseBtn.onclick = async () => {
+  await addDoc(collection(db, "users", currentUser.uid, "expenses"), {
+    date: expenseDate.value, amount: +expenseAmount.value, desc: expenseDesc.value, invoice: expenseInvoice.value
 
 // EXPENSE
 function loadExpenses() {
