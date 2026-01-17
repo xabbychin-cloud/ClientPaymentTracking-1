@@ -452,12 +452,6 @@ generateReportBtn.onclick=()=>{
   const cashOnHand = netSales - (bankTransferSales + creditCardSales + otherSales);
   report
 
-  // Merge otherSales into cashSales
-  cashSales += otherSales;
-  otherSales = 0;
-  const totalCollection = cashSales + bankTransferSales + creditCardSales + otherSales;
-  const totalExpenses = expenses.filter(x=>new Date(x.date)>=s&&new Date(x.date)<=e).reduce((a,b)=>a+b.amount,0);
-
     
   // Merge otherSales into cashSales
   cashSales += otherSales;
@@ -492,6 +486,7 @@ window.showSection=id=>{
 
 </body>
 </html>
+
 
 
 
