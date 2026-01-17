@@ -65,6 +65,7 @@ th{background:#eee;color:black}
   <input id="loginEmail" placeholder="Email">
   <input id="loginPassword" type="password" placeholder="Password">
   <button id="loginBtn">Login</button>
+  <button id="signupBtn">Sign Up</button>
 </div>
 
 <div id="appSection" style="display:none">
@@ -187,7 +188,7 @@ th{background:#eee;color:black}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const app = initializeApp({
@@ -207,8 +208,23 @@ const formatDate = (isoString) => { if (!isoString) return ''; const d = new Dat
 const highlight=(t,q)=>!q?t:t.replace(new RegExp(`(${q})`,'gi'),'<span class="highlight">$1</span>');
 
 // LOGIN
-loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value)
-.catch(e=>alert(e.message));
+loginBtn.onclick=()=>{
+  const email = loginEmail.value.trim();
+  const password = loginPassword.value.trim();
+  if (!email || !password) return alert("Please enter email and password");
+  signInWithEmailAndPassword(auth, email, password).catch(e=>alert(e.message));
+};
+
+// SIGN UP
+signupBtn.onclick=()=>{
+  const email = loginEmail.value.trim();
+  const password = loginPassword.value.trim();
+  if (!email || !password) return alert("Please enter email and password");
+  if (password.length < 6) return alert("Password should be at least 6 characters");
+  createUserWithEmailAndPassword(auth, email, password).then(() => {
+    alert("Account created successfully! You can now log in.");
+  }).catch(e=>alert(e.message));
+};
 
 onAuthStateChanged(auth,u=>{
   if(u){
@@ -430,23 +446,7 @@ generateReportBtn.onclick=()=>{
       else otherSales+=h.credit;
     }
   }));
-  // Merge otherSales into cashSales
-  cashSales += otherSales;
-  otherSales = 0;
-  const totalCollection = cashSales + bankTransferSales + creditCardSales + otherSales;
-  const totalExpenses = expenses.filter(x=>new Date(x.date)>=s&&new Date(x.date)<=e).reduce((a,b)=>a+b.amount,0);
-  const netSales = totalCollection - totalExpenses;
-  const cashOnHand = netSales - (bankTransferSales + creditCardSales + otherSales);
-  reportResult.innerHTML=`
-    <strong>Sales Breakdown:</strong><br>
-    Total Cash Sales: ${cashSales}<br>
-    Total Bank Transfer Sales: ${bankTransferSales}<br>
-    Total Credit Card Sales: ${creditCardSales}<br>
-    Total Other Sales: ${otherSales}<br><br>
-    <strong>Total Collection: ${totalCollection}</strong><br>
-    <strong>Total Expenses: ${totalExpenses}</strong><br>
-    <strong>Net Sales: ${netSales}</strong><br>
-    <strong>Cash on Hand: ${cashOnHand}</strong
+
     
   // Merge otherSales into cashSales
   cashSales += otherSales;
@@ -481,5 +481,6 @@ window.showSection=id=>{
 
 </body>
 </html>
+
 
 
