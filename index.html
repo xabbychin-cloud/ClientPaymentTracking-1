@@ -365,7 +365,8 @@ function selectClient(name){
   });
   const bal = d - cr;
   paymentClientName.value=name;
-  paymentBalance.value=`Balance: ${bal}${bal > 0 && remarks.length ? ' (' + remarks.join(', ') + ')' : ''}`;
+  paymentBalance.value=`Balance: ${bal}`;
+  paymentRemarks.value = bal > 0 && remarks.length ? remarks.join(', ') : '';
   paymentAuto.innerHTML="";
 }
 
@@ -446,6 +447,11 @@ generateReportBtn.onclick=()=>{
       else otherSales+=h.credit;
     }
   }));
+  // Merge otherSales into cashSales
+  cashSales += otherSales;
+  otherSales = 0;
+  const totalCollection = cashSales + bankTransferSales + creditCardSales + otherSales;
+  const totalExpenses = expenses.filter(x=>new Date(x.date)>=s&&new Date(x.date)<=e).reduce((a,b)=>a+b.amount,0);
 
     
   // Merge otherSales into cashSales
@@ -481,6 +487,7 @@ window.showSection=id=>{
 
 </body>
 </html>
+
 
 
 
