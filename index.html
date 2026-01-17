@@ -483,8 +483,8 @@ viewExpenseBtn.onclick = () => {
 
 // NOTES
 function loadNotes() {
-  const notesRef = doc(db, "users", currentUser.uid, "notes");
-  getDoc(notesRef).then(docSnap => {
+  const userRef = doc(db, "users", currentUser.uid);
+  getDoc(userRef).then(docSnap => {
     if (docSnap.exists()) {
       notes = docSnap.data().content || '';
       notesTextarea.value = notes;
@@ -519,8 +519,9 @@ editNotesBtn.onclick = () => {
 async function saveNotes() {
   if (!currentUser) return alert("Please log in to save notes.");
   notes = notesTextarea.value;
+  const userRef = doc(db, "users", currentUser.uid);
   try {
-    await setDoc(doc(db, "users", currentUser.uid, "notes"), { content: notes });
+    await setDoc(userRef, { content: notes }, { merge: true }); // Use merge to update only the content field
     alert("Notes saved successfully!");
     notesDisplay.innerHTML = notes.replace(/\n/g, '<br>');
   } catch (e) {
