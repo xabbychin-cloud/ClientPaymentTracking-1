@@ -155,6 +155,14 @@ th{background:#eee;color:black}
   <input id="reportEnd" type="date">
   <button id="generateReportBtn">Generate Report</button>
   <div id="reportResult"></div>
+
+  <h3>Notes</h3>
+  <textarea id="notesTextarea" rows="5" placeholder="Enter your notes here..."></textarea>
+  <button id="saveNotesBtn">Save Notes</button>
+  <div id="notesDisplay"></div>
+</div>
+
+<button id="logoutBtn">Logout</button>
 </div>
 
 <button id="logoutBtn">Logout</button>
@@ -257,6 +265,13 @@ addChargeBtn.onclick=async()=>{
   c.history.push({date:new Date().toISOString(),debit:+chargeAmount.value,credit:0,method:"charge",remarks:chargeRemarks.value,start:chargeStart.value,end:chargeEnd.value});
   await setDoc(ref,{name,debit:c.debit+ +chargeAmount.value,credit:c.credit,history:c.history});
   alert("Charge added");
+  // Clear fields after save
+  chargeName.value = '';
+  chargeAmount.value = '';
+  chargeStart.value = '';
+  chargeEnd.value = '';
+  chargeRemarks.value = '';
+  chargeAuto.innerHTML = '';
 };
 
 // VIEW CLIENT
@@ -357,6 +372,25 @@ viewExpenseBtn.onclick=()=>{
   viewExpenseResult.innerHTML=html;
 };
 
+  // NOTES
+function loadNotes(){
+  const notesRef = doc(db, "users", currentUser.uid, "notes");
+  getDoc(notesRef).then(docSnap => {
+    if(docSnap.exists()){
+      notes = docSnap.data().content || '';
+      notesTextarea.value = notes;
+      notesDisplay.innerHTML = notes.replace(/\n/g, '<br>');
+    }
+  });
+}
+
+saveNotesBtn.onclick=async()=>{
+  notes = notesTextarea.value;
+  await setDoc(doc(db, "users", currentUser.uid, "notes"), {content: notes});
+  alert("Notes saved");
+  notesDisplay.innerHTML = notes.replace(/\n/g, '<br>');
+};
+
 // REPORT
 generateReportBtn.onclick=()=>{
   const s=new Date(reportStart.value);
@@ -404,3 +438,4 @@ window.showSection=id=>{
 
 </body>
 </html>
+
