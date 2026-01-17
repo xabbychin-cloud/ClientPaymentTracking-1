@@ -70,6 +70,7 @@ th{background:#eee;color:black}
 
 <div id="appSection" style="display:none">
 
+
 <!-- CLIENT LIST -->
 <div id="clientSection" class="section" style="display:block">
   <h3>Client Information</h3>
@@ -225,6 +226,18 @@ signupBtn.onclick=()=>{
     alert("Account created successfully! You can now log in.");
   }).catch(e=>alert(e.message));
 };
+
+onAuthStateChanged(auth,u=>{
+  if(u){
+    currentUser=u;
+    authSection.style.display="none";
+    appSection.style.display="block";
+    loadClients(); loadExpenses(); loadNotes();
+  }else{
+    authSection.style.display="block";
+    appSection.style.display="none";
+  }
+});
 
 onAuthStateChanged(auth,u=>{
   if(u){
@@ -487,6 +500,7 @@ window.showSection=id=>{
 
 </body>
 </html>
+
 
 
 
