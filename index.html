@@ -70,7 +70,6 @@ th{background:#eee;color:black}
 
 <div id="appSection" style="display:none">
 
-
 <!-- CLIENT LIST -->
 <div id="clientSection" class="section" style="display:block">
   <h3>Client Information</h3>
@@ -209,12 +208,8 @@ const formatDate = (isoString) => { if (!isoString) return ''; const d = new Dat
 const highlight=(t,q)=>!q?t:t.replace(new RegExp(`(${q})`,'gi'),'<span class="highlight">$1</span>');
 
 // LOGIN
-loginBtn.onclick=()=>{
-  const email = loginEmail.value.trim();
-  const password = loginPassword.value.trim();
-  if (!email || !password) return alert("Please enter email and password");
-  signInWithEmailAndPassword(auth, email, password).catch(e=>alert(e.message));
-};
+loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value)
+.catch(e=>alert(e.message));
 
 // SIGN UP
 signupBtn.onclick=()=>{
@@ -226,18 +221,6 @@ signupBtn.onclick=()=>{
     alert("Account created successfully! You can now log in.");
   }).catch(e=>alert(e.message));
 };
-
-onAuthStateChanged(auth,u=>{
-  if(u){
-    currentUser=u;
-    authSection.style.display="none";
-    appSection.style.display="block";
-    loadClients(); loadExpenses(); loadNotes();
-  }else{
-    authSection.style.display="block";
-    appSection.style.display="none";
-  }
-});
 
 onAuthStateChanged(auth,u=>{
   if(u){
@@ -465,6 +448,15 @@ generateReportBtn.onclick=()=>{
   otherSales = 0;
   const totalCollection = cashSales + bankTransferSales + creditCardSales + otherSales;
   const totalExpenses = expenses.filter(x=>new Date(x.date)>=s&&new Date(x.date)<=e).reduce((a,b)=>a+b.amount,0);
+  const netSales = totalCollection - totalExpenses;
+  const cashOnHand = netSales - (bankTransferSales + creditCardSales + otherSales);
+  report
+
+  // Merge otherSales into cashSales
+  cashSales += otherSales;
+  otherSales = 0;
+  const totalCollection = cashSales + bankTransferSales + creditCardSales + otherSales;
+  const totalExpenses = expenses.filter(x=>new Date(x.date)>=s&&new Date(x.date)<=e).reduce((a,b)=>a+b.amount,0);
 
     
   // Merge otherSales into cashSales
@@ -500,6 +492,7 @@ window.showSection=id=>{
 
 </body>
 </html>
+
 
 
 
