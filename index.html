@@ -375,12 +375,23 @@ window.viewClient = name => {
   viewTitle.textContent = name;
   viewSummary.innerHTML = `Total Debit: ${d}<br>Total Credit: ${cr}<br>Balance: <span class="${bal > 0 ? 'debit-red' : 'balance-paid'}">${bal}</span>`;
   viewBody.innerHTML = "";
-  let running_d = 0, running_cr = 0;
-  c.history.forEach(h => {
-    running_d += h.debit || 0;
-    running_cr += h.credit || 0;
-    const running_bal = running_d - running_cr;
-    const rowClass = (h.debit > 0 && running_bal > 0) ? 'unpaid-row' : '';
+  // Sort history by date to process in order
+  const sortedHistory = c.history.sort((a, b) => new Date(a.date) - new Date(b.date));
+  let remainingPayment = 0; // Tracks how much payment is left to apply to charges
+  sortedHistory.forEach(h => {
+    let rowClass = '';
+    if (h.debit > 0) {
+      // It's a charge: Check if it's fully covered by remaining payment
+      if (remainingPayment >= h.debit) {
+        remainingPayment -= h.debit; // Fully covered, no highlight
+      } else {
+        rowClass = 'unpaid-row'; // Partially or not covered, highlight
+        remainingPayment = 0; // Reset for next charges
+      }
+    } else if (h.credit > 0) {
+      // It's a payment: Add to remaining payment for future charges
+      remainingPayment += h.credit;
+    }
     viewBody.innerHTML += `
     <tr class="${rowClass}">
       <td>${formatDate(h.date)}</td>
@@ -479,15 +490,43 @@ function loadNotes() {
       notesTextarea.value = notes;
       notesDisplay.innerHTML = notes.replace(/\n/g, '<br>');
     }
-  });
+  }).catch(e => console.error("Error loading notes:", e));
 }
 
-saveNotesBtn.onclick = async () => {
-  notes = notesTextarea.value;
-  await setDoc(doc(db, "users", currentUser.uid, "notes"), { content: notes });
-  alert("Notes saved");
-  notesDisplay.innerHTML = notes.replace(/\n/g, '<br>');
+// Edit/Save Notes
+let isEditingNotes = false;
+const editNotesBtn = document.createElement('button');
+editNotesBtn.textContent = 'Edit';
+editNotesBtn.style.marginLeft = '10px';
+notesTextarea.parentNode.insertBefore(editNotesBtn, notesTextarea.nextSibling);
+
+editNotesBtn.onclick = () => {
+  if (isEditingNotes) {
+    // Save mode
+    saveNotes();
+    notesTextarea.readOnly = true;
+    editNotesBtn.textContent = 'Edit';
+    isEditingNotes = false;
+  } else {
+    // Edit mode
+    notesTextarea.readOnly = false;
+    notesTextarea.focus();
+    editNotesBtn.textContent = 'Save';
+    isEditingNotes = true;
+  }
 };
+
+async function saveNotes() {
+  if (!currentUser) return alert("Please log in to save notes.");
+  notes = notesTextarea.value;
+  try {
+    await setDoc(doc(db, "users", currentUser.uid, "notes"), { content: notes });
+    alert("Notes saved successfully!");
+    notesDisplay.innerHTML = notes.replace(/\n/g, '<br>');
+  } catch (e) {
+    alert(`Failed to save notes: ${e.message}`);
+  }
+}
 
 // REPORT
 generateReportBtn.onclick = () => {
@@ -503,6 +542,12 @@ generateReportBtn.onclick = () => {
       else otherSales += h.credit;
     }
   }));
+  // Merge otherSales into cashSales
+  cashSales += otherSales;
+  otherSales = 0;
+  const totalCollection = cashSales + bankTransferSales + creditCardSales + otherSales;
+  const totalExpenses = expenses.filter(x => new Date(x.date) >= s && new Date(x.date)
+  
   // Merge otherSales into cashSales
   cashSales += otherSales;
   otherSales = 0;
@@ -533,3 +578,4 @@ window.showSection = id => {
   if (activeBtn) activeBtn.classList.add("active");
 };
 </script>
+
