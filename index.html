@@ -208,8 +208,12 @@ const formatDate = (isoString) => { if (!isoString) return ''; const d = new Dat
 const highlight=(t,q)=>!q?t:t.replace(new RegExp(`(${q})`,'gi'),'<span class="highlight">$1</span>');
 
 // LOGIN
-loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value)
-.catch(e=>alert(e.message));
+loginBtn.onclick=()=>{
+  const email = loginEmail.value.trim();
+  const password = loginPassword.value.trim();
+  if (!email || !password) return alert("Please enter email and password");
+  signInWithEmailAndPassword(auth, email, password).catch(e=>alert(e.message));
+};
 
 // SIGN UP
 signupBtn.onclick=()=>{
@@ -486,6 +490,7 @@ window.showSection=id=>{
 
 </body>
 </html>
+
 
 
 
