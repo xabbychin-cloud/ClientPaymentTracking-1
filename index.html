@@ -41,6 +41,8 @@ th{background:#eee;color:black}
 
 .highlight{background:yellow;font-weight:bold}
 
+.unpaid-row{background:lightcoral} /* Highlight for unpaid charges */
+
 #logoutBtn{background:#c62828;color:white;margin:15px}
 </style>
 </head>
@@ -165,9 +167,6 @@ th{background:#eee;color:black}
 <button id="logoutBtn">Logout</button>
 </div>
 
-<button id="logoutBtn">Logout</button>
-</div>
-
 <!-- VIEW MODAL -->
 <div id="viewModal" class="modal">
   <div class="modal-content">
@@ -200,7 +199,8 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let currentUser=null, clients={}, expenses=[];
+let currentUser=null, clients={}, expenses=[], notes='';
+
 const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
 const formatDate = (isoString) => { if (!isoString) return ''; const d = new Date(isoString); return `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`; };
 
@@ -215,7 +215,7 @@ onAuthStateChanged(auth,u=>{
     currentUser=u;
     authSection.style.display="none";
     appSection.style.display="block";
-    loadClients(); loadExpenses();
+    loadClients(); loadExpenses(); loadNotes();
   }else{
     authSection.style.display="block";
     appSection.style.display="none";
@@ -255,6 +255,26 @@ function renderClients(){
 clientSearchBtn.onclick=renderClients;
 clientFilter.onchange=renderClients;
 
+// AUTOCOMPLETE CHARGE
+chargeName.oninput=()=>{
+  chargeAuto.innerHTML="";
+  const q=chargeName.value.toLowerCase();
+  Object.values(clients).forEach(c=>{
+    if(c.name.toLowerCase().includes(q)){
+      const d=document.createElement("div");
+      d.className="autocomplete-item";
+      d.textContent=c.name;
+      d.onclick=()=>selectChargeClient(c.name);
+      chargeAuto.appendChild(d);
+    }
+  });
+};
+
+function selectChargeClient(name){
+  chargeName.value=name;
+  chargeAuto.innerHTML="";
+}
+
 // ADD CHARGE
 addChargeBtn.onclick=async()=>{
   const name=chargeName.value;
@@ -283,10 +303,15 @@ window.viewClient=name=>{
   viewTitle.textContent=name;
   viewSummary.innerHTML=`Total Debit: ${d}<br>Total Credit: ${cr}<br>Balance: <span class="${bal>0?'debit-red':'balance-paid'}">${bal}</span>`;
   viewBody.innerHTML="";
+  let running_d = 0, running_cr = 0;
   c.history.forEach(h=>{
+    running_d += h.debit || 0;
+    running_cr += h.credit || 0;
+    const running_bal = running_d - running_cr;
+    const rowClass = (h.debit > 0 && running_bal > 0) ? 'unpaid-row' : '';
     viewBody.innerHTML+=`
-    <tr>
-      <td>${h.date}</td>
+    <tr class="${rowClass}">
+      <td>${formatDate(h.date)}</td>
       <td>${h.debit||0}</td>
       <td>${h.credit||0}</td>
       <td>${h.method||''}</td>
@@ -372,7 +397,7 @@ viewExpenseBtn.onclick=()=>{
   viewExpenseResult.innerHTML=html;
 };
 
-  // NOTES
+// NOTES
 function loadNotes(){
   const notesRef = doc(db, "users", currentUser.uid, "notes");
   getDoc(notesRef).then(docSnap => {
@@ -421,6 +446,24 @@ generateReportBtn.onclick=()=>{
     <strong>Total Collection: ${totalCollection}</strong><br>
     <strong>Total Expenses: ${totalExpenses}</strong><br>
     <strong>Net Sales: ${netSales}</strong><br>
+    <strong>Cash on Hand: ${cashOnHand}</strong
+    
+  // Merge otherSales into cashSales
+  cashSales += otherSales;
+  otherSales = 0;
+  const totalCollection = cashSales + bankTransferSales + creditCardSales + otherSales;
+  const totalExpenses = expenses.filter(x=>new Date(x.date)>=s&&new Date(x.date)<=e).reduce((a,b)=>a+b.amount,0);
+  const netSales = totalCollection - totalExpenses;
+  const cashOnHand = netSales - (bankTransferSales + creditCardSales + otherSales);
+  reportResult.innerHTML=`
+    <strong>Sales Breakdown:</strong><br>
+    Total Cash Sales: ${cashSales}<br>
+    Total Bank Transfer Sales: ${bankTransferSales}<br>
+    Total Credit Card Sales: ${creditCardSales}<br>
+    Total Other Sales: ${otherSales}<br><br>
+    <strong>Total Collection: ${totalCollection}</strong><br>
+    <strong>Total Expenses: ${totalExpenses}</strong><br>
+    <strong>Net Sales: ${netSales}</strong><br>
     <strong>Cash on Hand: ${cashOnHand}</strong>
   `;
 };
@@ -438,4 +481,5 @@ window.showSection=id=>{
 
 </body>
 </html>
+
 
