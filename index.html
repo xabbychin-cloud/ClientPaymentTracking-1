@@ -546,12 +546,6 @@ generateReportBtn.onclick = () => {
   cashSales += otherSales;
   otherSales = 0;
   const totalCollection = cashSales + bankTransferSales + creditCardSales + otherSales;
-  const totalExpenses = expenses.filter(x => new Date(x.date) >= s && new Date(x.date)
-  
-  // Merge otherSales into cashSales
-  cashSales += otherSales;
-  otherSales = 0;
-  const totalCollection = cashSales + bankTransferSales + creditCardSales + otherSales;
   const totalExpenses = expenses.filter(x => new Date(x.date) >= s && new Date(x.date) <= e).reduce((a, b) => a + b.amount, 0);
   const netSales = totalCollection - totalExpenses;
   const cashOnHand = netSales - (bankTransferSales + creditCardSales + otherSales);
@@ -578,4 +572,3 @@ window.showSection = id => {
   if (activeBtn) activeBtn.classList.add("active");
 };
 </script>
-
