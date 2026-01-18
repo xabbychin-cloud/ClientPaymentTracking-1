@@ -563,6 +563,38 @@ generateReportBtn.onclick = () => {
   `;
 };
 
+window.showSection = id => {
+  if (id === "reportSection") {
+    const enteredCode = prompt("1234:");
+    // Here you can decide which client’s code to check.
+    // For example, if you want a global admin code, store it in Firestore under the user doc.
+    // If per client, pick the client first, then compare.
+    const userRef = doc(db, "users", currentUser.uid);
+    getDoc(userRef).then(docSnap => {
+      if (docSnap.exists()) {
+        const storedCode = docSnap.data().adminCode;
+        if (enteredCode === storedCode) {
+          // Show report
+          document.querySelectorAll(".section").forEach(s => s.style.display = "none");
+          document.getElementById("reportSection").style.display = "block";
+        } else {
+          alert("Unauthorized: Incorrect admin code.");
+        }
+      }
+    });
+    return;
+  }
+
+  // Default behavior for other sections
+  document.querySelectorAll(".section").forEach(s => s.style.display = "none");
+  document.getElementById(id).style.display = "block";
+
+  document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active"));
+  const activeBtn = Array.from(document.querySelectorAll("#toolbar button")).find(b => b.onclick.toString().includes(id));
+  if (activeBtn) activeBtn.classList.add("active");
+};
+
+
 logoutBtn.onclick = () => signOut(auth);
 window.showSection = id => {
   document.querySelectorAll(".section").forEach(s => s.style.display = "none");
@@ -573,4 +605,5 @@ window.showSection = id => {
   if (activeBtn) activeBtn.classList.add("active");
 };
 </script>
+
 
