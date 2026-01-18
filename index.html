@@ -378,20 +378,9 @@ window.viewClient = name => {
   // Sort history by date to process in order
   const sortedHistory = c.history.sort((a, b) => new Date(a.date) - new Date(b.date));
   let remainingPayment = 0; // Tracks how much payment is left to apply to charges
-  sortedHistory.forEach(h => {
-    let rowClass = '';
-    if (h.debit > 0) {
-      // It's a charge: Check if it's fully covered by remaining payment
-      if (remainingPayment >= h.debit) {
-        remainingPayment -= h.debit; // Fully covered, no highlight
-      } else {
-        rowClass = 'unpaid-row'; // Partially or not covered, highlight
-        remainingPayment = 0; // Reset for next charges
-      }
-    } else if (h.credit > 0) {
-      // It's a payment: Add to remaining payment for future charges
-      remainingPayment += h.credit;
-    }
+ // Render rows
+  sortedHistory.forEach((h, index) => {
+    const rowClass = unpaidCharges.has(index) ? 'unpaid-row' : '';
     viewBody.innerHTML += `
     <tr class="${rowClass}">
       <td>${formatDate(h.date)}</td>
@@ -405,6 +394,7 @@ window.viewClient = name => {
     </tr>`;
   });
   viewModal.style.display = "block";
+};
 };
 window.closeViewModal = () => viewModal.style.display = "none";
 
@@ -573,4 +563,5 @@ window.showSection = id => {
   if (activeBtn) activeBtn.classList.add("active");
 };
 </script>
+
 
