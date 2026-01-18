@@ -565,43 +565,12 @@ generateReportBtn.onclick = () => {
 
 logoutBtn.onclick = () => signOut(auth);
 window.showSection = id => {
-  if (id === "reportSection") {
-    const enteredCode = prompt("Enter Admin Code:");
-
-    // Reference to the user document
-    const userRef = doc(db, "users", currentUser.uid);
-    getDoc(userRef).then(docSnap => {
-      if (docSnap.exists()) {
-        // Expect adminCodes to be an array in Firestore
-        const storedCodes = docSnap.data().adminCodes || [];
-
-        if (Array.isArray(storedCodes) && storedCodes.includes(enteredCode)) {
-          // Show report if code matches
-          document.querySelectorAll(".section").forEach(s => s.style.display = "none");
-          document.getElementById("reportSection").style.display = "block";
-
-          // Highlight active toolbar button
-          document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active"));
-          const activeBtn = Array.from(document.querySelectorAll("#toolbar button"))
-            .find(b => b.onclick.toString().includes(id));
-          if (activeBtn) activeBtn.classList.add("active");
-        } else {
-          alert("Unauthorized: Incorrect admin code.");
-        }
-      }
-    });
-    return; // stop here so other sections aren't shown
-  }
-
-  // Default behavior for other sections
   document.querySelectorAll(".section").forEach(s => s.style.display = "none");
   document.getElementById(id).style.display = "block";
-
+  // Highlight active toolbar button
   document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active"));
   const activeBtn = Array.from(document.querySelectorAll("#toolbar button")).find(b => b.onclick.toString().includes(id));
   if (activeBtn) activeBtn.classList.add("active");
 };
-
-
-
+</script>
 
