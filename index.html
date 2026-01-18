@@ -365,7 +365,7 @@ addChargeBtn.onclick = async () => {
   chargeRemarks.value = '';
   chargeAuto.innerHTML = '';
 };
-
+  
 // VIEW CLIENT
 window.viewClient = name => {
   const c = clients[cid(name)];
@@ -404,16 +404,21 @@ window.viewClient = name => {
       <td>${h.end || ''}</td>
     </tr>`;
   });
-  // Add total row at the end
-  viewBody.innerHTML += `<tr style="font-weight: bold; background-color: #eee;"><td>Total</td><td>${d}</td><td>${cr}</td><td></td><td></td><td></td><td></td><td></td></tr>`;
+  // Add total row
+  viewBody.innerHTML += `
+    <tr style="font-weight: bold; background-color: #eee;">
+      <td>Total</td>
+      <td>${d}</td>
+      <td>${cr}</td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+      <td></td>
+    </tr>`;
   viewModal.style.display = "block";
 };
 window.closeViewModal = () => viewModal.style.display = "none";
-
-// AUTOCOMPLETE PAYMENT
-paymentSearch.oninput = () => {
-  paymentAuto.innerHTML = "";
-  const q = paymentSearch
 
 // AUTOCOMPLETE PAYMENT
 paymentSearch.oninput = () => {
@@ -580,5 +585,4 @@ window.showSection = id => {
   if (activeBtn) activeBtn.classList.add("active");
 };
 </script>
-
 
