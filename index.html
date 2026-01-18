@@ -44,9 +44,6 @@ th{background:#eee;color:black}
 .unpaid-row{background:lightcoral} /* Highlight for unpaid charges */
 
 #logoutBtn{background:#c62828;color:white;margin:15px}
-
-.outstanding-charge{cursor:pointer;padding:5px;margin:2px 0;background:#f9f9f9;border:1px solid #ddd;border-radius:3px}
-.outstanding-charge:hover{background:#e0e0e0}
 </style>
 </head>
 
@@ -119,7 +116,6 @@ th{background:#eee;color:black}
 
   <input id="paymentClientName" class="readonly" readonly>
   <input id="paymentBalance" class="readonly" readonly>
-  <div id="outstandingCharges"></div>
 
   <input id="paymentAmount" type="number" placeholder="Payment Amount">
   <select id="paymentType">
@@ -238,7 +234,6 @@ const paymentSearch = document.getElementById('paymentSearch');
 const paymentAuto = document.getElementById('paymentAuto');
 const paymentClientName = document.getElementById('paymentClientName');
 const paymentBalance = document.getElementById('paymentBalance');
-const outstandingCharges = document.getElementById('outstandingCharges');
 const paymentAmount = document.getElementById('paymentAmount');
 const paymentType = document.getElementById('paymentType');
 const paymentMode = document.getElementById('paymentMode');
@@ -380,7 +375,7 @@ window.viewClient = name => {
   viewTitle.textContent = name;
   viewSummary.innerHTML = `Total Debit: ${d}<br>Total Credit: ${cr}<br>Balance: <span class="${bal > 0 ? 'debit-red' : 'balance-paid'}">${bal}</span>`;
   viewBody.innerHTML = "";
-  // Sort history by date and time (ISO strings include time)
+  // Sort history by date to process in order
   const sortedHistory = c.history.sort((a, b) => new Date(a.date) - new Date(b.date));
   let remainingPayment = 0; // Tracks how much payment is left to apply to charges
   sortedHistory.forEach(h => {
@@ -412,10 +407,6 @@ window.viewClient = name => {
   viewModal.style.display = "block";
 };
 window.closeViewModal = () => viewModal.style.display = "none";
-
-// AUTOCOMPLETE PAYMENT
-paymentSearch.oninput = () => {
-  paymentAuto.inner
 
 // AUTOCOMPLETE PAYMENT
 paymentSearch.oninput = () => {
