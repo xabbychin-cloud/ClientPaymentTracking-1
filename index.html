@@ -200,7 +200,7 @@ const app = initializeApp({
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let currentUser = null, clients = {}, expenses = [], notes = '', userRole = null;
+let currentUser = null, clients = {}, expenses = [], notes = '';
 
 // Utility functions
 const cid = n => n.toLowerCase().replace(/\s+/g, '_');
@@ -280,28 +280,17 @@ signupBtn.onclick = () => {
   }).catch(e => alert(`Signup failed: ${e.message}`));
 };
 
-onAuthStateChanged(auth, async u => {
+onAuthStateChanged(auth, u => {
   if (u) {
     currentUser = u;
-    // Load user role
-    const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-    userRole = userDoc.exists() ? userDoc.data().role || "user" : "user";
-    
     authSection.style.display = "none";
     appSection.style.display = "block";
     loadClients();
     loadExpenses();
     loadNotes();
-    
-    // Show/hide admin report button based on role
-    const adminBtn = document.querySelector('#toolbar button[onclick*="reportSection"]');
-    if (adminBtn) {
-      adminBtn.style.display = userRole === "admin" ? "inline-block" : "none";
-    }
   } else {
     authSection.style.display = "block";
     appSection.style.display = "none";
-    userRole = null;
   }
 });
 
@@ -376,7 +365,7 @@ addChargeBtn.onclick = async () => {
   chargeRemarks.value = '';
   chargeAuto.innerHTML = '';
 };
-  
+
 // VIEW CLIENT
 window.viewClient = name => {
   const c = clients[cid(name)];
@@ -415,18 +404,6 @@ window.viewClient = name => {
       <td>${h.end || ''}</td>
     </tr>`;
   });
-  // Add total row
-  viewBody.innerHTML += `
-    <tr style="font-weight: bold; background-color: #eee;">
-      <td>Total</td>
-      <td>${d}</td>
-      <td>${cr}</td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td></td>
-      <td></td>
-    </tr>`;
   viewModal.style.display = "block";
 };
 window.closeViewModal = () => viewModal.style.display = "none";
@@ -552,13 +529,6 @@ async function saveNotes() {
   }
 }
 
-// REPORT
-generateReportBtn.onclick = () => {
-  if (userRole !== "admin") {
-    alert("Access denied: Admin privileges required.");
-    return;
-  }
-  
 // REPORT
 generateReportBtn.onclick = () => {
   const s = new Date(reportStart.value);
