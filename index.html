@@ -20,6 +20,10 @@ th,td{border:1px solid #ccc;padding:6px}
 th{background:#eee}
 .debit-red{color:red;font-weight:bold}
 .unpaid-row{background:#ffd6d6}
+.autocomplete{position:relative}
+.autolist{position:absolute;background:white;border:1px solid #ccc;width:100%;z-index:100}
+.autolist div{padding:6px;cursor:pointer}
+.autolist div:hover{background:#eee}
 .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5)}
 .modal-content{background:white;width:95%;max-width:900px;margin:5% auto;padding:15px;max-height:90vh;overflow-y:auto}
 #logoutBtn{background:#c62828;color:white;margin:15px}
@@ -36,13 +40,15 @@ th{background:#eee}
 
 <h1>Client Payment Tracker</h1>
 
+<!-- LOGIN -->
 <div id="authSection" class="section" style="display:block">
   <input id="loginEmail" placeholder="Email">
-  <input id="loginPassword" type="password">
+  <input id="loginPassword" type="password" placeholder="Password">
   <button id="loginBtn">Login</button>
   <button id="signupBtn">Sign Up</button>
 </div>
 
+<!-- APP -->
 <div id="appSection" style="display:none">
 
 <div id="toolbar">
@@ -64,15 +70,19 @@ th{background:#eee}
 
 <!-- CLIENTS -->
 <div id="clients" class="section">
-  <input id="clientSearch" placeholder="Search client">
+  <!-- RESTORED SEARCH + FILTER -->
+  <input id="clientSearch" placeholder="Search client..." style="margin-bottom:6px">
   <select id="clientFilter">
     <option value="all">All</option>
     <option value="outstanding">Outstanding</option>
     <option value="paid">Paid</option>
   </select>
+
   <table>
     <thead>
-      <tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Action</th></tr>
+      <tr>
+        <th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Action</th>
+      </tr>
     </thead>
     <tbody id="clientsBody"></tbody>
   </table>
@@ -85,7 +95,9 @@ th{background:#eee}
     <h3 id="viewTitle"></h3>
     <div id="viewSummary"></div>
     <table>
-      <thead><tr><th>Date</th><th>Debit</th><th>Credit</th><th>Remarks</th></tr></thead>
+      <thead>
+        <tr><th>Date</th><th>Debit</th><th>Credit</th><th>Remarks</th></tr>
+      </thead>
       <tbody id="viewBody"></tbody>
     </table>
   </div>
@@ -95,31 +107,45 @@ th{background:#eee}
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getAuth,onAuthStateChanged,signInWithEmailAndPassword,createUserWithEmailAndPassword,signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore,collection,onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const ADMIN_CODE="1234";
-const app=initializeApp({apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",authDomain:"client-payment-tracker-3572b.firebaseapp.com",projectId:"client-payment-tracker-3572b"});
+const app=initializeApp({
+  apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
+  authDomain:"client-payment-tracker-3572b.firebaseapp.com",
+  projectId:"client-payment-tracker-3572b"
+});
 const auth=getAuth(app);
 const db=getFirestore(app);
-let clients={},expenses=[],chart;
+let currentUser,clients={},expenses=[],chart;
 
 const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
 
+/* AUTH */
 loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
 signupBtn.onclick=()=>createUserWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
 logoutBtn.onclick=()=>signOut(auth);
 
 onAuthStateChanged(auth,u=>{
   if(u){
+    currentUser=u;
     authSection.style.display="none";
     appSection.style.display="block";
-    onSnapshot(collection(db,"users",u.uid,"clients"),snap=>{
-      clients={};snap.forEach(d=>clients[d.id]=d.data());
-      renderClients();updateDashboard();
-    });
+    loadClients();
+  } else {
+    authSection.style.display="block";
+    appSection.style.display="none";
   }
 });
+
+/* CLIENTS */
+function loadClients(){
+  onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
+    clients={}; snap.forEach(d=>clients[d.id]=d.data());
+    renderClients();
+  });
+}
 
 function renderClients(){
   const q=clientSearch.value.toLowerCase();
@@ -130,28 +156,39 @@ function renderClients(){
     if(q && !c.name.toLowerCase().includes(q)) return;
     if(f==="outstanding" && bal<=0) return;
     if(f==="paid" && bal>0) return;
+
     clientsBody.innerHTML+=`
       <tr>
-        <td>${c.name}</td><td>${c.debit||0}</td><td>${c.credit||0}</td>
+        <td>${c.name}</td>
+        <td>${c.debit||0}</td>
+        <td>${c.credit||0}</td>
         <td class="${bal>0?'debit-red':''}">${bal}</td>
         <td><button onclick="viewClient('${c.name}')">View</button></td>
       </tr>`;
   });
 }
+
 clientSearch.oninput=renderClients;
 clientFilter.onchange=renderClients;
 
+/* VIEW CLIENT – FIXED HIGHLIGHT */
 window.viewClient=name=>{
   const c=clients[cid(name)];
   const history=(c.history||[]).sort((a,b)=>new Date(a.date)-new Date(b.date));
   let remaining=(c.debit||0)-(c.credit||0);
   viewBody.innerHTML="";
+
   for(let i=history.length-1;i>=0;i--){
-    const h=history[i];
-    const highlight=remaining>0 && h.debit && remaining<=h.debit;
-    remaining-=h.debit||0;
-    history[i]._highlight=highlight;
+    history[i]._highlight=false;
+    if(history[i].credit) remaining+=history[i].credit;
+    if(history[i].debit){
+      if(remaining>0 && remaining<=history[i].debit){
+        history[i]._highlight=true;
+        remaining=0;
+      } else remaining-=history[i].debit;
+    }
   }
+
   history.forEach(h=>{
     viewBody.innerHTML+=`
       <tr class="${h._highlight?'unpaid-row':''}">
@@ -161,21 +198,25 @@ window.viewClient=name=>{
         <td>${h.remarks||''}</td>
       </tr>`;
   });
+
   viewTitle.textContent=name;
   viewSummary.innerHTML=`Balance: ${(c.debit||0)-(c.credit||0)}`;
   viewModal.style.display="block";
 };
 
+/* ADMIN – FIXED CLICK */
 window.openAdmin=()=>{
   if(prompt("Admin code")===ADMIN_CODE){
     showSection("admin");
   } else alert("Access denied");
 };
 
+/* SECTIONS */
 window.showSection=id=>{
   document.querySelectorAll(".section").forEach(s=>s.style.display="none");
   document.getElementById(id).style.display="block";
-  document.querySelectorAll("#toolbar button").forEach(b=>b.classList.toggle("active",b.dataset.section===id));
+  document.querySelectorAll("#toolbar button")
+    .forEach(b=>b.classList.toggle("active",b.dataset.section===id));
 };
 </script>
 </body>
