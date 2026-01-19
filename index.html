@@ -4,6 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Client Payment Tracker</title>
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
 <style>
 body{margin:0;font-family:Arial;background:#f4f6f9}
 h1{background:#2e7d32;color:white;padding:15px;text-align:center;margin:0}
@@ -24,11 +27,21 @@ th{background:#eee}
 .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5)}
 .modal-content{background:white;width:95%;max-width:900px;margin:5% auto;padding:15px;max-height:90vh;overflow-y:auto}
 #logoutBtn{background:#c62828;color:white;margin:15px}
+
+/* mobile tables */
 @media(max-width:768px){
   table,thead,tbody,th,td,tr{display:block}
   th{display:none}
   tr{margin-bottom:10px}
   td{display:flex;justify-content:space-between}
+}
+
+/* modal mobile */
+@media(max-width:768px){
+  #viewModal table,#viewModal thead,#viewModal tbody,#viewModal tr,#viewModal td{
+    display:block;width:100%;
+  }
+  #viewModal td{display:flex;justify-content:space-between;padding:8px}
 }
 </style>
 </head>
@@ -48,12 +61,12 @@ th{background:#eee}
 <div id="appSection" style="display:none">
 
 <div id="toolbar">
-  <button onclick="showSection('dashboard')" class="active">Dashboard</button>
-  <button onclick="showSection('clients')">Clients</button>
-  <button onclick="showSection('charge')">Add Charge</button>
-  <button onclick="showSection('payment')">Add Payment</button>
-  <button onclick="showSection('expense')">Expenses</button>
-  <button onclick="openAdmin()">Admin Report</button>
+  <button data-section="dashboard" onclick="showSection('dashboard')" class="active">Dashboard</button>
+  <button data-section="clients" onclick="showSection('clients')">Clients</button>
+  <button data-section="charge" onclick="showSection('charge')">Add Charge</button>
+  <button data-section="payment" onclick="showSection('payment')">Add Payment</button>
+  <button data-section="expense" onclick="showSection('expense')">Expenses</button>
+  <button data-section="admin" onclick="openAdmin()">Admin Report</button>
 </div>
 
 <!-- DASHBOARD -->
@@ -62,25 +75,82 @@ th{background:#eee}
   <p>Income: <span id="dashIncome">0</span></p>
   <p>Expenses: <span id="dashExpense">0</span></p>
   <p>Net: <span id="dashNet">0</span></p>
+  <canvas id="financeChart" height="120"></canvas>
 </div>
 
 <!-- CLIENTS -->
 <div id="clients" class="section">
-  <!-- ADDED SEARCH (FIX #1) -->
-  <input id="clientSearch" placeholder="Search client..." style="margin-bottom:6px">
-
-  <select id="clientFilter">
-    <option value="all">All</option>
-    <option value="outstanding">Outstanding</option>
-    <option value="paid">Paid</option>
-  </select>
-
+  <input id="clientSearch" placeholder="Search client...">
   <table>
-    <thead>
-      <tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Action</th></tr>
-    </thead>
+    <thead><tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Action</th></tr></thead>
     <tbody id="clientsBody"></tbody>
   </table>
+</div>
+
+<!-- ADD CHARGE -->
+<div id="charge" class="section">
+  <div class="autocomplete">
+    <input id="chargeName" placeholder="Client Name">
+    <div id="chargeAuto" class="autolist"></div>
+  </div>
+  <input id="chargeDate" type="date">
+  <select id="bookingType">
+    <option value="">Booking Type</option>
+    <option value="single">Single Day</option>
+    <option value="multi">Multi Day</option>
+  </select>
+  <div id="singleDay" style="display:none"><input id="singleDate" type="date"></div>
+  <div id="multiDay" style="display:none">
+    <input id="startDate" type="date">
+    <input id="endDate" type="date">
+  </div>
+  <input id="chargeAmount" type="number" placeholder="Amount">
+  <input id="chargeRemarks" placeholder="Remarks">
+  <button id="addChargeBtn">Save Charge</button>
+</div>
+
+<!-- ADD PAYMENT -->
+<div id="payment" class="section">
+  <div class="autocomplete">
+    <input id="paymentSearch" placeholder="Client Name">
+    <div id="paymentAuto" class="autolist"></div>
+  </div>
+  <input id="paymentDate" type="date">
+  <input id="paymentBalance" readonly placeholder="Balance">
+  <input id="paymentAmount" type="number" placeholder="Amount">
+  <select id="paymentType">
+    <option>Cash</option>
+    <option>Bank Transfer</option>
+    <option>Credit Card</option>
+    <option>Others</option>
+  </select>
+  <select id="paymentMode">
+    <option>Full</option>
+    <option>Partial</option>
+  </select>
+  <input id="paymentRemarks" placeholder="Remarks">
+  <button id="addPaymentBtn">Save Payment</button>
+</div>
+
+<!-- EXPENSE -->
+<div id="expense" class="section">
+  <input id="expenseDate" type="date">
+  <input id="expenseAmount" type="number" placeholder="Amount">
+  <input id="expenseDesc" placeholder="Description">
+  <button id="addExpenseBtn">Save Expense</button>
+
+  <h3>View Expenses</h3>
+  <input id="expStart" type="date">
+  <input id="expEnd" type="date">
+  <button onclick="viewExpenses()">Generate</button>
+  <div id="expenseResult"></div>
+</div>
+
+<!-- ADMIN -->
+<div id="admin" class="section">
+  <textarea id="adminNotes" placeholder="Notes"></textarea>
+  <button onclick="saveNotes()">Save Note</button>
+  <button id="viewAdminBtn">View Note</button>
 </div>
 
 <!-- VIEW MODAL -->
@@ -104,117 +174,86 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, on
 import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const ADMIN_CODE="1234";
-const app=initializeApp({
-  apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
-  authDomain:"client-payment-tracker-3572b.firebaseapp.com",
-  projectId:"client-payment-tracker-3572b"
-});
+const app=initializeApp({apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",authDomain:"client-payment-tracker-3572b.firebaseapp.com",projectId:"client-payment-tracker-3572b"});
 const auth=getAuth(app);
 const db=getFirestore(app);
-let currentUser,clients={};
+let currentUser,clients={},expenses=[],chart;
 
 const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
 
-/* AUTH */
 loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
 signupBtn.onclick=()=>createUserWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
 logoutBtn.onclick=()=>signOut(auth);
 
 onAuthStateChanged(auth,u=>{
-  if(u){
-    currentUser=u;
-    authSection.style.display="none";
-    appSection.style.display="block";
-    loadClients();
-  } else {
-    authSection.style.display="block";
-    appSection.style.display="none";
-  }
+  if(u){currentUser=u;authSection.style.display="none";appSection.style.display="block";loadClients();loadExpenses();}
+  else{authSection.style.display="block";appSection.style.display="none";}
 });
 
-/* CLIENTS */
 function loadClients(){
   onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
-    clients={}; snap.forEach(d=>clients[d.id]=d.data());
-    renderClients();
+    clients={};snap.forEach(d=>clients[d.id]=d.data());
+    renderClients();updateClientAuto();updateDashboard();
   });
 }
 
 function renderClients(){
-  const q=clientSearch.value.toLowerCase();
-  const f=clientFilter.value;
   clientsBody.innerHTML="";
   Object.values(clients).forEach(c=>{
     const bal=(c.debit||0)-(c.credit||0);
-    if(q && !c.name.toLowerCase().includes(q)) return;
-    if(f==="outstanding" && bal<=0) return;
-    if(f==="paid" && bal>0) return;
-
-    clientsBody.innerHTML+=`
-      <tr>
-        <td>${c.name}</td>
-        <td>${c.debit||0}</td>
-        <td>${c.credit||0}</td>
-        <td class="${bal>0?'debit-red':''}">${bal}</td>
-        <td><button onclick="viewClient('${c.name}')">View</button></td>
-      </tr>`;
+    clientsBody.innerHTML+=`<tr>
+      <td>${c.name}</td><td>${c.debit||0}</td><td>${c.credit||0}</td>
+      <td class="${bal>0?'debit-red':''}">${bal}</td>
+      <td><button onclick="viewClient('${c.name}')">View</button></td>
+    </tr>`;
   });
 }
 
-clientSearch.oninput=renderClients;
-clientFilter.onchange=renderClients;
+clientSearch.oninput=()=>{
+  const q=clientSearch.value.toLowerCase();
+  clientsBody.innerHTML="";
+  Object.values(clients).filter(c=>c.name.toLowerCase().includes(q)).forEach(c=>{
+    const bal=(c.debit||0)-(c.credit||0);
+    clientsBody.innerHTML+=`<tr>
+      <td>${c.name}</td><td>${c.debit||0}</td><td>${c.credit||0}</td>
+      <td class="${bal>0?'debit-red':''}">${bal}</td>
+      <td><button onclick="viewClient('${c.name}')">View</button></td>
+    </tr>`;
+  });
+};
 
-/* VIEW CLIENT – FIX #3 */
 window.viewClient=name=>{
   const c=clients[cid(name)];
-  const history=(c.history||[]).sort((a,b)=>new Date(a.date)-new Date(b.date));
-  let remaining=(c.debit||0)-(c.credit||0);
   viewBody.innerHTML="";
-
-  for(let i=history.length-1;i>=0;i--){
-    const h=history[i];
-    h._highlight=false;
-    if(h.credit) remaining+=h.credit;
-    if(h.debit){
-      if(remaining>0 && remaining<=h.debit){
-        h._highlight=true;
-        remaining=0;
-      } else remaining-=h.debit;
-    }
-  }
-
-  history.forEach(h=>{
-    viewBody.innerHTML+=`
-      <tr class="${h._highlight?'unpaid-row':''}">
-        <td>${new Date(h.date).toLocaleString()}</td>
-        <td>${h.debit||0}</td>
-        <td>${h.credit||0}</td>
-        <td>${h.remarks||''}</td>
-      </tr>`;
+  const history=(c.history||[]).sort((a,b)=>new Date(a.date)-new Date(b.date));
+  const balance=(c.debit||0)-(c.credit||0);
+  let hi=-1;if(balance>0){for(let i=history.length-1;i>=0;i--){if(history[i].debit){hi=i;break;}}}
+  history.forEach((h,i)=>{
+    viewBody.innerHTML+=`<tr class="${i===hi?'unpaid-row':''}">
+      <td>${new Date(h.date).toLocaleString()}</td>
+      <td>${h.debit||0}</td><td>${h.credit||0}</td><td>${h.remarks||''}</td>
+    </tr>`;
   });
-
   viewTitle.textContent=name;
-  viewSummary.innerHTML=`Balance: ${(c.debit||0)-(c.credit||0)}`;
+  viewSummary.innerHTML=`Debit:${c.debit} Credit:${c.credit} Balance:${balance}`;
   viewModal.style.display="block";
 };
 
-/* ADMIN – FIX #2 */
-window.openAdmin=()=>{
-  if(prompt("Admin code")===ADMIN_CODE){
-    showSection("admin");
-  } else alert("Access denied");
-};
+function updateDashboard(){
+  let inc=0,exp=0;
+  Object.values(clients).forEach(c=>(c.history||[]).forEach(h=>h.credit&&(inc+=h.credit)));
+  expenses.forEach(e=>exp+=e.amount);
+  dashIncome.textContent=inc;
+  dashExpense.textContent=exp;
+  dashNet.textContent=inc-exp;
+  if(chart)chart.destroy();
+  chart=new Chart(financeChart,{type:'bar',data:{labels:['Income','Expense'],datasets:[{data:[inc,exp],backgroundColor:['#4CAF50','#c62828']}]}});
+}
 
-/* TOOLBAR – UNCHANGED */
 window.showSection=id=>{
   document.querySelectorAll(".section").forEach(s=>s.style.display="none");
-  const sec=document.getElementById(id);
-  if(sec) sec.style.display="block";
-
-  document.querySelectorAll("#toolbar button").forEach(btn=>btn.classList.remove("active"));
-  const activeBtn=Array.from(document.querySelectorAll("#toolbar button"))
-    .find(btn=>btn.textContent.toLowerCase().includes(id));
-  if(activeBtn) activeBtn.classList.add("active");
+  document.getElementById(id).style.display="block";
+  document.querySelectorAll("#toolbar button").forEach(b=>b.classList.toggle("active",b.dataset.section===id));
 };
 </script>
 </body>
