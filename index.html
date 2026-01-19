@@ -65,6 +65,8 @@
 
     <!-- CLIENTS -->
     <div id="clients" class="section">
+        <input id="clientSearch" placeholder="Search Client">
+        <button onclick="renderClients()">Search</button>
         <select id="clientFilter">
             <option value="all">All</option>
             <option value="outstanding">Outstanding</option>
@@ -168,7 +170,6 @@ import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, on
 import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const ADMIN_CODE = "1234";
-
 const app = initializeApp({
     apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
     authDomain: "client-payment-tracker-3572b.firebaseapp.com",
@@ -179,19 +180,10 @@ const db = getFirestore(app);
 let currentUser, clients = {}, expenses = [];
 const cid = n => n.toLowerCase().replace(/\s+/g, '_');
 
-// DOM references
-const loginEmail = document.getElementById("loginEmail");
-const loginPassword = document.getElementById("loginPassword");
-const loginBtn = document.getElementById("loginBtn");
-const signupBtn = document.getElementById("signupBtn");
-const authSection = document.getElementById("authSection");
-const appSection = document.getElementById("appSection");
-const logoutBtn = document.getElementById("logoutBtn");
-
-// ==================== AUTH ====================
-loginBtn.addEventListener("click", async () => {
+// ---------------- AUTH ----------------
+loginBtn.onclick = async () => {
     const email = loginEmail.value.trim();
-    const password = loginPassword.value.trim();
+    const password = loginPassword.value;
     if (!email || !password) { alert("Enter email and password"); return; }
     try {
         const userCred = await signInWithEmailAndPassword(auth, email, password);
@@ -201,15 +193,12 @@ loginBtn.addEventListener("click", async () => {
         appSection.style.display = "block";
         loadClients();
         loadExpenses();
-    } catch (e) {
-        console.error(e);
-        alert("Login failed: " + e.message);
-    }
-});
+    } catch(e) { alert("Login failed: " + e.message); }
+};
 
-signupBtn.addEventListener("click", async () => {
+signupBtn.onclick = async () => {
     const email = loginEmail.value.trim();
-    const password = loginPassword.value.trim();
+    const password = loginPassword.value;
     if (!email || !password) { alert("Enter email and password"); return; }
     try {
         const userCred = await createUserWithEmailAndPassword(auth, email, password);
@@ -219,33 +208,101 @@ signupBtn.addEventListener("click", async () => {
         appSection.style.display = "block";
         loadClients();
         loadExpenses();
-    } catch (e) {
-        console.error(e);
-        alert("Signup failed: " + e.message);
-    }
+    } catch(e) { alert("Signup failed: " + e.message); }
+};
+
+logoutBtn.onclick = () => { signOut(auth).catch(console.error); };
+onAuthStateChanged(auth, u => {
+    if (u) { currentUser = u; authSection.style.display="none"; appSection.style.display="block"; loadClients(); loadExpenses(); }
+    else { authSection.style.display="block"; appSection.style.display="none"; }
 });
 
-logoutBtn.addEventListener("click", async () => {
-    try { await signOut(auth); } catch (e) { console.error(e); }
-});
+// ---------------- TOOLBAR ----------------
+window.showSection = id => {
+    document.querySelectorAll(".section").forEach(s => s.style.display="none");
+    const sec = document.getElementById(id);
+    if(sec) sec.style.display="block";
+    document.querySelectorAll("#toolbar button").forEach(btn=>btn.classList.remove("active"));
+    const activeBtn = Array.from(document.querySelectorAll("#toolbar button"))
+        .find(btn=>btn.textContent.toLowerCase()===id.toLowerCase());
+    if(activeBtn) activeBtn.classList.add("active");
+};
 
-onAuthStateChanged(auth, (user) => {
-    if (user) {
-        currentUser = user;
-        authSection.style.display = "none";
-        appSection.style.display = "block";
-        loadClients();
-        loadExpenses();
-    } else {
-        authSection.style.display = "block";
-        appSection.style.display = "none";
-    }
-});
+// ---------------- CLIENTS ----------------
+clientFilter.onchange = () => renderClients();
+window.renderClients = () => {
+    const searchVal = (clientSearch.value || "").toLowerCase();
+    const filter = clientFilter.value;
+    clientsBody.innerHTML = "";
+    Object.values(clients).forEach(c=>{
+        const bal = (c.debit||0) - (c.credit||0);
+        const showFilter = filter==="all" || (filter==="outstanding" && bal>0) || (filter==="paid" && bal<=0);
+        const showSearch = !searchVal || c.name.toLowerCase().includes(searchVal);
+        if(showFilter && showSearch){
+            clientsBody.innerHTML += `<tr>
+                <td>${c.name}</td>
+                <td>${c.debit||0}</td>
+                <td>${c.credit||0}</td>
+                <td class="${bal>0?'debit-red':''}">${bal}</td>
+                <td><button onclick="viewClient('${c.name}')">View</button></td>
+            </tr>`;
+        }
+    });
+};
 
-// ==================== OTHER CODES ====================
-// All your previous code for clients, charges, payments, expenses, admin report, view modal
-// remains unchanged, including renderClients(), viewClient(), updateClientAuto(), generateAdminReport(), etc.
+// ---------------- VIEW MODAL ----------------
+window.viewClient = name => {
+    const c = clients[cid(name)]; if(!c) return;
+    viewTitle.textContent = name;
+    const balance = (c.debit||0) - (c.credit||0);
+    viewSummary.textContent = `Balance: ${balance}`;
+    let runningBalance = 0;
+    viewBody.innerHTML = "";
+    (c.history||[]).sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(h=>{
+        runningBalance += (h.debit||0)-(h.credit||0);
+        viewBody.innerHTML += `<tr class="${runningBalance>0?'unpaid-row':''}">
+            <td>${new Date(h.date).toLocaleString()}</td>
+            <td>${h.debit||0}</td>
+            <td>${h.credit||0}</td>
+            <td>${h.remarks||''}</td>
+        </tr>`;
+    });
+    viewModal.style.display="block";
+};
 
+// ---------------- ADMIN REPORT ----------------
+window.openAdmin = () => {
+    if(prompt("Admin code")===ADMIN_CODE) showSection("admin");
+    else alert("Access denied");
+};
+window.generateAdminReport = () => {
+    if(!adminStart.value || !adminEnd.value){ alert("Select start and end dates."); return; }
+    const s = new Date(adminStart.value), e = new Date(adminEnd.value);
+    let inc=0, exp=0;
+    let clientHtml="<h4>Clients</h4><table><tr><th>Name</th><th>Balance</th></tr>";
+    Object.values(clients).forEach(c=>{
+        let bal=0;
+        (c.history||[]).forEach(h=>{
+            const d=new Date(h.date);
+            if(d>=s && d<=e){ bal += (h.debit||0)-(h.credit||0); if(h.credit) inc+=h.credit; }
+        });
+        clientHtml+=`<tr><td>${c.name}</td><td>${bal}</td></tr>`;
+    });
+    expenses.forEach(x=>{ const d=new Date(x.date); if(d>=s&&d<=e) exp+=x.amount; });
+    clientHtml+="</table>";
+    adminResult.innerHTML=`<p>Income: ${inc}</p><p>Expenses: ${exp}</p><p>Net: ${inc-exp}</p>${clientHtml}`;
+};
+
+// ---------------- DASHBOARD ----------------
+function updateDashboard(){
+    let inc=0, exp=0;
+    Object.values(clients).forEach(c=>(c.history||[]).forEach(h=>{ if(h.credit) inc+=h.credit; }));
+    expenses.forEach(e=>exp+=e.amount);
+    dashIncome.textContent=inc; dashExpense.textContent=exp; dashNet.textContent=inc-exp;
+}
+
+// ---------------- AUTOCOMPLETE, EXPENSES, CHARGES, PAYMENTS ----------------
+// Keep exactly as your previous working code (unchanged)
 </script>
 </body>
 </html>
