@@ -103,13 +103,26 @@ tr.paid {
   background: #e8f5e9; /* light green */
 }
 
-/* Add below existing CSS */
-@media(min-width:1024px){
-  .card-grid{
-    grid-template-columns:repeat(auto-fit,minmax(120px,1fr));
-    gap:8px;
-  }
-  #dashboard h3{font-size:16px;}
-  #dashboard h2{font-size:20px;}
+.modal-content{
+  max-height:90vh;
+  overflow-y:auto;
 }
+
+
+@media(max-width:768px){
+  #viewModal table, 
+  #viewModal thead, 
+  #viewModal tbody, 
+  #viewModal tr, 
+  #viewModal td{
+    display:block;
+    width:100%;
+  }
+  #viewModal td{
+    display:flex;
+    justify-content:space-between;
+    padding:8px;
+  }
+}
+
 
