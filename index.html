@@ -253,8 +253,10 @@ window.renderClients = () => {
 };
 
 // ---------------- VIEW MODAL ----------------
-window.viewClient = name => {
-    const c = clients[cid(name)]; if(!c) return;
+// Highlight active toolbar button when section changes
+    window.viewClient = name => {
+    const c = clients[cid(name)];
+    if (!c) return;
     viewTitle.textContent = name;
     const balance = (c.debit||0) - (c.credit||0);
     viewSummary.textContent = `Balance: ${balance}`;
@@ -271,13 +273,56 @@ window.viewClient = name => {
     });
     viewModal.style.display="block";
 };
-
+    
 // ---------------- ADMIN ----------------
 window.openAdmin = () => {
     const code = prompt("Enter Admin Code");
-    if(code===ADMIN_CODE) showSection("admin");
+    if(code === ADMIN_CODE) showSection("admin");
     else alert("Access denied");
 };
+
+window.generateAdminReport = () => {
+    if(!adminStart.value || !adminEnd.value){ alert("Select start and end dates."); return; }
+    const s = new Date(adminStart.value), e = new Date(adminEnd.value);
+    let totalIncome=0, totalExpenses=0, cashSales=0;
+
+    let clientHtml = "<h4>Clients</h4><table><tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th></tr>";
+    Object.values(clients).forEach(c=>{
+        let debit=0, credit=0;
+        (c.history||[]).forEach(h=>{
+            const d=new Date(h.date);
+            if(d>=s && d<=e){
+                debit += h.debit||0;
+                credit += h.credit||0;
+                if(h.credit && (h.paymentType==="Cash" || h.paymentType==="cash")) cashSales += h.credit;
+            }
+        });
+        clientHtml += `<tr>
+            <td>${c.name}</td>
+            <td>${debit}</td>
+            <td>${credit}</td>
+            <td>${debit-credit}</td>
+        </tr>`;
+        totalIncome += credit;
+    });
+    clientHtml += "</table>";
+
+    expenses.forEach(x=>{
+        const d = new Date(x.date);
+        if(d>=s && d<=e) totalExpenses += x.amount;
+    });
+
+    const net = totalIncome - totalExpenses;
+    adminResult.innerHTML = `
+        <h4>Summary</h4>
+        <p>Total Income: ${totalIncome}</p>
+        <p>Total Cash Sales: ${cashSales}</p>
+        <p>Total Expenses: ${totalExpenses}</p>
+        <p>Net: ${net}</p>
+        ${clientHtml}
+    `;
+};
+
 
 saveNotesBtn.onclick = () => { localStorage.setItem("adminNotes", adminNotes.value); };
 
@@ -364,32 +409,60 @@ function updateClientAuto(){
 // ---------------- PAYMENT CALENDAR ----------------
 function updatePaymentCalendar(clientName){
     const c = clients[cid(clientName)];
-    if(!c){ paymentCalendarSingle.style.display=paymentCalendarMulti.style.display="none"; return; }
-    const lastBooking = (c.history||[]).slice(-1)[0];
+    if(!c){ 
+        paymentCalendarSingle.style.display = paymentCalendarMulti.style.display = "none"; 
+        return; 
+    }
+    const lastBooking = (c.history||[]).slice(-1)[0]; // last charge/payment
     if(lastBooking){
-        if(lastBooking.bookingType==="single"){
-            paymentCalendarSingle.style.display="block";
-            paymentCalendarMulti.style.display="none";
-            paymentSingleDate.value=lastBooking.date||"";
-        } else if(lastBooking.bookingType==="multi"){
-            paymentCalendarSingle.style.display="none";
-            paymentCalendarMulti.style.display="block";
-            paymentStartDate.value=lastBooking.startDate||"";
-            paymentEndDate.value=lastBooking.endDate||"";
+        if(lastBooking.bookingType === "single"){
+            paymentCalendarSingle.style.display = "block";
+            paymentCalendarMulti.style.display = "none";
+            paymentSingleDate.value = lastBooking.date || "";
+        } else if(lastBooking.bookingType === "multi"){
+            paymentCalendarSingle.style.display = "none";
+            paymentCalendarMulti.style.display = "block";
+            paymentStartDate.value = lastBooking.startDate || "";
+            paymentEndDate.value = lastBooking.endDate || "";
         }
-    } else { paymentCalendarSingle.style.display=paymentCalendarMulti.style.display="none"; }
+    } else {
+        paymentCalendarSingle.style.display = paymentCalendarMulti.style.display = "none";
+    }
 }
 
-// ---------------- LOAD CLIENTS & EXPENSES ----------------
-function loadClients(){
-    onSnapshot(collection(db,"users",currentUser.uid,"clients"), snap=>{
-        clients={};
-        snap.forEach(d=>{
-            clients[d.id]=d.data();
-            clients[d.id].history = clients[d.id].history || [];
+// Call when selecting client in Add Payment
+paymentSearch.oninput = ()=>{
+    paymentAuto.innerHTML="";
+    const val = paymentSearch.value.toLowerCase();
+    Object.values(clients).map(c=>c.name)
+        .filter(n=>n.toLowerCase().includes(val))
+        .forEach(n=>{
+            const div = document.createElement("div");
+            div.textContent=n;
+            div.onclick = ()=>{
+                paymentSearch.value = n;
+                paymentAuto.innerHTML="";
+                const c = clients[cid(n)];
+                if(c) paymentBalance.value=(c.debit||0)-(c.credit||0);
+                updatePaymentCalendar(n); // update calendar fields
+            };
+            paymentAuto.appendChild(div);
         });
-        renderClients();
-        updateClientAuto();
+};
+
+
+// ---------------- LOAD CLIENTS & EXPENSES ----------------
+// Load clients from Firestore and ensure history exists
+function loadClients() {
+    onSnapshot(collection(db, "users", currentUser.uid, "clients"), snap => {
+        clients = {};
+        snap.forEach(d => {
+            const data = d.data();
+            data.history = data.history || []; // ensure previous charges/payments exist
+            clients[d.id] = data;
+        });
+        renderClients();       // refresh client table
+        updateClientAuto();    // refresh autocomplete
     });
 }
 function loadExpenses(){
@@ -401,3 +474,4 @@ function loadExpenses(){
 </script>
 </body>
 </html>
+
