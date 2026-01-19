@@ -48,11 +48,20 @@
 <div id="appSection" style="display:none">
 
     <div id="toolbar">
+        <button onclick="showSection('dashboard')" class="active">Dashboard</button>
         <button onclick="showSection('clients')">Clients</button>
         <button onclick="showSection('charge')">Add Charge</button>
         <button onclick="showSection('payment')">Add Payment</button>
         <button onclick="showSection('expense')">Expenses</button>
         <button onclick="openAdmin()">Admin Report</button>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboard" class="section" style="display:block">
+        <h2>Dashboard</h2>
+        <p>Income: <span id="dashIncome">0</span></p>
+        <p>Expenses: <span id="dashExpense">0</span></p>
+        <p>Net: <span id="dashNet">0</span></p>
     </div>
 
     <!-- CLIENTS -->
@@ -286,6 +295,14 @@ window.generateAdminReport = () => {
     adminResult.innerHTML=`<p>Income: ${inc}</p><p>Expenses: ${exp}</p><p>Net: ${inc-exp}</p>${clientHtml}`;
 };
 
+// ---------------- DASHBOARD ----------------
+function updateDashboard(){
+    let inc=0, exp=0;
+    Object.values(clients).forEach(c=>(c.history||[]).forEach(h=>{ if(h.credit) inc+=h.credit; }));
+    expenses.forEach(e=>exp+=e.amount);
+    dashIncome.textContent=inc; dashExpense.textContent=exp; dashNet.textContent=inc-exp;
+}
+
 // ---------------- AUTOCOMPLETE ----------------
 function updateClientAuto(){
     const clientNames = Object.values(clients).map(c=>c.name);
@@ -323,12 +340,14 @@ function loadClients(){
         snap.forEach(d=>clients[d.id]=d.data());
         renderClients();
         updateClientAuto();
+        updateDashboard();
     });
 }
 function loadExpenses(){
     onSnapshot(collection(db,"users",currentUser.uid,"expenses"), snap=>{
         expenses=[];
         snap.forEach(d=>expenses.push(d.data()));
+        updateDashboard();
     });
 }
 </script>
