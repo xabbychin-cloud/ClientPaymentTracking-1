@@ -167,20 +167,26 @@
         const cid = n => n.toLowerCase().replace(/\s+/g, '_');
 
         /* ==================== AUTH ==================== */
-        loginBtn.onclick = () => {
-            const email = loginEmail.value.trim(), password = loginPassword.value;
-            if (!email || !password) { alert("Enter email and password"); return; }
-            signInWithEmailAndPassword(auth, email, password)
-                .then(u => { console.log("Logged in", u.user.email); loginEmail.value = ""; loginPassword.value = ""; })
-                .catch(e => { console.error(e); alert("Login failed: " + e.message); });
-        };
-        signupBtn.onclick = () => {
-            const email = loginEmail.value.trim(), password = loginPassword.value;
-            if (!email || !password) { alert("Enter email and password"); return; }
-            createUserWithEmailAndPassword(auth, email, password)
-                .then(u => { alert("Signup successful!"); loginEmail.value = ""; loginPassword.value = ""; })
-                .catch(e => { console.error(e); alert("Signup failed: " + e.message); });
-        };
+       loginBtn.onclick = async () => {
+    const email = loginEmail.value.trim();
+    const password = loginPassword.value;
+    if (!email || !password) { alert("Enter email and password"); return; }
+
+    try {
+        const userCred = await signInWithEmailAndPassword(auth, email, password);
+        currentUser = userCred.user;
+        alert(`Logged in as ${currentUser.email}`);
+        loginEmail.value = "";
+        loginPassword.value = "";
+        authSection.style.display = "none";
+        appSection.style.display = "block";
+        loadClients();
+        loadExpenses();
+    } catch(e) {
+        console.error(e);
+        alert("Login failed: " + e.message);
+    }
+};
         logoutBtn.onclick = () => {
             signOut(auth).then(() => console.log("Logged out")).catch(console.error);
         };
@@ -196,6 +202,27 @@
                 appSection.style.display = "none";
             }
         });
+
+        signupBtn.onclick = async () => {
+    const email = loginEmail.value.trim();
+    const password = loginPassword.value;
+    if (!email || !password) { alert("Enter email and password"); return; }
+
+    try {
+        const userCred = await createUserWithEmailAndPassword(auth, email, password);
+        currentUser = userCred.user;
+        alert(`Signup successful! Logged in as ${currentUser.email}`);
+        loginEmail.value = "";
+        loginPassword.value = "";
+        authSection.style.display = "none";
+        appSection.style.display = "block";
+        loadClients();
+        loadExpenses();
+    } catch(e) {
+        console.error(e);
+        alert("Signup failed: " + e.message);
+    }
+};
 
         /* ==================== CLIENTS ==================== */
         function loadClients() {
@@ -404,4 +431,5 @@ function renderClients() {
     </script>
 </body>
 </html>
+
 
