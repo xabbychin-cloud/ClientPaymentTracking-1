@@ -190,17 +190,95 @@ let currentUser,clients={},expenses=[];
 
 const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
 
-/* AUTH */
-loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
-signupBtn.onclick=()=>createUserWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
-logoutBtn.onclick=()=>signOut(auth);
+/* ==================== AUTH - UPDATED ==================== */
+loginBtn.onclick = () => {
+  const email = loginEmail.value.trim();
+  const password = loginPassword.value;
 
+  if (!email || !password) {
+    alert("Please enter both email and password.");
+    return;
+  }
+
+  signInWithEmailAndPassword(auth, email, password)
+    .then(userCredential => {
+      console.log("Logged in!", userCredential.user.email);
+      loginEmail.value = "";
+      loginPassword.value = "";
+    })
+    .catch(error => {
+      console.error(error);
+      switch(error.code){
+        case "auth/user-not-found":
+          alert("User not found. Please sign up first.");
+          break;
+        case "auth/wrong-password":
+          alert("Incorrect password. Try again.");
+          break;
+        case "auth/invalid-email":
+          alert("Invalid email format.");
+          break;
+        default:
+          alert("Login failed: " + error.message);
+      }
+    });
+};
+
+signupBtn.onclick = () => {
+  const email = loginEmail.value.trim();
+  const password = loginPassword.value;
+
+  if (!email || !password) {
+    alert("Please enter both email and password.");
+    return;
+  }
+
+  createUserWithEmailAndPassword(auth, email, password)
+    .then(userCredential => {
+      console.log("Signed up!", userCredential.user.email);
+      alert("Signup successful! You can now log in.");
+      loginEmail.value = "";
+      loginPassword.value = "";
+    })
+    .catch(error => {
+      console.error(error);
+      switch(error.code){
+        case "auth/email-already-in-use":
+          alert("Email already in use. Please log in.");
+          break;
+        case "auth/invalid-email":
+          alert("Invalid email format.");
+          break;
+        case "auth/weak-password":
+          alert("Password is too weak. Use at least 6 characters.");
+          break;
+        default:
+          alert("Signup failed: " + error.message);
+      }
+    });
+};
+
+logoutBtn.onclick = () => {
+  signOut(auth)
+    .then(() => console.log("Logged out"))
+    .catch(error => console.error("Logout error:", error));
+};
+
+/* ==================== AUTH STATE ==================== */
 onAuthStateChanged(auth,u=>{
-  if(u){currentUser=u;authSection.style.display="none";appSection.style.display="block";loadClients();loadExpenses();}
-  else{authSection.style.display="block";appSection.style.display="none";}
+  if(u){
+    currentUser=u;
+    authSection.style.display="none";
+    appSection.style.display="block";
+    loadClients();
+    loadExpenses();
+  } else {
+    authSection.style.display="block";
+    appSection.style.display="none";
+  }
 });
 
-/* CLIENTS */
+/* ==================== CLIENTS ==================== */
 function loadClients(){
   onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
     clients={}; snap.forEach(d=>clients[d.id]=d.data());
@@ -240,7 +318,7 @@ window.viewClient=name=>{
   viewModal.style.display="block";
 };
 
-/* ADD CHARGE */
+/* ==================== ADD CHARGE ==================== */
 bookingType.onchange=()=>{
   singleDay.style.display=bookingType.value==="single"?"block":"none";
   multiDay.style.display=bookingType.value==="multi"?"block":"none";
@@ -253,7 +331,7 @@ addChargeBtn.onclick=async()=>{
   await setDoc(ref,{...c,debit:c.debit+ +chargeAmount.value});
 };
 
-/* PAYMENT */
+/* ==================== PAYMENT ==================== */
 addPaymentBtn.onclick=async()=>{
   const ref=doc(db,"users",currentUser.uid,"clients",cid(paymentSearch.value));
   const s=await getDoc(ref); const c=s.data();
@@ -261,7 +339,7 @@ addPaymentBtn.onclick=async()=>{
   await setDoc(ref,{...c,credit:c.credit+ +paymentAmount.value});
 };
 
-/* EXPENSE */
+/* ==================== EXPENSE ==================== */
 function loadExpenses(){
   onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
     expenses=[]; snap.forEach(d=>expenses.push(d.data()));
@@ -281,94 +359,38 @@ window.viewExpenses=()=>{
   expenseResult.innerHTML=html+`</table>Total:${t}`;
 };
 
-/* DASHBOARD */
-function updateDashboard(){
-  const m=new Date().getMonth(),y=new Date().getFullYear();
-  let inc=0,exp=0;
-  Object.values(clients).forEach(c=>c.history.forEach(h=>{
-    const d=new Date(h.date);
-    if(h.credit&&d.getMonth()===m&&d.getFullYear()===y)inc+=h.credit;
-  }));
-  expenses.forEach(e=>{
-    const d=new Date(e.date);
-    if(d.getMonth()===m&&d.getFullYear()===y)exp+=e.amount;
-  });
-  dashIncome.textContent=inc;
-  dashExpense.textContent=exp;
-  dashNet.textContent=inc-exp;
-
-  let barChart,lineChart;
-
+/* ==================== DASHBOARD ==================== */
+let barChart,lineChart;
 function renderCharts(){
-  // Monthly labels (Jan-Dec)
   const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  
-  // Prepare income and expense per month
   const incomeData=new Array(12).fill(0);
   const expenseData=new Array(12).fill(0);
 
-  Object.values(clients).forEach(c=>{
-    c.history.forEach(h=>{
-      if(h.credit){
-        const d=new Date(h.date);
-        incomeData[d.getMonth()]+=h.credit;
-      }
-    });
-  });
+  Object.values(clients).forEach(c=>{c.history.forEach(h=>{if(h.credit){incomeData[new Date(h.date).getMonth()]+=h.credit;}})});
+  expenses.forEach(e=>{expenseData[new Date(e.date).getMonth()]+=e.amount;});
 
-  expenses.forEach(e=>{
-    const d=new Date(e.date);
-    expenseData[d.getMonth()]+=e.amount;
-  });
-
-  // Bar Chart: Income vs Expense
   const ctxBar=document.getElementById("barChart").getContext("2d");
   if(barChart) barChart.destroy();
-  barChart=new Chart(ctxBar,{
-    type:"bar",
-    data:{
-      labels:months,
-      datasets:[
-        {label:"Income",data:incomeData,backgroundColor:"rgba(46,125,50,0.7)"},
-        {label:"Expenses",data:expenseData,backgroundColor:"rgba(198,40,40,0.7)"}
-      ]
-    },
-    options:{responsive:true,plugins:{legend:{position:"top"}}}
-  });
+  barChart=new Chart(ctxBar,{type:"bar",data:{labels:months,datasets:[{label:"Income",data:incomeData,backgroundColor:"rgba(46,125,50,0.7)"},{label:"Expenses",data:expenseData,backgroundColor:"rgba(198,40,40,0.7)"}]},options:{responsive:true,plugins:{legend:{position:"top"}}}});
 
-  // Line Chart: Net Balance
   const netData=incomeData.map((v,i)=>v-expenseData[i]);
   const ctxLine=document.getElementById("lineChart").getContext("2d");
   if(lineChart) lineChart.destroy();
-  lineChart=new Chart(ctxLine,{
-    type:"line",
-    data:{
-      labels:months,
-      datasets:[{label:"Net Balance",data:netData,borderColor:"blue",backgroundColor:"rgba(0,0,255,0.2)",fill:true}]
-    },
-    options:{responsive:true,plugins:{legend:{position:"top"}}}
-  });
+  lineChart=new Chart(ctxLine,{type:"line",data:{labels:months,datasets:[{label:"Net Balance",data:netData,borderColor:"blue",backgroundColor:"rgba(0,0,255,0.2)",fill:true}]},options:{responsive:true,plugins:{legend:{position:"top"}}}});
 }
 
-// Call after dashboard update
 function updateDashboard(){
   const m=new Date().getMonth(),y=new Date().getFullYear();
   let inc=0,exp=0;
-  Object.values(clients).forEach(c=>c.history.forEach(h=>{
-    const d=new Date(h.date);
-    if(h.credit&&d.getMonth()===m&&d.getFullYear()===y)inc+=h.credit;
-  }));
-  expenses.forEach(e=>{
-    const d=new Date(e.date);
-    if(d.getMonth()===m&&d.getFullYear()===y)exp+=e.amount;
-  });
+  Object.values(clients).forEach(c=>c.history.forEach(h=>{const d=new Date(h.date);if(h.credit&&d.getMonth()===m&&d.getFullYear()===y)inc+=h.credit;}));
+  expenses.forEach(e=>{const d=new Date(e.date);if(d.getMonth()===m&&d.getFullYear()===y)exp+=e.amount;});
   dashIncome.textContent=inc;
   dashExpense.textContent=exp;
   dashNet.textContent=inc-exp;
-  renderCharts(); // 🔥 draw charts
+  renderCharts();
 }
 
-/* ADMIN */
+/* ==================== ADMIN ==================== */
 window.openAdmin=()=>{
   if(prompt("Admin code")===ADMIN_CODE)showSection("admin");
   else alert("Access denied");
@@ -382,6 +404,11 @@ window.showSection=id=>{
   document.getElementById(id).style.display="block";
 };
 </script>
+
+  
+};
+</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </body>
 </html>
+
