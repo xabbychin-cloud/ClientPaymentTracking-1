@@ -6,15 +6,28 @@
 <title>Client Payment Tracker</title>
 
 <style>
-body { margin:0; font-family: Arial; background:#f4f4f4 }
-h1 { background:#2e7d32; color:white; padding:15px; text-align:center }
+body{margin:0;font-family:Arial;background:#f4f4f4}
+h1{background:#2e7d32;color:white;padding:15px;text-align:center;margin:0}
 
-.section { background:white; margin:20px; padding:20px; border-radius:6px }
-input, button { width:100%; padding:10px; margin-top:10px }
-button { cursor:pointer; background:#4CAF50; color:white; border:none }
-button:hover { background:#43a047 }
-#logoutBtn { background:#c62828 }
-.hidden { display:none }
+#toolbar{display:flex;gap:8px;padding:10px;background:#333;overflow-x:auto}
+#toolbar button{background:#4CAF50;color:white;border:none;padding:10px 14px;border-radius:4px;cursor:pointer}
+#toolbar button.active{background:yellow;color:black}
+
+.section{display:none;background:white;margin:10px;padding:15px;border-radius:6px}
+input,select,button{width:100%;padding:8px;margin-top:6px}
+button{cursor:pointer}
+
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border:1px solid #ccc;padding:6px}
+th{background:#eee}
+
+.debit-red{color:red;font-weight:bold}
+.unpaid-row{background:lightcoral}
+
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5)}
+.modal-content{background:white;width:95%;max-width:900px;margin:5% auto;padding:15px}
+
+#logoutBtn{background:#c62828;color:white;margin:15px}
 </style>
 </head>
 
@@ -23,8 +36,8 @@ button:hover { background:#43a047 }
 <h1>Client Payment Tracker</h1>
 
 <!-- AUTH -->
-<div id="authSection" class="section">
-  <h3>Login / Sign Up</h3>
+<div id="authSection" class="section" style="display:block">
+  <h3>Login</h3>
   <input id="loginEmail" placeholder="Email">
   <input id="loginPassword" type="password" placeholder="Password">
   <button id="loginBtn">Login</button>
@@ -32,122 +45,127 @@ button:hover { background:#43a047 }
 </div>
 
 <!-- APP -->
-<div id="appSection" class="section hidden">
-  <h3>Welcome</h3>
-  <p id="userEmail"></p>
-  <button id="logoutBtn">Logout</button>
+<div id="appSection" style="display:none">
+
+<div id="toolbar">
+  <button onclick="showSection('clientSection')" class="active">Clients</button>
+  <button onclick="showSection('chargeSection')">Add Charge</button>
+  <button onclick="showSection('paymentSection')">Add Payment</button>
+  <button onclick="showSection('expenseSection')">Expenses</button>
+  <button onclick="showSection('reportSection')">Admin Report</button>
+</div>
+
+<div id="clientSection" class="section" style="display:block">
+  <h3>Clients</h3>
+  <table>
+    <thead>
+      <tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Action</th></tr>
+    </thead>
+    <tbody id="clientsBody"></tbody>
+  </table>
+</div>
+
+<div id="chargeSection" class="section">
+  <h3>Add Charge</h3>
+  <input id="chargeName" placeholder="Client Name">
+  <input id="chargeAmount" type="number" placeholder="Amount">
+  <button id="addChargeBtn">Save</button>
+</div>
+
+<div id="paymentSection" class="section">
+  <h3>Add Payment</h3>
+  <input id="paymentName" placeholder="Client Name">
+  <input id="paymentAmount" type="number" placeholder="Amount">
+  <button id="addPaymentBtn">Save</button>
+</div>
+
+<div id="expenseSection" class="section">
+  <h3>Add Expense</h3>
+  <input id="expenseAmount" type="number" placeholder="Amount">
+  <button id="addExpenseBtn">Save</button>
+</div>
+
+<div id="reportSection" class="section">
+  <h3>Admin Report</h3>
+  <div id="reportResult"></div>
+</div>
+
+<button id="logoutBtn">Logout</button>
 </div>
 
 <script type="module">
-/* =========================
-   FIREBASE IMPORTS
-========================= */
+/* ================= FIREBASE ================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import {
-  getAuth,
-  signInWithEmailAndPassword,
-  createUserWithEmailAndPassword,
-  onAuthStateChanged,
-  signOut
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import {
-  getFirestore,
-  doc,
-  setDoc
-} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } 
+from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } 
+from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-/* =========================
-   FIREBASE CONFIG
-========================= */
 const firebaseConfig = {
   apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
   authDomain: "client-payment-tracker-3572b.firebaseapp.com",
   projectId: "client-payment-tracker-3572b",
-  storageBucket: "client-payment-tracker-3572b.appspot.com",
-  messagingSenderId: "REPLACE_WITH_YOUR_ID",
-  appId: "REPLACE_WITH_YOUR_APP_ID"
+  messagingSenderId: "REPLACE_ME",
+  appId: "REPLACE_ME"
 };
 
-/* =========================
-   INIT
-========================= */
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-/* =========================
-   DOM ELEMENTS
-========================= */
-const authSection = document.getElementById("authSection");
-const appSection = document.getElementById("appSection");
-const loginEmail = document.getElementById("loginEmail");
-const loginPassword = document.getElementById("loginPassword");
-const loginBtn = document.getElementById("loginBtn");
-const signupBtn = document.getElementById("signupBtn");
-const logoutBtn = document.getElementById("logoutBtn");
-const userEmail = document.getElementById("userEmail");
+let currentUser = null;
 
-/* =========================
-   LOGIN
-========================= */
+/* ================= AUTH ================= */
 loginBtn.onclick = async () => {
-  try {
-    await signInWithEmailAndPassword(
-      auth,
-      loginEmail.value.trim(),
-      loginPassword.value.trim()
-    );
-  } catch (e) {
-    alert(e.message);
-  }
+  await signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value)
+  .catch(e => alert(e.message));
 };
 
-/* =========================
-   SIGN UP
-========================= */
 signupBtn.onclick = async () => {
-  if (loginPassword.value.length < 6) {
-    alert("Password must be at least 6 characters");
-    return;
-  }
-
-  try {
-    const cred = await createUserWithEmailAndPassword(
-      auth,
-      loginEmail.value.trim(),
-      loginPassword.value.trim()
-    );
-
-    await setDoc(doc(db, "users", cred.user.uid), {
-      email: cred.user.email,
-      createdAt: new Date()
-    });
-
-    alert("Account created & logged in");
-  } catch (e) {
-    alert(e.message);
-  }
+  const cred = await createUserWithEmailAndPassword(auth, loginEmail.value, loginPassword.value)
+  .catch(e => alert(e.message));
+  if (!cred) return;
+  await setDoc(doc(db, "users", cred.user.uid), { createdAt: new Date() });
 };
 
-/* =========================
-   AUTH STATE
-========================= */
 onAuthStateChanged(auth, user => {
   if (user) {
-    authSection.classList.add("hidden");
-    appSection.classList.remove("hidden");
-    userEmail.textContent = "Logged in as: " + user.email;
+    currentUser = user;
+    authSection.style.display = "none";
+    appSection.style.display = "block";
+    loadClients();
   } else {
-    authSection.classList.remove("hidden");
-    appSection.classList.add("hidden");
+    authSection.style.display = "block";
+    appSection.style.display = "none";
   }
 });
 
-/* =========================
-   LOGOUT
-========================= */
-logoutBtn.onclick = async () => {
-  await signOut(auth);
+logoutBtn.onclick = () => signOut(auth);
+
+/* ================= APP LOGIC ================= */
+const clientsBody = document.getElementById("clientsBody");
+
+function loadClients() {
+  onSnapshot(collection(db, "users", currentUser.uid, "clients"), snap => {
+    clientsBody.innerHTML = "";
+    snap.forEach(d => {
+      const c = d.data();
+      const bal = (c.debit||0)-(c.credit||0);
+      clientsBody.innerHTML += `
+        <tr>
+          <td>${c.name}</td>
+          <td>${c.debit||0}</td>
+          <td>${c.credit||0}</td>
+          <td>${bal}</td>
+          <td>-</td>
+        </tr>`;
+    });
+  });
+}
+
+window.showSection = id => {
+  document.querySelectorAll(".section").forEach(s => s.style.display="none");
+  document.getElementById(id).style.display="block";
 };
 </script>
 
