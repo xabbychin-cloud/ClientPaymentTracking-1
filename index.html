@@ -93,27 +93,82 @@
     </div>
 
     <!-- ADD PAYMENT -->
-    <div id="payment" class="section">
-        <div class="autocomplete">
-            <input id="paymentSearch" placeholder="Client Name">
-            <div id="paymentAuto" class="autolist"></div>
-        </div>
-        <input id="paymentDate" type="date">
-        <input id="paymentBalance" readonly placeholder="Balance">
-        <input id="paymentAmount" type="number" placeholder="Amount">
-        <select id="paymentType">
-            <option>Cash</option>
-            <option>Bank Transfer</option>
-            <option>Credit Card</option>
-            <option>Others</option>
-        </select>
-        <select id="paymentMode">
-            <option>Full</option>
-            <option>Partial</option>
-        </select>
-        <input id="paymentRemarks" placeholder="Remarks">
-        <button id="addPaymentBtn">Save Payment</button>
+<div id="payment" class="section">
+    <div class="autocomplete">
+        <input id="paymentSearch" placeholder="Client Name">
+        <div id="paymentAuto" class="autolist"></div>
     </div>
+
+    <!-- Show calendar based on booking type -->
+    <div id="paymentCalendarSingle" style="display:none">
+        <input id="paymentSingleDate" type="date">
+    </div>
+    <div id="paymentCalendarMulti" style="display:none">
+        <input id="paymentStartDate" type="date">
+        <input id="paymentEndDate" type="date">
+    </div>
+
+    <input id="paymentBalance" readonly placeholder="Balance">
+    <input id="paymentAmount" type="number" placeholder="Amount">
+    <select id="paymentType">
+        <option>Cash</option>
+        <option>Bank Transfer</option>
+        <option>Credit Card</option>
+        <option>Others</option>
+    </select>
+    <select id="paymentMode">
+        <option>Full</option>
+        <option>Partial</option>
+    </select>
+    <input id="paymentRemarks" placeholder="Remarks">
+    <button id="addPaymentBtn">Save Payment</button>
+</div>
+
+<script>
+function updatePaymentCalendar(clientName){
+    const c = clients[cid(clientName)];
+    if(!c) { 
+        paymentCalendarSingle.style.display = paymentCalendarMulti.style.display = "none"; 
+        return; 
+    }
+
+    const lastBooking = (c.history||[]).slice(-1)[0]; // last booking
+    if(lastBooking){
+        if(lastBooking.bookingType === "single"){
+            paymentCalendarSingle.style.display = "block";
+            paymentCalendarMulti.style.display = "none";
+            paymentSingleDate.value = lastBooking.date || "";
+        } else if(lastBooking.bookingType === "multi"){
+            paymentCalendarSingle.style.display = "none";
+            paymentCalendarMulti.style.display = "block";
+            paymentStartDate.value = lastBooking.startDate || "";
+            paymentEndDate.value = lastBooking.endDate || "";
+        }
+    } else {
+        paymentCalendarSingle.style.display = paymentCalendarMulti.style.display = "none";
+    }
+}
+
+// Autocomplete + calendar update
+paymentSearch.oninput = ()=>{
+    paymentAuto.innerHTML="";
+    const val = paymentSearch.value.toLowerCase();
+    Object.values(clients).map(c=>c.name)
+        .filter(n=>n.toLowerCase().includes(val))
+        .forEach(n=>{
+            const div = document.createElement("div");
+            div.textContent=n;
+            div.onclick = ()=>{
+                paymentSearch.value = n;
+                paymentAuto.innerHTML="";
+                const c = clients[cid(n)];
+                if(c) paymentBalance.value=(c.debit||0)-(c.credit||0);
+                updatePaymentCalendar(n);
+            };
+            paymentAuto.appendChild(div);
+        });
+};
+   
 
     <!-- EXPENSE -->
     <div id="expense" class="section">
@@ -128,16 +183,75 @@
         <div id="expenseResult"></div>
     </div>
 
-    <!-- ADMIN -->
-    <div id="admin" class="section">
-        <textarea id="adminNotes" placeholder="Notes"></textarea>
-        <button id="saveNotesBtn">Save Note</button>
-        <h3>Admin Report</h3>
-        <input id="adminStart" type="date" placeholder="Start Date">
-        <input id="adminEnd" type="date" placeholder="End Date">
-        <button onclick="generateAdminReport()">Generate Report</button>
-        <div id="adminResult"></div>
-    </div>
+    window.openAdmin = () => {
+    const code = prompt("Enter Admin Code");
+    if(code===ADMIN_CODE){
+        showSection("admin");
+        // Load notes if any
+        const storedNotes = localStorage.getItem("adminNotes") || "";
+        adminNotes.value = storedNotes;
+    } else alert("Access denied");
+};
+
+document.getElementById("saveNotesBtn").onclick = ()=>{
+    localStorage.setItem("adminNotes", adminNotes.value);
+};
+
+window.generateAdminReport = () => {
+    if(!adminStart.value || !adminEnd.value){ alert("Select start and end dates."); return; }
+    const s = new Date(adminStart.value), e = new Date(adminEnd.value);
+    let totalIncome=0, totalExpenses=0, cashSales=0;
+
+    let clientHtml = "<h4>Clients</h4><table><tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th></tr>";
+    Object.values(clients).forEach(c=>{
+        let debit=0, credit=0;
+        (c.history||[]).forEach(h=>{
+            const d=new Date(h.date);
+            if(d>=s && d<=e){
+                debit += h.debit||0;
+                credit += h.credit||0;
+                if(h.credit && (h.paymentType==="Cash" || h.paymentType==="cash")) cashSales += h.credit;
+            }
+        });
+        clientHtml += `<tr>
+            <td>${c.name}</td>
+            <td>${debit}</td>
+            <td>${credit}</td>
+            <td>${debit-credit}</td>
+        </tr>`;
+        totalIncome += credit;
+    });
+    clientHtml += "</table>";
+
+    expenses.forEach(x=>{
+        const d = new Date(x.date);
+        if(d>=s && d<=e) totalExpenses += x.amount;
+    });
+
+    const net = totalIncome - totalExpenses;
+    adminResult.innerHTML = `
+        <h4>Summary</h4>
+        <p>Total Income: ${totalIncome}</p>
+        <p>Total Cash Sales: ${cashSales}</p>
+        <p>Total Expenses: ${totalExpenses}</p>
+        <p>Net: ${net}</p>
+        ${clientHtml}
+    `;
+};
+    // ---------------- RESTORE CLIENT HISTORY ----------------
+function loadClients(){
+    onSnapshot(collection(db,"users",currentUser.uid,"clients"), snap=>{
+        clients={};
+        snap.forEach(d=>{
+            clients[d.id] = d.data();
+            clients[d.id].history = clients[d.id].history || []; // ensure history exists
+        });
+        renderClients();
+        updateClientAuto();
+    });
+}
+</script>
+
 
     <!-- VIEW MODAL -->
     <div id="viewModal" class="modal">
@@ -377,3 +491,4 @@ function loadExpenses(){
 </script>
 </body>
 </html>
+
