@@ -4,12 +4,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Client Payment Tracker</title>
-
 <style>
 body{margin:0;font-family:Arial;background:#f4f6f9}
 h1{background:#2e7d32;color:white;padding:15px;text-align:center;margin:0}
 #toolbar{display:flex;gap:8px;padding:10px;background:#333;overflow-x:auto}
-#toolbar button{background:#4CAF50;color:white;border:none;padding:10px 14px;border-radius:4px}
+#toolbar button{background:#4CAF50;color:white;border:none;padding:10px 14px;border-radius:4px;cursor:pointer}
 #toolbar button.active{background:gold;color:black}
 .section{display:none;background:white;margin:10px;padding:15px;border-radius:6px}
 input,select,button,textarea{width:100%;padding:8px;margin-top:6px}
@@ -18,9 +17,6 @@ th,td{border:1px solid #ccc;padding:6px}
 th{background:#eee}
 .debit-red{color:red;font-weight:bold}
 .unpaid-row{background:#ffd6d6}
-.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
-.card{background:#fff;border-radius:6px;padding:15px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.1)}
-.card h2{margin:5px 0}
 .autocomplete{position:relative}
 .autolist{position:absolute;background:white;border:1px solid #ccc;width:100%;z-index:100}
 .autolist div{padding:6px;cursor:pointer}
@@ -28,7 +24,6 @@ th{background:#eee}
 .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5)}
 .modal-content{background:white;width:95%;max-width:900px;margin:5% auto;padding:15px}
 #logoutBtn{background:#c62828;color:white;margin:15px}
-
 @media(max-width:768px){
   table,thead,tbody,th,td,tr{display:block}
   th{display:none}
@@ -37,7 +32,6 @@ th{background:#eee}
 }
 </style>
 </head>
-
 <body>
 
 <h1>Client Payment Tracker</h1>
@@ -63,21 +57,12 @@ th{background:#eee}
 </div>
 
 <!-- DASHBOARD -->
-<!-- DASHBOARD -->
 <div id="dashboard" class="section" style="display:block">
-  <div class="card-grid">
-    <div class="card"><h3>Income</h3><h2 id="dashIncome">0</h2></div>
-    <div class="card"><h3>Expenses</h3><h2 id="dashExpense">0</h2></div>
-    <div class="card"><h3>Net</h3><h2 id="dashNet">0</h2></div>
-  </div>
-
-  <h3>Monthly Income vs Expenses</h3>
-  <canvas id="barChart" style="width:100%;max-width:700px;height:300px"></canvas>
-
-  <h3>Net Balance Trend</h3>
-  <canvas id="lineChart" style="width:100%;max-width:700px;height:300px"></canvas>
+  <h2>Dashboard</h2>
+  <p>Income: <span id="dashIncome">0</span></p>
+  <p>Expenses: <span id="dashExpense">0</span></p>
+  <p>Net: <span id="dashNet">0</span></p>
 </div>
-
 
 <!-- CLIENTS -->
 <div id="clients" class="section">
@@ -87,7 +72,7 @@ th{background:#eee}
     <option value="paid">Paid</option>
   </select>
   <table>
-    <thead><tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th></th></tr></thead>
+    <thead><tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Action</th></tr></thead>
     <tbody id="clientsBody"></tbody>
   </table>
 </div>
@@ -104,9 +89,7 @@ th{background:#eee}
     <option value="single">Single Day</option>
     <option value="multi">Multi Day</option>
   </select>
-  <div id="singleDay" style="display:none">
-    <input id="singleDate" type="date">
-  </div>
+  <div id="singleDay" style="display:none"><input id="singleDate" type="date"></div>
   <div id="multiDay" style="display:none">
     <input id="startDate" type="date">
     <input id="endDate" type="date">
@@ -123,7 +106,7 @@ th{background:#eee}
     <div id="paymentAuto" class="autolist"></div>
   </div>
   <input id="paymentDate" type="date">
-  <input id="paymentBalance" readonly>
+  <input id="paymentBalance" readonly placeholder="Balance">
   <input id="paymentAmount" type="number" placeholder="Amount">
   <select id="paymentType">
     <option>Cash</option>
@@ -155,30 +138,11 @@ th{background:#eee}
 
 <!-- ADMIN -->
 <div id="admin" class="section">
-  <input id="adminStart" type="date">
-  <input id="adminEnd" type="date">
   <textarea id="adminNotes" placeholder="Notes"></textarea>
-  <button onclick="saveNotes()">Save Notes</button>
+  <button onclick="saveNotes()">Save Note</button>
+  <button id="viewAdminBtn">View Note</button>
   <div id="adminResult"></div>
 </div>
-
-<button id="logoutBtn">Logout</button>
-</div>
-  
-  // Admin Report - View Report
-const viewAdminBtn = document.createElement("button");
-viewAdminBtn.textContent = "View Report";
-viewAdminBtn.onclick = async () => {
-  const docRef = doc(db, "users", currentUser.uid);
-  const docSnap = await getDoc(docRef);
-  if(docSnap.exists() && docSnap.data().notes){
-    alert("Admin Notes:\n" + docSnap.data().notes);
-  } else {
-    alert("No notes found.");
-  }
-};
-admin.appendChild(viewAdminBtn);
-
 
 <!-- VIEW MODAL -->
 <div id="viewModal" class="modal">
@@ -193,73 +157,167 @@ admin.appendChild(viewAdminBtn);
   </div>
 </div>
 
+<button id="logoutBtn">Logout</button>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-const ADMIN_CODE="1234";
-const app=initializeApp({apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",authDomain:"client-payment-tracker-3572b.firebaseapp.com",projectId:"client-payment-tracker-3572b"});
-const auth=getAuth(app), db=getFirestore(app);
-let currentUser, clients={}, expenses=[];
+const ADMIN_CODE = "1234";
+const app = initializeApp({
+  apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
+  authDomain: "client-payment-tracker-3572b.firebaseapp.com",
+  projectId: "client-payment-tracker-3572b"
+});
+const auth = getAuth(app);
+const db = getFirestore(app);
+let currentUser, clients = {}, expenses = [];
 
-const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
+const cid = n => n.toLowerCase().replace(/\s+/g,'_');
 
 /* ==================== AUTH ==================== */
 loginBtn.onclick = () => {
-  const email = loginEmail.value.trim();
-  const password = loginPassword.value;
-  if (!email || !password) { alert("Please enter both email and password."); return; }
-
+  const email = loginEmail.value.trim(), password = loginPassword.value;
+  if(!email || !password){ alert("Enter email and password"); return; }
   signInWithEmailAndPassword(auth,email,password)
-    .then(u => { console.log("Logged in!", u.user.email); loginEmail.value=""; loginPassword.value=""; })
-    .catch(e => {
-      console.error(e);
-      switch(e.code){
-        case "auth/user-not-found": alert("User not found."); break;
-        case "auth/wrong-password": alert("Incorrect password."); break;
-        default: alert("Login failed: " + e.message);
-      }
-    });
+    .then(u=>{ console.log("Logged in",u.user.email); loginEmail.value=""; loginPassword.value=""; })
+    .catch(e=>{ console.error(e); alert("Login failed: "+e.message); });
 };
 
 signupBtn.onclick = () => {
-  const email = loginEmail.value.trim();
-  const password = loginPassword.value;
-  if (!email || !password) { alert("Please enter both email and password."); return; }
-
+  const email = loginEmail.value.trim(), password = loginPassword.value;
+  if(!email || !password){ alert("Enter email and password"); return; }
   createUserWithEmailAndPassword(auth,email,password)
-    .then(u => { console.log("Signed up!", u.user.email); alert("Signup successful!"); loginEmail.value=""; loginPassword.value=""; })
-    .catch(e => { console.error(e); alert("Signup failed: "+e.message); });
+    .then(u=>{ alert("Signup successful!"); loginEmail.value=""; loginPassword.value=""; })
+    .catch(e=>{ console.error(e); alert("Signup failed: "+e.message); });
 };
 
-logoutBtn.onclick = () => {
-  signOut(auth).then(()=>console.log("Logged out")).catch(e=>console.error(e));
-};
+logoutBtn.onclick = () => { signOut(auth).then(()=>console.log("Logged out")).catch(console.error); };
 
-/* ==================== AUTH STATE ==================== */
 onAuthStateChanged(auth, u => {
   if(u){ currentUser=u; authSection.style.display="none"; appSection.style.display="block"; loadClients(); loadExpenses(); }
   else { authSection.style.display="block"; appSection.style.display="none"; }
 });
 
-/* ==================== ADMIN - View Report Button ==================== */
-const viewAdminBtn = document.createElement("button");
-viewAdminBtn.textContent = "View Report";
-viewAdminBtn.onclick = async () => {
-  if(!currentUser){ alert("Not logged in"); return; }
-  const docRef = doc(db, "users", currentUser.uid);
-  const docSnap = await getDoc(docRef);
-  if(docSnap.exists() && docSnap.data().notes) alert("Admin Notes:\n" + docSnap.data().notes);
+/* ==================== CLIENTS ==================== */
+function loadClients(){
+  onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
+    clients={}; snap.forEach(d=>clients[d.id]=d.data());
+    renderClients(); updateClientAuto(); updateDashboard();
+  });
+}
+function renderClients(){
+  clientsBody.innerHTML="";
+  Object.values(clients).forEach(c=>{
+    const bal=(c.debit||0)-(c.credit||0);
+    clientsBody.innerHTML+=`<tr>
+      <td>${c.name}</td>
+      <td>${c.debit||0}</td>
+      <td>${c.credit||0}</td>
+      <td class="${bal>0?'debit-red':''}">${bal}</td>
+      <td><button onclick="viewClient('${c.name}')">View</button></td>
+    </tr>`;
+  });
+}
+
+/* ==================== VIEW CLIENT ==================== */
+window.viewClient = name => {
+  const c = clients[cid(name)];
+  if(!c) return;
+  let d=0, cr=0;
+  viewBody.innerHTML="";
+  (c.history||[]).sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(h=>{
+    d+=h.debit||0; cr+=h.credit||0;
+    viewBody.innerHTML+=`<tr class="${h.debit&&(d-cr)>0?'unpaid-row':''}">
+      <td>${new Date(h.date).toLocaleString()}</td>
+      <td>${h.debit||0}</td>
+      <td>${h.credit||0}</td>
+      <td>${h.remarks||''}</td>
+    </tr>`;
+  });
+  viewTitle.textContent = name;
+  viewSummary.innerHTML = `Debit:${d} Credit:${cr} Balance:${d-cr}`;
+  viewModal.style.display = "block";
+};
+
+/* ==================== ADD CHARGE ==================== */
+bookingType.onchange = ()=>{ singleDay.style.display=bookingType.value==="single"?"block":"none"; multiDay.style.display=bookingType.value==="multi"?"block":"none"; };
+addChargeBtn.onclick = async ()=>{
+  if(!confirm(`Add charge of ${chargeAmount.value} to ${chargeName.value}?`)) return;
+  const ref = doc(db,"users",currentUser.uid,"clients",cid(chargeName.value));
+  const s = await getDoc(ref);
+  const c = s.exists()?s.data():{name:chargeName.value,debit:0,credit:0,history:[]};
+  c.history.push({date:chargeDate.value,debit:+chargeAmount.value,remarks:chargeRemarks.value});
+  await setDoc(ref,{...c,debit:c.debit+ +chargeAmount.value});
+};
+
+/* ==================== ADD PAYMENT ==================== */
+addPaymentBtn.onclick = async ()=>{
+  if(!confirm(`Add payment of ${paymentAmount.value} from ${paymentSearch.value}?`)) return;
+  const ref = doc(db,"users",currentUser.uid,"clients",cid(paymentSearch.value));
+  const s = await getDoc(ref); const c = s.data();
+  c.history.push({date:paymentDate.value,credit:+paymentAmount.value,remarks:paymentRemarks.value});
+  await setDoc(ref,{...c,credit:c.credit+ +paymentAmount.value});
+};
+
+/* ==================== EXPENSE ==================== */
+function loadExpenses(){
+  onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
+    expenses=[]; snap.forEach(d=>expenses.push(d.data())); updateDashboard();
+  });
+}
+addExpenseBtn.onclick = ()=>{
+  if(!confirm(`Add expense of ${expenseAmount.value}?`)) return;
+  addDoc(collection(db,"users",currentUser.uid,"expenses"),{date:expenseDate.value,amount:+expenseAmount.value,desc:expenseDesc.value});
+};
+window.viewExpenses = ()=>{
+  const s=new Date(expStart.value),e=new Date(expEnd.value); let t=0, html="<table><tr><th>Date</th><th>Amount</th><th>Description</th></tr>";
+  expenses.forEach(x=>{ const d=new Date(x.date); if(d>=s&&d<=e){ t+=x.amount; html+=`<tr><td>${d.toLocaleDateString()}</td><td>${x.amount}</td><td>${x.desc}</td></tr>`;}});
+  expenseResult.innerHTML=html+"</table>Total:"+t;
+};
+
+/* ==================== DASHBOARD UPDATE ==================== */
+function updateDashboard(){
+  let inc=0,exp=0;
+  Object.values(clients).forEach(c=> (c.history||[]).forEach(h=>{ if(h.credit) inc+=h.credit; }));
+  expenses.forEach(e=>{ exp+=e.amount; });
+  dashIncome.textContent=inc;
+  dashExpense.textContent=exp;
+  dashNet.textContent=inc-exp;
+}
+
+/* ==================== ADMIN ==================== */
+window.openAdmin = ()=>{
+  if(prompt("Admin code")===ADMIN_CODE) showSection("admin"); else alert("Access denied");
+};
+window.saveNotes = async ()=>{
+  await setDoc(doc(db,"users",currentUser.uid),{notes:adminNotes.value},{merge:true});
+};
+viewAdminBtn.onclick = async ()=>{
+  const docSnap = await getDoc(doc(db,"users",currentUser.uid));
+  if(docSnap.exists() && docSnap.data().notes) alert("Notes:\n"+docSnap.data().notes);
   else alert("No notes found.");
 };
-admin.appendChild(viewAdminBtn);
 
+/* ==================== TOOLBAR & SECTIONS ==================== */
+window.showSection = id => {
+  document.querySelectorAll(".section").forEach(s=>s.style.display="none");
+  const sec = document.getElementById(id);
+  if(sec) sec.style.display="block";
+
+  document.querySelectorAll("#toolbar button").forEach(btn=>btn.classList.remove("active"));
+  const activeBtn = Array.from(document.querySelectorAll("#toolbar button"))
+    .find(btn => btn.textContent.toLowerCase()===id.toLowerCase());
+  if(activeBtn) activeBtn.classList.add("active");
+};
+
+/* ==================== AUTOCOMPLETE ==================== */
+function updateClientAuto(){
+  const clientNames = Object.values(clients).map(c=>c.name);
+  chargeName.oninput = ()=>{ chargeAuto.innerHTML=""; const val=chargeName.value.toLowerCase(); clientNames.filter(n=>n.toLowerCase().includes(val)).forEach(n=>{const div=document.createElement("div");div.textContent=n;div.onclick=()=>{chargeName.value=n;chargeAuto.innerHTML="";}; chargeAuto.appendChild(div);});};
+  paymentSearch.oninput = ()=>{ paymentAuto.innerHTML=""; const val=paymentSearch.value.toLowerCase(); clientNames.filter(n=>n.toLowerCase().includes(val)).forEach(n=>{const div=document.createElement("div"); div.textContent=n; div.onclick=()=>{paymentSearch.value=n; paymentAuto.innerHTML=""; const c=clients[cid(n)]; if(c) paymentBalance.value=(c.debit||0)-(c.credit||0);}; paymentAuto.appendChild(div);});};
+}
 </script>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </body>
 </html>
-
-
-
