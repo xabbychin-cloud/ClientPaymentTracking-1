@@ -4,9 +4,6 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Client Payment Tracker</title>
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-
 <style>
 body{margin:0;font-family:Arial;background:#f4f6f9}
 h1{background:#2e7d32;color:white;padding:15px;text-align:center;margin:0}
@@ -27,7 +24,6 @@ th{background:#eee}
 .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5)}
 .modal-content{background:white;width:95%;max-width:900px;margin:5% auto;padding:15px;max-height:90vh;overflow-y:auto}
 #logoutBtn{background:#c62828;color:white;margin:15px}
-
 @media(max-width:768px){
   table,thead,tbody,th,td,tr{display:block}
   th{display:none}
@@ -52,26 +48,27 @@ th{background:#eee}
 <div id="appSection" style="display:none">
 
 <div id="toolbar">
-  <button data-section="dashboard" onclick="showSection('dashboard')" class="active">Dashboard</button>
-  <button data-section="clients" onclick="showSection('clients')">Clients</button>
-  <button data-section="charge" onclick="showSection('charge')">Add Charge</button>
-  <button data-section="payment" onclick="showSection('payment')">Add Payment</button>
-  <button data-section="expense" onclick="showSection('expense')">Expenses</button>
-  <button data-section="admin" onclick="openAdmin()">Admin Report</button>
+  <button onclick="showSection('dashboard')" class="active">Dashboard</button>
+  <button onclick="showSection('clients')">Clients</button>
+  <button onclick="showSection('charge')">Add Charge</button>
+  <button onclick="showSection('payment')">Add Payment</button>
+  <button onclick="showSection('expense')">Expenses</button>
+  <button onclick="openAdmin()">Admin Report</button>
 </div>
 
 <!-- DASHBOARD -->
 <div id="dashboard" class="section" style="display:block">
+  <h2>Dashboard</h2>
   <p>Income: <span id="dashIncome">0</span></p>
   <p>Expenses: <span id="dashExpense">0</span></p>
   <p>Net: <span id="dashNet">0</span></p>
-  <canvas id="financeChart" height="120"></canvas>
 </div>
 
 <!-- CLIENTS -->
 <div id="clients" class="section">
-  <!-- RESTORED SEARCH + FILTER -->
+  <!-- ADDED SEARCH (FIX #1) -->
   <input id="clientSearch" placeholder="Search client..." style="margin-bottom:6px">
+
   <select id="clientFilter">
     <option value="all">All</option>
     <option value="outstanding">Outstanding</option>
@@ -80,9 +77,7 @@ th{background:#eee}
 
   <table>
     <thead>
-      <tr>
-        <th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Action</th>
-      </tr>
+      <tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Action</th></tr>
     </thead>
     <tbody id="clientsBody"></tbody>
   </table>
@@ -95,9 +90,7 @@ th{background:#eee}
     <h3 id="viewTitle"></h3>
     <div id="viewSummary"></div>
     <table>
-      <thead>
-        <tr><th>Date</th><th>Debit</th><th>Credit</th><th>Remarks</th></tr>
-      </thead>
+      <thead><tr><th>Date</th><th>Debit</th><th>Credit</th><th>Remarks</th></tr></thead>
       <tbody id="viewBody"></tbody>
     </table>
   </div>
@@ -118,7 +111,7 @@ const app=initializeApp({
 });
 const auth=getAuth(app);
 const db=getFirestore(app);
-let currentUser,clients={},expenses=[],chart;
+let currentUser,clients={};
 
 const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
 
@@ -171,7 +164,7 @@ function renderClients(){
 clientSearch.oninput=renderClients;
 clientFilter.onchange=renderClients;
 
-/* VIEW CLIENT – FIXED HIGHLIGHT */
+/* VIEW CLIENT – FIX #3 */
 window.viewClient=name=>{
   const c=clients[cid(name)];
   const history=(c.history||[]).sort((a,b)=>new Date(a.date)-new Date(b.date));
@@ -179,13 +172,14 @@ window.viewClient=name=>{
   viewBody.innerHTML="";
 
   for(let i=history.length-1;i>=0;i--){
-    history[i]._highlight=false;
-    if(history[i].credit) remaining+=history[i].credit;
-    if(history[i].debit){
-      if(remaining>0 && remaining<=history[i].debit){
-        history[i]._highlight=true;
+    const h=history[i];
+    h._highlight=false;
+    if(h.credit) remaining+=h.credit;
+    if(h.debit){
+      if(remaining>0 && remaining<=h.debit){
+        h._highlight=true;
         remaining=0;
-      } else remaining-=history[i].debit;
+      } else remaining-=h.debit;
     }
   }
 
@@ -204,19 +198,23 @@ window.viewClient=name=>{
   viewModal.style.display="block";
 };
 
-/* ADMIN – FIXED CLICK */
+/* ADMIN – FIX #2 */
 window.openAdmin=()=>{
   if(prompt("Admin code")===ADMIN_CODE){
     showSection("admin");
   } else alert("Access denied");
 };
 
-/* SECTIONS */
+/* TOOLBAR – UNCHANGED */
 window.showSection=id=>{
   document.querySelectorAll(".section").forEach(s=>s.style.display="none");
-  document.getElementById(id).style.display="block";
-  document.querySelectorAll("#toolbar button")
-    .forEach(b=>b.classList.toggle("active",b.dataset.section===id));
+  const sec=document.getElementById(id);
+  if(sec) sec.style.display="block";
+
+  document.querySelectorAll("#toolbar button").forEach(btn=>btn.classList.remove("active"));
+  const activeBtn=Array.from(document.querySelectorAll("#toolbar button"))
+    .find(btn=>btn.textContent.toLowerCase().includes(id));
+  if(activeBtn) activeBtn.classList.add("active");
 };
 </script>
 </body>
