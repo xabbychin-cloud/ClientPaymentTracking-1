@@ -17,11 +17,12 @@
     th { background: #eee }
     .debit-red { color: red; font-weight: bold }
     .unpaid-row { background: #ffd6d6 }
+    .highlight-row { background: #fff176 !important } /* Highlight latest balance */
     .autocomplete { position: relative }
     .autolist { position: absolute; background: white; border: 1px solid #ccc; width: 100%; z-index: 100 }
     .autolist div { padding: 6px; cursor: pointer }
     .autolist div:hover { background: #eee }
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.5) }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.5); overflow-y: auto }
     .modal-content { background: white; width: 95%; max-width: 900px; margin: 5% auto; padding: 15px }
     #logoutBtn { background: #c62828; color: white; margin: 15px }
     @media (max-width: 768px) {
@@ -47,7 +48,6 @@
 <div id="appSection" style="display:none">
 
     <div id="toolbar">
-        <button onclick="showSection('dashboard')" class="active">Dashboard</button>
         <button onclick="showSection('clients')">Clients</button>
         <button onclick="showSection('charge')">Add Charge</button>
         <button onclick="showSection('payment')">Add Payment</button>
@@ -55,18 +55,12 @@
         <button onclick="openAdmin()">Admin Report</button>
     </div>
 
-    <!-- DASHBOARD -->
-    <div id="dashboard" class="section" style="display:block">
-        <h2>Dashboard</h2>
-        <p>Income: <span id="dashIncome">0</span></p>
-        <p>Expenses: <span id="dashExpense">0</span></p>
-        <p>Net: <span id="dashNet">0</span></p>
-    </div>
-
     <!-- CLIENTS -->
     <div id="clients" class="section">
-        <input id="clientSearch" placeholder="Search Client">
-        <button onclick="renderClients()">Search</button>
+        <div style="display:flex; gap:5px;">
+            <input id="clientSearch" placeholder="Search Client">
+            <button onclick="renderClients()">Search</button>
+        </div>
         <select id="clientFilter">
             <option value="all">All</option>
             <option value="outstanding">Outstanding</option>
@@ -191,11 +185,9 @@ loginBtn.onclick = async () => {
         loginEmail.value = loginPassword.value = "";
         authSection.style.display = "none";
         appSection.style.display = "block";
-        loadClients();
-        loadExpenses();
+        loadClients(); loadExpenses();
     } catch(e) { alert("Login failed: " + e.message); }
 };
-
 signupBtn.onclick = async () => {
     const email = loginEmail.value.trim();
     const password = loginPassword.value;
@@ -206,11 +198,9 @@ signupBtn.onclick = async () => {
         loginEmail.value = loginPassword.value = "";
         authSection.style.display = "none";
         appSection.style.display = "block";
-        loadClients();
-        loadExpenses();
+        loadClients(); loadExpenses();
     } catch(e) { alert("Signup failed: " + e.message); }
 };
-
 logoutBtn.onclick = () => { signOut(auth).catch(console.error); };
 onAuthStateChanged(auth, u => {
     if (u) { currentUser = u; authSection.style.display="none"; appSection.style.display="block"; loadClients(); loadExpenses(); }
@@ -229,7 +219,7 @@ window.showSection = id => {
 };
 
 // ---------------- CLIENTS ----------------
-clientFilter.onchange = () => renderClients();
+clientFilter.onchange = renderClients;
 window.renderClients = () => {
     const searchVal = (clientSearch.value || "").toLowerCase();
     const filter = clientFilter.value;
@@ -257,16 +247,19 @@ window.viewClient = name => {
     const balance = (c.debit||0) - (c.credit||0);
     viewSummary.textContent = `Balance: ${balance}`;
     let runningBalance = 0;
+    let lastRowIndex = -1;
     viewBody.innerHTML = "";
-    (c.history||[]).sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(h=>{
+    (c.history||[]).sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach((h,i)=>{
         runningBalance += (h.debit||0)-(h.credit||0);
-        viewBody.innerHTML += `<tr class="${runningBalance>0?'unpaid-row':''}">
-            <td>${new Date(h.date).toLocaleString()}</td>
-            <td>${h.debit||0}</td>
-            <td>${h.credit||0}</td>
-            <td>${h.remarks||''}</td>
-        </tr>`;
+        const cls = runningBalance>0?'unpaid-row':'';
+        viewBody.innerHTML += `<tr class="${cls}" data-balance="${runningBalance}"><td>${new Date(h.date).toLocaleString()}</td><td>${h.debit||0}</td><td>${h.credit||0}</td><td>${h.remarks||''}</td></tr>`;
+        lastRowIndex = i;
     });
+    // highlight the last row with outstanding balance
+    if(balance>0){
+        const rows = viewBody.querySelectorAll("tr");
+        rows[rows.length-1].classList.add("highlight-row");
+    }
     viewModal.style.display="block";
 };
 
@@ -293,16 +286,51 @@ window.generateAdminReport = () => {
     adminResult.innerHTML=`<p>Income: ${inc}</p><p>Expenses: ${exp}</p><p>Net: ${inc-exp}</p>${clientHtml}`;
 };
 
-// ---------------- DASHBOARD ----------------
-function updateDashboard(){
-    let inc=0, exp=0;
-    Object.values(clients).forEach(c=>(c.history||[]).forEach(h=>{ if(h.credit) inc+=h.credit; }));
-    expenses.forEach(e=>exp+=e.amount);
-    dashIncome.textContent=inc; dashExpense.textContent=exp; dashNet.textContent=inc-exp;
+// ---------------- AUTOCOMPLETE ----------------
+function updateClientAuto(){
+    const clientNames = Object.values(clients).map(c=>c.name);
+    chargeName.oninput = ()=>{
+        chargeAuto.innerHTML="";
+        const val = chargeName.value.toLowerCase();
+        clientNames.filter(n=>n.toLowerCase().includes(val)).forEach(n=>{
+            const div = document.createElement("div");
+            div.textContent=n;
+            div.onclick = ()=>{ chargeName.value=n; chargeAuto.innerHTML=""; };
+            chargeAuto.appendChild(div);
+        });
+    };
+    paymentSearch.oninput = ()=>{
+        paymentAuto.innerHTML="";
+        const val = paymentSearch.value.toLowerCase();
+        clientNames.filter(n=>n.toLowerCase().includes(val)).forEach(n=>{
+            const div = document.createElement("div");
+            div.textContent=n;
+            div.onclick = ()=>{
+                paymentSearch.value=n;
+                paymentAuto.innerHTML="";
+                const c = clients[cid(n)];
+                if(c) paymentBalance.value=(c.debit||0)-(c.credit||0);
+            };
+            paymentAuto.appendChild(div);
+        });
+    };
 }
 
-// ---------------- AUTOCOMPLETE, EXPENSES, CHARGES, PAYMENTS ----------------
-// Keep exactly as your previous working code (unchanged)
+// ---------------- INITIAL LOAD ----------------
+function loadClients(){
+    onSnapshot(collection(db,"users",currentUser.uid,"clients"), snap=>{
+        clients={};
+        snap.forEach(d=>clients[d.id]=d.data());
+        renderClients();
+        updateClientAuto();
+    });
+}
+function loadExpenses(){
+    onSnapshot(collection(db,"users",currentUser.uid,"expenses"), snap=>{
+        expenses=[];
+        snap.forEach(d=>expenses.push(d.data()));
+    });
+}
 </script>
 </body>
 </html>
