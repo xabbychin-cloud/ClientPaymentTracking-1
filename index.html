@@ -312,8 +312,12 @@ function renderClients() {
 
         /* ==================== ADMIN ==================== */
         window.openAdmin = () => {
-            if (prompt("Admin code") === ADMIN_CODE) showSection("admin");
-            else alert("Access denied");
+            if (prompt("Admin code") === ADMIN_CODE) {
+                showSection("admin");
+                document.querySelector("#toolbar button[onclick='openAdmin()']").classList.add("active");
+            } else {
+                alert("Access denied");
+            }
         };
         window.saveNotes = async () => {
             await setDoc(doc(db, "users", currentUser.uid), { notes: adminNotes.value }, { merge: true });
@@ -367,4 +371,3 @@ function renderClients() {
     </script>
 </body>
 </html>
-
