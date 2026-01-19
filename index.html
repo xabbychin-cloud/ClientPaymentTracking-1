@@ -164,6 +164,21 @@ th{background:#eee}
 
 <button id="logoutBtn">Logout</button>
 </div>
+  
+  // Admin Report - View Report
+const viewAdminBtn = document.createElement("button");
+viewAdminBtn.textContent = "View Report";
+viewAdminBtn.onclick = async () => {
+  const docRef = doc(db, "users", currentUser.uid);
+  const docSnap = await getDoc(docRef);
+  if(docSnap.exists() && docSnap.data().notes){
+    alert("Admin Notes:\n" + docSnap.data().notes);
+  } else {
+    alert("No notes found.");
+  }
+};
+admin.appendChild(viewAdminBtn);
+
 
 <!-- VIEW MODAL -->
 <div id="viewModal" class="modal">
@@ -323,21 +338,105 @@ bookingType.onchange=()=>{
   singleDay.style.display=bookingType.value==="single"?"block":"none";
   multiDay.style.display=bookingType.value==="multi"?"block":"none";
 };
-addChargeBtn.onclick=async()=>{
+addChargeBtn.onclick = async () => {
+  if(!confirm(`Add charge of ${chargeAmount.value} to ${chargeName.value}?`)) return;
   const ref=doc(db,"users",currentUser.uid,"clients",cid(chargeName.value));
   const s=await getDoc(ref);
   const c=s.exists()?s.data():{name:chargeName.value,debit:0,credit:0,history:[]};
   c.history.push({date:chargeDate.value,debit:+chargeAmount.value,remarks:chargeRemarks.value});
   await setDoc(ref,{...c,debit:c.debit+ +chargeAmount.value});
 };
+  function updateClientAuto() {
+  const clientNames = Object.values(clients).map(c => c.name);
+
+  // Charge Auto
+  chargeName.oninput = () => {
+    chargeAuto.innerHTML = "";
+    const val = chargeName.value.toLowerCase();
+    clientNames.filter(n => n.toLowerCase().includes(val)).forEach(n => {
+      const div = document.createElement("div");
+      div.textContent = n;
+      div.onclick = () => { chargeName.value = n; chargeAuto.innerHTML = ""; };
+      chargeAuto.appendChild(div);
+    });
+  };
+
+  // Payment Auto
+  paymentSearch.oninput = () => {
+    paymentAuto.innerHTML = "";
+    const val = paymentSearch.value.toLowerCase();
+    clientNames.filter(n => n.toLowerCase().includes(val)).forEach(n => {
+      const div = document.createElement("div");
+      div.textContent = n;
+      div.onclick = () => { paymentSearch.value = n; paymentAuto.innerHTML = ""; updatePaymentBalance(n); };
+      paymentAuto.appendChild(div);
+    });
+  };
+}
+
+// Call this after loading clients
+loadClients = () => {
+  onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
+    clients={}; snap.forEach(d=>clients[d.id]=d.data());
+    renderClients(); updateDashboard(); updateClientAuto();
+  });
+};
+
+function updatePaymentBalance(name){
+  const c = clients[cid(name)];
+  if(c) paymentBalance.value = (c.debit||0) - (c.credit||0);
+}
+
 
 /* ==================== PAYMENT ==================== */
-addPaymentBtn.onclick=async()=>{
+addPaymentBtn.onclick = async () => {
+  if(!confirm(`Add payment of ${paymentAmount.value} from ${paymentSearch.value}?`)) return;
   const ref=doc(db,"users",currentUser.uid,"clients",cid(paymentSearch.value));
   const s=await getDoc(ref); const c=s.data();
   c.history.push({date:paymentDate.value,credit:+paymentAmount.value,remarks:paymentRemarks.value});
   await setDoc(ref,{...c,credit:c.credit+ +paymentAmount.value});
 };
+function updateClientAuto() {
+  const clientNames = Object.values(clients).map(c => c.name);
+
+  // Charge Auto
+  chargeName.oninput = () => {
+    chargeAuto.innerHTML = "";
+    const val = chargeName.value.toLowerCase();
+    clientNames.filter(n => n.toLowerCase().includes(val)).forEach(n => {
+      const div = document.createElement("div");
+      div.textContent = n;
+      div.onclick = () => { chargeName.value = n; chargeAuto.innerHTML = ""; };
+      chargeAuto.appendChild(div);
+    });
+  };
+
+  // Payment Auto
+  paymentSearch.oninput = () => {
+    paymentAuto.innerHTML = "";
+    const val = paymentSearch.value.toLowerCase();
+    clientNames.filter(n => n.toLowerCase().includes(val)).forEach(n => {
+      const div = document.createElement("div");
+      div.textContent = n;
+      div.onclick = () => { paymentSearch.value = n; paymentAuto.innerHTML = ""; updatePaymentBalance(n); };
+      paymentAuto.appendChild(div);
+    });
+  };
+}
+
+// Call this after loading clients
+loadClients = () => {
+  onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
+    clients={}; snap.forEach(d=>clients[d.id]=d.data());
+    renderClients(); updateDashboard(); updateClientAuto();
+  });
+};
+
+function updatePaymentBalance(name){
+  const c = clients[cid(name)];
+  if(c) paymentBalance.value = (c.debit||0) - (c.credit||0);
+}
+
 
 /* ==================== EXPENSE ==================== */
 function loadExpenses(){
@@ -346,9 +445,12 @@ function loadExpenses(){
     updateDashboard();
   });
 }
-addExpenseBtn.onclick=()=>addDoc(collection(db,"users",currentUser.uid,"expenses"),{
-  date:expenseDate.value,amount:+expenseAmount.value,desc:expenseDesc.value
-});
+addExpenseBtn.onclick = () => {
+  if(!confirm(`Add expense of ${expenseAmount.value}?`)) return;
+  addDoc(collection(db,"users",currentUser.uid,"expenses"),{
+    date:expenseDate.value,amount:+expenseAmount.value,desc:expenseDesc.value
+  });
+};
 window.viewExpenses=()=>{
   const s=new Date(expStart.value),e=new Date(expEnd.value);
   let t=0,html="<table><tr><th>Date</th><th>Amount</th><th>Description</th></tr>";
@@ -399,10 +501,17 @@ window.saveNotes=async()=>{
   await setDoc(doc(db,"users",currentUser.uid),{notes:adminNotes.value},{merge:true});
 };
 
-window.showSection=id=>{
-  document.querySelectorAll(".section").forEach(s=>s.style.display="none");
+window.showSection = id => {
+  document.querySelectorAll(".section").forEach(s => s.style.display="none");
   document.getElementById(id).style.display="block";
+
+  // Toolbar highlight
+  document.querySelectorAll("#toolbar button").forEach(btn => btn.classList.remove("active"));
+  const activeBtn = Array.from(document.querySelectorAll("#toolbar button"))
+    .find(btn => btn.textContent.toLowerCase() === id.toLowerCase());
+  if(activeBtn) activeBtn.classList.add("active");
 };
+
 </script>
 
   
@@ -411,4 +520,5 @@ window.showSection=id=>{
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </body>
 </html>
+
 
