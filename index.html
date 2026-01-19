@@ -55,6 +55,15 @@ th{background:#eee}
   <button onclick="showSection('expense')">Expenses</button>
   <button onclick="openAdmin()">Admin Report</button>
 </div>
+  <div id="toolbar">
+  <button data-section="dashboard" onclick="showSection('dashboard')" class="active">Dashboard</button>
+  <button data-section="clients" onclick="showSection('clients')">Clients</button>
+  <button data-section="charge" onclick="showSection('charge')">Add Charge</button>
+  <button data-section="payment" onclick="showSection('payment')">Add Payment</button>
+  <button data-section="expense" onclick="showSection('expense')">Expenses</button>
+  <button data-section="admin" onclick="openAdmin()">Admin Report</button>
+</div>
+
 
 <!-- DASHBOARD -->
 <div id="dashboard" class="section" style="display:block">
@@ -227,19 +236,31 @@ window.viewClient = name => {
   if(!c) return;
   let d=0, cr=0;
   viewBody.innerHTML="";
-  (c.history||[]).sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(h=>{
-    d+=h.debit||0; cr+=h.credit||0;
-    viewBody.innerHTML+=`<tr class="${h.debit&&(d-cr)>0?'unpaid-row':''}">
+ const history = (c.history || []).sort((a,b)=>new Date(a.date)-new Date(b.date));
+let balance = (c.debit||0) - (c.credit||0);
+let highlightIndex = -1;
+
+// find last unpaid charge
+if(balance > 0){
+  let running = balance;
+  for(let i = history.length - 1; i >= 0; i--){
+    if(history[i].debit){
+      highlightIndex = i;
+      break;
+    }
+  }
+}
+
+history.forEach((h, i)=>{
+  viewBody.innerHTML += `
+    <tr class="${i === highlightIndex ? 'unpaid-row' : ''}">
       <td>${new Date(h.date).toLocaleString()}</td>
-      <td>${h.debit||0}</td>
-      <td>${h.credit||0}</td>
-      <td>${h.remarks||''}</td>
+      <td>${h.debit || 0}</td>
+      <td>${h.credit || 0}</td>
+      <td>${h.remarks || ''}</td>
     </tr>`;
-  });
-  viewTitle.textContent = name;
-  viewSummary.innerHTML = `Debit:${d} Credit:${cr} Balance:${d-cr}`;
-  viewModal.style.display = "block";
-};
+});
+
 
 /* ==================== ADD CHARGE ==================== */
 bookingType.onchange = ()=>{ singleDay.style.display=bookingType.value==="single"?"block":"none"; multiDay.style.display=bookingType.value==="multi"?"block":"none"; };
@@ -302,15 +323,15 @@ viewAdminBtn.onclick = async ()=>{
 
 /* ==================== TOOLBAR & SECTIONS ==================== */
 window.showSection = id => {
-  document.querySelectorAll(".section").forEach(s=>s.style.display="none");
+  document.querySelectorAll(".section").forEach(s => s.style.display = "none");
   const sec = document.getElementById(id);
-  if(sec) sec.style.display="block";
+  if (sec) sec.style.display = "block";
 
-  document.querySelectorAll("#toolbar button").forEach(btn=>btn.classList.remove("active"));
-  const activeBtn = Array.from(document.querySelectorAll("#toolbar button"))
-    .find(btn => btn.textContent.toLowerCase()===id.toLowerCase());
-  if(activeBtn) activeBtn.classList.add("active");
+  document.querySelectorAll("#toolbar button").forEach(btn => {
+    btn.classList.toggle("active", btn.dataset.section === id);
+  });
 };
+
 
 /* ==================== AUTOCOMPLETE ==================== */
 function updateClientAuto(){
@@ -321,3 +342,4 @@ function updateClientAuto(){
 </script>
 </body>
 </html>
+
