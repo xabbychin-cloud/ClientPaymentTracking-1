@@ -5,31 +5,32 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Client Payment Tracker</title>
 <style>
-    body { margin: 0; font-family: Arial; background: #f4f6f9 }
-    h1 { background: #2e7d32; color: white; padding: 15px; text-align: center; margin: 0 }
-    #toolbar { display: flex; gap: 8px; padding: 10px; background: #333; overflow-x: auto }
-    #toolbar button { background: #4CAF50; color: white; border: none; padding: 10px 14px; border-radius: 4px; cursor: pointer }
-    #toolbar button.active { background: gold; color: black }
-    .section { display: none; background: white; margin: 10px; padding: 15px; border-radius: 6px }
-    input, select, button, textarea { width: 100%; padding: 8px; margin-top: 6px }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px }
-    th, td { border: 1px solid #ccc; padding: 6px }
-    th { background: #eee }
-    .debit-red { color: red; font-weight: bold }
-    .unpaid-row { background: #ffd6d6 }
-    .autocomplete { position: relative }
-    .autolist { position: absolute; background: white; border: 1px solid #ccc; width: 100%; z-index: 100 }
-    .autolist div { padding: 6px; cursor: pointer }
-    .autolist div:hover { background: #eee }
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.5) }
-    .modal-content { background: white; width: 95%; max-width: 900px; margin: 5% auto; padding: 15px }
-    #logoutBtn { background: #c62828; color: white; margin: 15px }
-    @media (max-width: 768px) {
-        table, thead, tbody, th, td, tr { display: block }
-        th { display: none }
-        tr { margin-bottom: 10px }
-        td { display: flex; justify-content: space-between }
-    }
+/* Existing styles - unchanged */
+body { margin: 0; font-family: Arial; background: #f4f6f9 }
+h1 { background: #2e7d32; color: white; padding: 15px; text-align: center; margin: 0 }
+#toolbar { display: flex; gap: 8px; padding: 10px; background: #333; overflow-x: auto }
+#toolbar button { background: #4CAF50; color: white; border: none; padding: 10px 14px; border-radius: 4px; cursor: pointer }
+#toolbar button.active { background: gold; color: black }
+.section { display: none; background: white; margin: 10px; padding: 15px; border-radius: 6px }
+input, select, button, textarea { width: 100%; padding: 8px; margin-top: 6px }
+table { width: 100%; border-collapse: collapse; margin-top: 10px }
+th, td { border: 1px solid #ccc; padding: 6px }
+th { background: #eee }
+.debit-red { color: red; font-weight: bold }
+.unpaid-row { background: #ffd6d6 }
+.autocomplete { position: relative }
+.autolist { position: absolute; background: white; border: 1px solid #ccc; width: 100%; z-index: 100 }
+.autolist div { padding: 6px; cursor: pointer }
+.autolist div:hover { background: #eee }
+.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.5) }
+.modal-content { background: white; width: 95%; max-width: 900px; margin: 5% auto; padding: 15px }
+#logoutBtn { background: #c62828; color: white; margin: 15px }
+@media (max-width: 768px) {
+    table, thead, tbody, th, td, tr { display: block }
+    th { display: none }
+    tr { margin-bottom: 10px }
+    td { display: flex; justify-content: space-between }
+}
 </style>
 </head>
 <body>
@@ -99,7 +100,7 @@
             <div id="paymentAuto" class="autolist"></div>
         </div>
 
-        <!-- Calendar based on booking type -->
+        <!-- Payment calendar fields -->
         <div id="paymentCalendarSingle" style="display:none"><input id="paymentSingleDate" type="date"></div>
         <div id="paymentCalendarMulti" style="display:none">
             <input id="paymentStartDate" type="date">
@@ -167,75 +168,55 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebas
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-const ADMIN_CODE = "1234";
-const app = initializeApp({
-    apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
-    authDomain: "client-payment-tracker-3572b.firebaseapp.com",
-    projectId: "client-payment-tracker-3572b"
+const ADMIN_CODE="1234";
+const app=initializeApp({
+    apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
+    authDomain:"client-payment-tracker-3572b.firebaseapp.com",
+    projectId:"client-payment-tracker-3572b"
 });
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-let currentUser, clients = {}, expenses = [];
-const cid = n => n.toLowerCase().replace(/\s+/g, '_');
+const auth=getAuth(app);
+const db=getFirestore(app);
+let currentUser, clients={}, expenses=[];
+const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
 
 // ---------------- AUTH ----------------
-loginBtn.onclick = async () => {
-    const email = loginEmail.value.trim();
-    const password = loginPassword.value;
+loginBtn.onclick=async()=>{
+    const email=loginEmail.value.trim(), password=loginPassword.value;
     if(!email||!password){ alert("Enter email and password"); return; }
-    try {
-        const userCred = await signInWithEmailAndPassword(auth,email,password);
-        currentUser = userCred.user;
-        authSection.style.display="none";
-        appSection.style.display="block";
-        loadClients();
-        loadExpenses();
-    } catch(e){ alert("Login failed: "+e.message); }
+    try{ currentUser=(await signInWithEmailAndPassword(auth,email,password)).user; authSection.style.display="none"; appSection.style.display="block"; loadClients(); loadExpenses(); } 
+    catch(e){ alert("Login failed: "+e.message); }
 };
-signupBtn.onclick = async () => {
-    const email = loginEmail.value.trim();
-    const password = loginPassword.value;
+signupBtn.onclick=async()=>{
+    const email=loginEmail.value.trim(), password=loginPassword.value;
     if(!email||!password){ alert("Enter email and password"); return; }
-    try {
-        const userCred = await createUserWithEmailAndPassword(auth,email,password);
-        currentUser = userCred.user;
-        authSection.style.display="none";
-        appSection.style.display="block";
-        loadClients();
-        loadExpenses();
-    } catch(e){ alert("Signup failed: "+e.message); }
+    try{ currentUser=(await createUserWithEmailAndPassword(auth,email,password)).user; authSection.style.display="none"; appSection.style.display="block"; loadClients(); loadExpenses(); } 
+    catch(e){ alert("Signup failed: "+e.message); }
 };
-logoutBtn.onclick = () => signOut(auth);
-onAuthStateChanged(auth, u => {
-    if(u){ currentUser=u; authSection.style.display="none"; appSection.style.display="block"; loadClients(); loadExpenses();}
-    else{ authSection.style.display="block"; appSection.style.display="none"; }
-});
+logoutBtn.onclick=()=>signOut(auth);
+onAuthStateChanged(auth,u=>{ if(u){ currentUser=u; authSection.style.display="none"; appSection.style.display="block"; loadClients(); loadExpenses(); } else{ authSection.style.display="block"; appSection.style.display="none"; } });
 
 // ---------------- TOOLBAR ----------------
-window.showSection = id => {
+window.showSection=id=>{
     document.querySelectorAll(".section").forEach(s=>s.style.display="none");
-    const sec = document.getElementById(id);
+    const sec=document.getElementById(id);
     if(sec) sec.style.display="block";
-
-    // highlight toolbar button
     document.querySelectorAll("#toolbar button").forEach(btn=>btn.classList.remove("active"));
-    const activeBtn = Array.from(document.querySelectorAll("#toolbar button")).find(btn=>btn.textContent.toLowerCase().includes(id.toLowerCase()));
+    const activeBtn=Array.from(document.querySelectorAll("#toolbar button")).find(btn=>btn.textContent.toLowerCase().includes(id.toLowerCase()));
     if(activeBtn) activeBtn.classList.add("active");
 };
 
 // ---------------- CLIENTS ----------------
-clientFilter.onchange = renderClients;
-window.renderClients = () => {
-    const searchVal = (clientSearch.value||"").toLowerCase();
-    const filter = clientFilter.value;
-    clientsBody.innerHTML = "";
+clientFilter.onchange=renderClients;
+window.renderClients=()=>{
+    const searchVal=(clientSearch.value||"").toLowerCase();
+    const filter=clientFilter.value;
+    clientsBody.innerHTML="";
     Object.values(clients).forEach(c=>{
         const bal=(c.debit||0)-(c.credit||0);
-        const showFilter = filter==="all" || (filter==="outstanding" && bal>0) || (filter==="paid" && bal<=0);
-        const showSearch = !searchVal || c.name.toLowerCase().includes(searchVal);
-        if(showFilter && showSearch){
-            clientsBody.innerHTML += `<tr>
+        const showFilter=filter==="all"||(filter==="outstanding"&&bal>0)||(filter==="paid"&&bal<=0);
+        const showSearch=!searchVal||c.name.toLowerCase().includes(searchVal);
+        if(showFilter&&showSearch){
+            clientsBody.innerHTML+=`<tr>
                 <td>${c.name}</td>
                 <td>${c.debit||0}</td>
                 <td>${c.credit||0}</td>
@@ -247,16 +228,14 @@ window.renderClients = () => {
 };
 
 // ---------------- VIEW MODAL ----------------
-window.viewClient = name => {
-    const c = clients[cid(name)]; if(!c) return;
-    viewTitle.textContent = name;
-    const balance = (c.debit||0)-(c.credit||0);
-    viewSummary.textContent = `Balance: ${balance}`;
-    let runningBalance = 0;
+window.viewClient=name=>{
+    const c=clients[cid(name)]; if(!c) return;
+    viewTitle.textContent=name;
+    const balance=(c.debit||0)-(c.credit||0);
+    viewSummary.textContent=`Balance: ${balance}`;
     viewBody.innerHTML="";
     (c.history||[]).sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(h=>{
-        runningBalance += (h.debit||0)-(h.credit||0);
-        viewBody.innerHTML += `<tr class="${runningBalance>0?'unpaid-row':''}">
+        viewBody.innerHTML+=`<tr class="${((h.debit||0)-(h.credit||0))>0?'unpaid-row':''}">
             <td>${new Date(h.date).toLocaleString()}</td>
             <td>${h.debit||0}</td>
             <td>${h.credit||0}</td>
@@ -267,37 +246,33 @@ window.viewClient = name => {
 };
 
 // ---------------- ADMIN ----------------
-window.openAdmin = () => {
-    const code = prompt("Enter Admin Code");
+window.openAdmin=()=>{
+    const code=prompt("Enter Admin Code");
     if(code===ADMIN_CODE) showSection("admin");
     else alert("Access denied");
 };
-
-document.getElementById("saveNotesBtn").onclick = ()=>localStorage.setItem("adminNotes", adminNotes.value);
-
-window.generateAdminReport = ()=>{
+saveNotesBtn.onclick=()=>localStorage.setItem("adminNotes",adminNotes.value);
+window.generateAdminReport=()=>{
     if(!adminStart.value||!adminEnd.value){ alert("Select start and end dates"); return; }
-    const s = new Date(adminStart.value), e = new Date(adminEnd.value);
+    const s=new Date(adminStart.value), e=new Date(adminEnd.value);
     let totalIncome=0, totalExpenses=0, cashSales=0;
-
     let clientHtml="<h4>Clients</h4><table><tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th></tr>";
     Object.values(clients).forEach(c=>{
         let debit=0, credit=0;
         (c.history||[]).forEach(h=>{
-            const d = new Date(h.date);
+            const d=new Date(h.date);
             if(d>=s && d<=e){
-                debit += h.debit||0;
-                credit += h.credit||0;
-                if(h.credit && (h.paymentType==="Cash" || h.paymentType==="cash")) cashSales+=h.credit;
+                debit+=(h.debit||0); credit+=(h.credit||0);
+                if(h.credit && (h.paymentType==="Cash"||h.paymentType==="cash")) cashSales+=h.credit;
             }
         });
-        clientHtml += `<tr><td>${c.name}</td><td>${debit}</td><td>${credit}</td><td>${debit-credit}</td></tr>`;
+        clientHtml+=`<tr><td>${c.name}</td><td>${debit}</td><td>${credit}</td><td>${debit-credit}</td></tr>`;
         totalIncome+=credit;
     });
     clientHtml+="</table>";
-    expenses.forEach(x=>{ const d=new Date(x.date); if(d>=s && d<=e) totalExpenses+=x.amount;});
-    const net = totalIncome - totalExpenses;
-    adminResult.innerHTML = `<h4>Summary</h4>
+    expenses.forEach(x=>{ const d=new Date(x.date); if(d>=s&&d<=e) totalExpenses+=x.amount; });
+    const net=totalIncome-totalExpenses;
+    adminResult.innerHTML=`<h4>Summary</h4>
         <p>Total Income: ${totalIncome}</p>
         <p>Total Cash Sales: ${cashSales}</p>
         <p>Total Expenses: ${totalExpenses}</p>
@@ -307,60 +282,48 @@ window.generateAdminReport = ()=>{
 
 // ---------------- PAYMENT CALENDAR ----------------
 function updatePaymentCalendar(clientName){
-    const c = clients[cid(clientName)];
+    const c=clients[cid(clientName)];
     if(!c){ paymentCalendarSingle.style.display=paymentCalendarMulti.style.display="none"; return; }
     const lastBooking=(c.history||[]).slice(-1)[0];
     if(lastBooking){
         if(lastBooking.bookingType==="single"){
             paymentCalendarSingle.style.display="block";
             paymentCalendarMulti.style.display="none";
-            paymentSingleDate.value = lastBooking.date||"";
+            paymentSingleDate.value=lastBooking.date||"";
         } else if(lastBooking.bookingType==="multi"){
             paymentCalendarSingle.style.display="none";
             paymentCalendarMulti.style.display="block";
-            paymentStartDate.value = lastBooking.startDate||"";
-            paymentEndDate.value = lastBooking.endDate||"";
+            paymentStartDate.value=lastBooking.startDate||"";
+            paymentEndDate.value=lastBooking.endDate||"";
         }
     } else { paymentCalendarSingle.style.display=paymentCalendarMulti.style.display="none"; }
 }
-
-paymentSearch.oninput = ()=>{
+paymentSearch.oninput=()=>{
     paymentAuto.innerHTML="";
-    const val = paymentSearch.value.toLowerCase();
-    Object.values(clients).map(c=>c.name)
-        .filter(n=>n.toLowerCase().includes(val))
-        .forEach(n=>{
-            const div = document.createElement("div");
-            div.textContent=n;
-            div.onclick = ()=>{
-                paymentSearch.value=n;
-                paymentAuto.innerHTML="";
-                const c = clients[cid(n)];
-                if(c) paymentBalance.value=(c.debit||0)-(c.credit||0);
-                updatePaymentCalendar(n);
-            };
-            paymentAuto.appendChild(div);
-        });
+    const val=paymentSearch.value.toLowerCase();
+    Object.values(clients).map(c=>c.name).filter(n=>n.toLowerCase().includes(val)).forEach(n=>{
+        const div=document.createElement("div");
+        div.textContent=n;
+        div.onclick=()=>{
+            paymentSearch.value=n; paymentAuto.innerHTML="";
+            const c=clients[cid(n)];
+            if(c) paymentBalance.value=(c.debit||0)-(c.credit||0);
+            updatePaymentCalendar(n);
+        };
+        paymentAuto.appendChild(div);
+    });
 };
 
 // ---------------- LOAD DATA ----------------
 function loadClients(){
     onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
         clients={};
-        snap.forEach(d=>{
-            const data=d.data();
-            data.history = data.history||[];
-            clients[d.id]=data;
-        });
+        snap.forEach(d=>{ const data=d.data(); data.history=data.history||[]; clients[d.id]=data; });
         renderClients();
     });
 }
-
 function loadExpenses(){
-    onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
-        expenses=[];
-        snap.forEach(d=>expenses.push(d.data()));
-    });
+    onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{ expenses=[]; snap.forEach(d=>expenses.push(d.data())); });
 }
 </script>
 </body>
