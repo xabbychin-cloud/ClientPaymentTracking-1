@@ -6,44 +6,15 @@
 <title>Client Payment Tracker</title>
 
 <style>
-body{margin:0;font-family:Arial;background:#f4f4f4}
-h1{background:#2e7d32;color:white;padding:15px;text-align:center;margin:0}
+body { margin:0; font-family: Arial; background:#f4f4f4 }
+h1 { background:#2e7d32; color:white; padding:15px; text-align:center }
 
-#toolbar{display:flex;gap:8px;padding:10px;background:#333;overflow-x:auto}
-#toolbar button{background:#4CAF50;color:white;border:none;padding:10px 14px;border-radius:4px;cursor:pointer}
-#toolbar button:hover{background:#43a047}
-#toolbar button.active{background:yellow;color:black} /* Yellow highlight for active button */
-
-.section{display:none;background:white;margin:10px;padding:15px;border-radius:6px}
-input,select,button{width:100%;padding:8px;margin-top:6px}
-button{cursor:pointer}
-
-table{width:100%;border-collapse:collapse;margin-top:10px}
-th,td{border:1px solid #ccc;padding:6px;text-align:left}
-th{background:#eee;color:black}
-
-.debit-red{color:red;font-weight:bold}
-.balance-paid{color:black}
-
-.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5)}
-.modal-content{background:white;width:95%;max-width:900px;margin:5% auto;padding:15px;max-height:80vh;overflow:auto}
-.close{float:right;font-size:22px;cursor:pointer}
-
-.readonly{background:#eee}
-
-.autocomplete-box{position:relative}
-.autocomplete-list{
-  position:absolute;background:white;border:1px solid #ccc;
-  width:100%;max-height:150px;overflow:auto;z-index:100
-}
-.autocomplete-item{padding:6px;cursor:pointer}
-.autocomplete-item:hover{background:#f0f0f0}
-
-.highlight{background:yellow;font-weight:bold}
-
-.unpaid-row{background:lightcoral} /* Highlight for unpaid charges */
-
-#logoutBtn{background:#c62828;color:white;margin:15px}
+.section { background:white; margin:20px; padding:20px; border-radius:6px }
+input, button { width:100%; padding:10px; margin-top:10px }
+button { cursor:pointer; background:#4CAF50; color:white; border:none }
+button:hover { background:#43a047 }
+#logoutBtn { background:#c62828 }
+.hidden { display:none }
 </style>
 </head>
 
@@ -51,522 +22,134 @@ th{background:#eee;color:black}
 
 <h1>Client Payment Tracker</h1>
 
-<div id="toolbar">
-  <button onclick="showSection('clientSection')" class="active">Clients</button>
-  <button onclick="showSection('chargeSection')">Add Charge</button>
-  <button onclick="showSection('paymentSection')">Add Payment</button>
-  <button onclick="showSection('expenseSection')">Expenses</button>
-  <button onclick="showSection('reportSection')">Admin Report</button>
-</div>
-
-<!-- LOGIN -->
-<div id="authSection" class="section" style="display:block">
-  <h3>Login</h3>
+<!-- AUTH -->
+<div id="authSection" class="section">
+  <h3>Login / Sign Up</h3>
   <input id="loginEmail" placeholder="Email">
   <input id="loginPassword" type="password" placeholder="Password">
   <button id="loginBtn">Login</button>
   <button id="signupBtn">Sign Up</button>
 </div>
 
-<div id="appSection" style="display:none">
-
-<!-- CLIENT LIST -->
-<div id="clientSection" class="section" style="display:block">
-  <h3>Client Information</h3>
-  <input id="clientSearchInput" placeholder="Search full name">
-  <button id="clientSearchBtn">Search</button>
-  <select id="clientFilter">
-    <option value="all">All</option>
-    <option value="outstanding">Outstanding</option>
-    <option value="paid">Paid</option>
-  </select>
-
-  <table>
-    <thead>
-      <tr>
-        <th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Status</th><th>Action</th>
-      </tr>
-    </thead>
-    <tbody id="clientsBody"></tbody>
-  </table>
-</div>
-
-<!-- ADD CHARGE -->
-<div id="chargeSection" class="section">
-  <h3>Add Charge</h3>
-  <div class="autocomplete-box">
-    <input id="chargeName" placeholder="Client Full Name">
-    <div id="chargeAuto" class="autocomplete-list"></div>
-  </div>
-  <input id="chargeAmount" type="number" placeholder="Amount">
-  <input id="chargeStart" type="date">
-  <input id="chargeEnd" type="date">
-  <input id="chargeRemarks" placeholder="Remarks">
-  <button id="addChargeBtn">Save Charge</button>
-</div>
-
-<!-- ADD PAYMENT -->
-<div id="paymentSection" class="section">
-  <h3>Add Payment</h3>
-
-  <div class="autocomplete-box">
-    <input id="paymentSearch" placeholder="Search Client">
-    <div id="paymentAuto" class="autocomplete-list"></div>
-  </div>
-
-  <input id="paymentClientName" class="readonly" readonly>
-  <input id="paymentBalance" class="readonly" readonly>
-
-  <input id="paymentAmount" type="number" placeholder="Payment Amount">
-  <select id="paymentType">
-    <option value="">Payment Type</option>
-    <option>Cash</option>
-    <option>Bank Transfer</option>
-    <option>Credit Card</option>
-    <option>Others</option>
-  </select>
-  <select id="paymentMode">
-    <option value="">Payment Mode</option>
-    <option>Full</option>
-    <option>Partial</option>
-  </select>
-  <input id="paymentDate" type="date">
-  <input id="paymentRemarks" placeholder="Remarks">
-  <button id="addPaymentBtn">Save Payment</button>
-</div>
-
-<!-- EXPENSE -->
-<div id="expenseSection" class="section">
-  <h3>Add Expense</h3>
-  <input id="expenseDate" type="date">
-  <input id="expenseAmount" type="number" placeholder="Amount">
-  <input id="expenseDesc" placeholder="Description">
-  <input id="expenseInvoice" placeholder="Invoice (optional)">
-  <button id="addExpenseBtn">Save Expense</button>
-
-  <h3>View Expenses</h3>
-  <input id="viewExpenseStart" type="date">
-  <input id="viewExpenseEnd" type="date">
-  <button id="viewExpenseBtn">Generate</button>
-  <div id="viewExpenseResult"></div>
-</div>
-
-<!-- REPORT -->
-<div id="reportSection" class="section">
-  <h3>Admin Report</h3>
-  <input id="reportStart" type="date">
-  <input id="reportEnd" type="date">
-  <button id="generateReportBtn">Generate Report</button>
-  <div id="reportResult"></div>
-
-  <h3>Notes</h3>
-  <textarea id="notesTextarea" rows="5" placeholder="Enter your notes here..."></textarea>
-  <button id="saveNotesBtn">Save Notes</button>
-  <div id="notesDisplay"></div>
-</div>
-
-<button id="logoutBtn">Logout</button>
-</div>
-
-<!-- VIEW MODAL -->
-<div id="viewModal" class="modal">
-  <div class="modal-content">
-    <span class="close" onclick="closeViewModal()">&times;</span>
-    <h3 id="viewTitle"></h3>
-    <div id="viewSummary"></div>
-    <table>
-      <thead>
-        <tr>
-          <th>Date</th><th>Debit</th><th>Credit</th>
-          <th>Method</th><th>Mode</th><th>Remarks</th><th>Start</th><th>End</th>
-        </tr>
-      </thead>
-      <tbody id="viewBody"></tbody>
-    </table>
-  </div>
+<!-- APP -->
+<div id="appSection" class="section hidden">
+  <h3>Welcome</h3>
+  <p id="userEmail"></p>
+  <button id="logoutBtn">Logout</button>
 </div>
 
 <script type="module">
+/* =========================
+   FIREBASE IMPORTS
+========================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import {
+  getAuth,
+  signInWithEmailAndPassword,
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signOut
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import {
+  getFirestore,
+  doc,
+  setDoc
+} from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-const app = initializeApp({
+/* =========================
+   FIREBASE CONFIG
+========================= */
+const firebaseConfig = {
   apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
   authDomain: "client-payment-tracker-3572b.firebaseapp.com",
-  projectId: "client-payment-tracker-3572b"
-});
+  projectId: "client-payment-tracker-3572b",
+  storageBucket: "client-payment-tracker-3572b.appspot.com",
+  messagingSenderId: "REPLACE_WITH_YOUR_ID",
+  appId: "REPLACE_WITH_YOUR_APP_ID"
+};
 
+/* =========================
+   INIT
+========================= */
+const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-let currentUser = null, clients = {}, expenses = [], notes = '';
+/* =========================
+   DOM ELEMENTS
+========================= */
+const authSection = document.getElementById("authSection");
+const appSection = document.getElementById("appSection");
+const loginEmail = document.getElementById("loginEmail");
+const loginPassword = document.getElementById("loginPassword");
+const loginBtn = document.getElementById("loginBtn");
+const signupBtn = document.getElementById("signupBtn");
+const logoutBtn = document.getElementById("logoutBtn");
+const userEmail = document.getElementById("userEmail");
 
-// Utility functions
-const cid = n => n.toLowerCase().replace(/\s+/g, '_');
-const formatDate = (isoString) => {
-  if (!isoString) return '';
-  const d = new Date(isoString);
-  return `${d.getMonth() + 1}/${d.getDate()}/${d.getFullYear()}`;
-};
-const highlight = (t, q) => !q ? t : t.replace(new RegExp(`(${q})`, 'gi'), '<span class="highlight">$1</span>');
-
-// Get DOM elements (fixes module scoping issues)
-const loginBtn = document.getElementById('loginBtn');
-const signupBtn = document.getElementById('signupBtn');
-const loginEmail = document.getElementById('loginEmail');
-const loginPassword = document.getElementById('loginPassword');
-const authSection = document.getElementById('authSection');
-const appSection = document.getElementById('appSection');
-const logoutBtn = document.getElementById('logoutBtn');
-const clientSearchInput = document.getElementById('clientSearchInput');
-const clientSearchBtn = document.getElementById('clientSearchBtn');
-const clientFilter = document.getElementById('clientFilter');
-const clientsBody = document.getElementById('clientsBody');
-const chargeName = document.getElementById('chargeName');
-const chargeAuto = document.getElementById('chargeAuto');
-const chargeAmount = document.getElementById('chargeAmount');
-const chargeStart = document.getElementById('chargeStart');
-const chargeEnd = document.getElementById('chargeEnd');
-const chargeRemarks = document.getElementById('chargeRemarks');
-const addChargeBtn = document.getElementById('addChargeBtn');
-const paymentSearch = document.getElementById('paymentSearch');
-const paymentAuto = document.getElementById('paymentAuto');
-const paymentClientName = document.getElementById('paymentClientName');
-const paymentBalance = document.getElementById('paymentBalance');
-const paymentAmount = document.getElementById('paymentAmount');
-const paymentType = document.getElementById('paymentType');
-const paymentMode = document.getElementById('paymentMode');
-const paymentDate = document.getElementById('paymentDate');
-const paymentRemarks = document.getElementById('paymentRemarks');
-const addPaymentBtn = document.getElementById('addPaymentBtn');
-const expenseDate = document.getElementById('expenseDate');
-const expenseAmount = document.getElementById('expenseAmount');
-const expenseDesc = document.getElementById('expenseDesc');
-const expenseInvoice = document.getElementById('expenseInvoice');
-const addExpenseBtn = document.getElementById('addExpenseBtn');
-const viewExpenseStart = document.getElementById('viewExpenseStart');
-const viewExpenseEnd = document.getElementById('viewExpenseEnd');
-const viewExpenseBtn = document.getElementById('viewExpenseBtn');
-const viewExpenseResult = document.getElementById('viewExpenseResult');
-const reportStart = document.getElementById('reportStart');
-const reportEnd = document.getElementById('reportEnd');
-const generateReportBtn = document.getElementById('generateReportBtn');
-const reportResult = document.getElementById('reportResult');
-const notesTextarea = document.getElementById('notesTextarea');
-const saveNotesBtn = document.getElementById('saveNotesBtn');
-const notesDisplay = document.getElementById('notesDisplay');
-const viewModal = document.getElementById('viewModal');
-const viewTitle = document.getElementById('viewTitle');
-const viewSummary = document.getElementById('viewSummary');
-const viewBody = document.getElementById('viewBody');
-
-// LOGIN
-loginBtn.onclick = () => {
-  const email = loginEmail.value.trim();
-  const password = loginPassword.value.trim();
-  if (!email || !password) return alert("Please enter email and password");
-  signInWithEmailAndPassword(auth, email, password).catch(e => alert(`Login failed: ${e.message}`));
+/* =========================
+   LOGIN
+========================= */
+loginBtn.onclick = async () => {
+  try {
+    await signInWithEmailAndPassword(
+      auth,
+      loginEmail.value.trim(),
+      loginPassword.value.trim()
+    );
+  } catch (e) {
+    alert(e.message);
+  }
 };
 
-// SIGN UP
-signupBtn.onclick = () => {
-  const email = loginEmail.value.trim();
-  const password = loginPassword.value.trim();
-  if (!email || !password) return alert("Please enter email and password");
-  if (password.length < 6) return alert("Password should be at least 6 characters");
-  createUserWithEmailAndPassword(auth, email, password).then(() => {
-    alert("Account created successfully! You can now log in.");
-  }).catch(e => alert(`Signup failed: ${e.message}`));
+/* =========================
+   SIGN UP
+========================= */
+signupBtn.onclick = async () => {
+  if (loginPassword.value.length < 6) {
+    alert("Password must be at least 6 characters");
+    return;
+  }
+
+  try {
+    const cred = await createUserWithEmailAndPassword(
+      auth,
+      loginEmail.value.trim(),
+      loginPassword.value.trim()
+    );
+
+    await setDoc(doc(db, "users", cred.user.uid), {
+      email: cred.user.email,
+      createdAt: new Date()
+    });
+
+    alert("Account created & logged in");
+  } catch (e) {
+    alert(e.message);
+  }
 };
 
-onAuthStateChanged(auth, u => {
-  if (u) {
-    currentUser = u;
-    authSection.style.display = "none";
-    appSection.style.display = "block";
-    loadClients();
-    loadExpenses();
-    loadNotes();
+/* =========================
+   AUTH STATE
+========================= */
+onAuthStateChanged(auth, user => {
+  if (user) {
+    authSection.classList.add("hidden");
+    appSection.classList.remove("hidden");
+    userEmail.textContent = "Logged in as: " + user.email;
   } else {
-    authSection.style.display = "block";
-    appSection.style.display = "none";
+    authSection.classList.remove("hidden");
+    appSection.classList.add("hidden");
   }
 });
 
-// CLIENTS
-function loadClients() {
-  onSnapshot(collection(db, "users", currentUser.uid, "clients"), snap => {
-    clients = {};
-    snap.forEach(d => clients[d.id] = d.data());
-    renderClients();
-  });
-}
-
-function renderClients() {
-  const q = clientSearchInput.value.toLowerCase();
-  const f = clientFilter.value;
-  clientsBody.innerHTML = "";
-  Object.values(clients).forEach(c => {
-    const bal = (c.debit || 0) - (c.credit || 0);
-    const s = bal > 0 ? "outstanding" : "paid";
-    if (q && !c.name.toLowerCase().includes(q)) return;
-    if (f !== "all" && f !== s) return;
-    clientsBody.innerHTML += `
-    <tr>
-      <td>${highlight(c.name, q)}</td>
-      <td class="${bal > 0 ? 'debit-red' : ''}">${c.debit || 0}</td>
-      <td>${c.credit || 0}</td>
-      <td class="${bal > 0 ? 'debit-red' : 'balance-paid'}">${bal}</td>
-      <td>${s}</td>
-      <td><button onclick="viewClient('${c.name}')">View</button></td>
-    </tr>`;
-  });
-}
-
-clientSearchBtn.onclick = renderClients;
-clientFilter.onchange = renderClients;
-
-// AUTOCOMPLETE CHARGE
-chargeName.oninput = () => {
-  chargeAuto.innerHTML = "";
-  const q = chargeName.value.toLowerCase();
-  Object.values(clients).forEach(c => {
-    if (c.name.toLowerCase().includes(q)) {
-      const d = document.createElement("div");
-      d.className = "autocomplete-item";
-      d.textContent = c.name;
-      d.onclick = () => selectChargeClient(c.name);
-      chargeAuto.appendChild(d);
-    }
-  });
+/* =========================
+   LOGOUT
+========================= */
+logoutBtn.onclick = async () => {
+  await signOut(auth);
 };
+</script>
 
-function selectChargeClient(name) {
-  chargeName.value = name;
-  chargeAuto.innerHTML = "";
-}
-
-// ADD CHARGE
-addChargeBtn.onclick = async () => {
-  const name = chargeName.value;
-  if (!name) return alert("Enter client name");
-  const ref = doc(db, "users", currentUser.uid, "clients", cid(name));
-  const s = await getDoc(ref);
-  const c = s.exists() ? s.data() : { name, debit: 0, credit: 0, history: [] };
-  c.history.push({ date: new Date().toISOString(), debit: +chargeAmount.value, credit: 0, method: "charge", remarks: chargeRemarks.value, start: chargeStart.value, end: chargeEnd.value });
-  await setDoc(ref, { name, debit: c.debit + +chargeAmount.value, credit: c.credit, history: c.history });
-  alert("Charge added");
-  // Clear fields after save
-  chargeName.value = '';
-  chargeAmount.value = '';
-  chargeStart.value = '';
-  chargeEnd.value = '';
-  chargeRemarks.value = '';
-  chargeAuto.innerHTML = '';
-};
-
-// VIEW CLIENT
-window.viewClient = name => {
-  const c = clients[cid(name)];
-  let d = 0, cr = 0;
-  c.history.forEach(h => { d += h.debit || 0; cr += h.credit || 0 });
-  const bal = d - cr;
-  viewTitle.textContent = name;
-  viewSummary.innerHTML = `Total Debit: ${d}<br>Total Credit: ${cr}<br>Balance: <span class="${bal > 0 ? 'debit-red' : 'balance-paid'}">${bal}</span>`;
-  viewBody.innerHTML = "";
-  // Sort history by date to process in order
-  const sortedHistory = c.history.sort((a, b) => new Date(a.date) - new Date(b.date));
-  let remainingPayment = 0; // Tracks how much payment is left to apply to charges
-  sortedHistory.forEach(h => {
-    let rowClass = '';
-    if (h.debit > 0) {
-      // It's a charge: Check if it's fully covered by remaining payment
-      if (remainingPayment >= h.debit) {
-        remainingPayment -= h.debit; // Fully covered, no highlight
-      } else {
-        rowClass = 'unpaid-row'; // Partially or not covered, highlight
-        remainingPayment = 0; // Reset for next charges
-      }
-    } else if (h.credit > 0) {
-      // It's a payment: Add to remaining payment for future charges
-      remainingPayment += h.credit;
-    }
-    viewBody.innerHTML += `
-    <tr class="${rowClass}">
-      <td>${formatDate(h.date)}</td>
-      <td>${h.debit || 0}</td>
-      <td>${h.credit || 0}</td>
-      <td>${h.method || ''}</td>
-      <td>${h.mode || ''}</td>
-      <td>${h.remarks || ''}</td>
-      <td>${h.start || ''}</td>
-      <td>${h.end || ''}</td>
-    </tr>`;
-  });
-  viewModal.style.display = "block";
-};
-window.closeViewModal = () => viewModal.style.display = "none";
-
-// AUTOCOMPLETE PAYMENT
-paymentSearch.oninput = () => {
-  paymentAuto.innerHTML = "";
-  const q = paymentSearch.value.toLowerCase();
-  Object.values(clients).forEach(c => {
-    if (c.name.toLowerCase().includes(q)) {
-      const d = document.createElement("div");
-      d.className = "autocomplete-item";
-      d.textContent = c.name;
-      d.onclick = () => selectClient(c.name);
-      paymentAuto.appendChild(d);
-    }
-  });
-};
-
-function selectClient(name) {
-  const c = clients[cid(name)];
-  let d = 0, cr = 0, remarks = [];
-  c.history.forEach(h => {
-    d += h.debit || 0; cr += h.credit || 0;
-    if (h.debit > 0 && h.remarks) remarks.push(h.remarks);
-  });
-  const bal = d - cr;
-  paymentClientName.value = name;
-  paymentBalance.value = `Balance: ${bal}`;
-  paymentRemarks.value = bal > 0 && remarks.length ? remarks.join(', ') : '';
-  paymentAuto.innerHTML = "";
-}
-
-// PAYMENT
-addPaymentBtn.onclick = async () => {
-  const name = paymentClientName.value;
-  const ref = doc(db, "users", currentUser.uid, "clients", cid(name));
-  const s = await getDoc(ref);
-  const c = s.data();
-  c.history.push({ date: paymentDate.value, debit: 0, credit: +paymentAmount.value, method: "payment", mode: paymentMode.value, type: paymentType.value, remarks: paymentRemarks.value });
-  await setDoc(ref, { ...c, credit: c.credit + +paymentAmount.value });
-  alert("Payment added");
-  // Clear form after save
-  paymentSearch.value = '';
-  paymentClientName.value = '';
-  paymentBalance.value = '';
-  paymentAmount.value = '';
-  paymentType.value = '';
-  paymentMode.value = '';
-  paymentDate.value = '';
-  paymentRemarks.value = '';
-};
-
-// EXPENSE
-function loadExpenses() {
-  onSnapshot(collection(db, "users", currentUser.uid, "expenses"), snap => {
-    expenses = []; snap.forEach(d => expenses.push(d.data()));
-  });
-}
-addExpenseBtn.onclick = async () => {
-  await addDoc(collection(db, "users", currentUser.uid, "expenses"), {
-    date: expenseDate.value, amount: +expenseAmount.value, desc: expenseDesc.value, invoice: expenseInvoice.value
-  });
-  alert("Expense saved");
-};
-
-// VIEW EXPENSES
-viewExpenseBtn.onclick = () => {
-  const s = new Date(viewExpenseStart.value);
-  const e = new Date(viewExpenseEnd.value);
-  const filtered = expenses.filter(x => new Date(x.date) >= s && new Date(x.date) <= e);
-  let html = "<table><thead><tr><th>Date</th><th>Amount</th><th>Description</th><th>Invoice</th></tr></thead><tbody>";
-  filtered.forEach(x => html += `<tr><td>${formatDate(x.date)}</td><td>${x.amount}</td><td>${x.desc}</td><td>${x.invoice || ''}</td></tr>`);
-  html += "</tbody></table>";
-  viewExpenseResult.innerHTML = html;
-};
-
-// NOTES
-function loadNotes() {
-  const userRef = doc(db, "users", currentUser.uid);
-  getDoc(userRef).then(docSnap => {
-    if (docSnap.exists()) {
-      notes = docSnap.data().content || '';
-      notesTextarea.value = notes;
-      notesDisplay.innerHTML = notes.replace(/\n/g, '<br>');
-    }
-  }).catch(e => console.error("Error loading notes:", e));
-}
-
-// Edit/Save Notes
-let isEditingNotes = false;
-const editNotesBtn = document.createElement('button');
-editNotesBtn.textContent = 'Edit';
-editNotesBtn.style.marginLeft = '10px';
-notesTextarea.parentNode.insertBefore(editNotesBtn, notesTextarea.nextSibling);
-
-editNotesBtn.onclick = () => {
-  if (isEditingNotes) {
-    // Save mode
-    saveNotes();
-    notesTextarea.readOnly = true;
-    editNotesBtn.textContent = 'Edit';
-    isEditingNotes = false;
-  } else {
-    // Edit mode
-    notesTextarea.readOnly = false;
-    notesTextarea.focus();
-    editNotesBtn.textContent = 'Save';
-    isEditingNotes = true;
-  }
-};
-
-async function saveNotes() {
-  if (!currentUser) return alert("Please log in to save notes.");
-  notes = notesTextarea.value;
-  const userRef = doc(db, "users", currentUser.uid);
-  try {
-    await setDoc(userRef, { content: notes }, { merge: true }); // Use merge to update only the content field
-    alert("Notes saved successfully!");
-    notesDisplay.innerHTML = notes.replace(/\n/g, '<br>');
-  } catch (e) {
-    alert(`Failed to save notes: ${e.message}`);
-  }
-}
-
-// REPORT
-generateReportBtn.onclick = () => {
-  const s = new Date(reportStart.value);
-  const e = new Date(reportEnd.value);
-  let cashSales = 0, bankTransferSales = 0, creditCardSales = 0, otherSales = 0;
-  Object.values(clients).forEach(c => c.history.forEach(h => {
-    const d = new Date(h.date);
-    if (h.credit && d >= s && d <= e) {
-      if (h.type === "Cash") cashSales += h.credit;
-      else if (h.type === "Bank Transfer") bankTransferSales += h.credit;
-      else if (h.type === "Credit Card") creditCardSales += h.credit;
-      else otherSales += h.credit;
-    }
-  }));
-  const grandTotalSales = cashSales + bankTransferSales + creditCardSales + otherSales;
-  const totalExpenses = expenses.filter(x => new Date(x.date) >= s && new Date(x.date) <= e).reduce((a, b) => a + b.amount, 0);
-  const cashOnHand = cashSales - totalExpenses;
-  reportResult.innerHTML = `
-    <strong>Sales Breakdown:</strong><br>
-    Total Cash Sales: ${cashSales}<br>
-    Total Bank Transfer Sales: ${bankTransferSales}<br>
-    Total Credit Card Sales: ${creditCardSales}<br>
-    Total Other Sales: ${otherSales}<br>
-    Grand Total Sales: ${grandTotalSales}<br>
-    Expenses: ${totalExpenses}<br>
-    Cash on hand: ${cashOnHand}
-  `;
-};
-
-logoutBtn.onclick = () => signOut(auth);
-window.showSection = id => {
-  document.querySelectorAll(".section").forEach(s => s.style.display = "none");
-  document.getElementById(id).style.display = "block";
-  // Highlight active toolbar button
-  document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active"));
-  const activeBtn = Array.from(document.querySelectorAll("#toolbar button")).find(b => b.onclick.toString().includes(id));
-  if (activeBtn) activeBtn.classList.add("active");
-};
-
-
-
+</body>
+</html>
