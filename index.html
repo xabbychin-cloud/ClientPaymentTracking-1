@@ -200,41 +200,25 @@ import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc } fro
 
 const ADMIN_CODE="1234";
 const app=initializeApp({apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",authDomain:"client-payment-tracker-3572b.firebaseapp.com",projectId:"client-payment-tracker-3572b"});
-const auth=getAuth(app),db=getFirestore(app);
-let currentUser,clients={},expenses=[];
+const auth=getAuth(app), db=getFirestore(app);
+let currentUser, clients={}, expenses=[];
 
 const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
 
-/* ==================== AUTH - UPDATED ==================== */
+/* ==================== AUTH ==================== */
 loginBtn.onclick = () => {
   const email = loginEmail.value.trim();
   const password = loginPassword.value;
+  if (!email || !password) { alert("Please enter both email and password."); return; }
 
-  if (!email || !password) {
-    alert("Please enter both email and password.");
-    return;
-  }
-
-  signInWithEmailAndPassword(auth, email, password)
-    .then(userCredential => {
-      console.log("Logged in!", userCredential.user.email);
-      loginEmail.value = "";
-      loginPassword.value = "";
-    })
-    .catch(error => {
-      console.error(error);
-      switch(error.code){
-        case "auth/user-not-found":
-          alert("User not found. Please sign up first.");
-          break;
-        case "auth/wrong-password":
-          alert("Incorrect password. Try again.");
-          break;
-        case "auth/invalid-email":
-          alert("Invalid email format.");
-          break;
-        default:
-          alert("Login failed: " + error.message);
+  signInWithEmailAndPassword(auth,email,password)
+    .then(u => { console.log("Logged in!", u.user.email); loginEmail.value=""; loginPassword.value=""; })
+    .catch(e => {
+      console.error(e);
+      switch(e.code){
+        case "auth/user-not-found": alert("User not found."); break;
+        case "auth/wrong-password": alert("Incorrect password."); break;
+        default: alert("Login failed: " + e.message);
       }
     });
 };
@@ -242,283 +226,40 @@ loginBtn.onclick = () => {
 signupBtn.onclick = () => {
   const email = loginEmail.value.trim();
   const password = loginPassword.value;
+  if (!email || !password) { alert("Please enter both email and password."); return; }
 
-  if (!email || !password) {
-    alert("Please enter both email and password.");
-    return;
-  }
-
-  createUserWithEmailAndPassword(auth, email, password)
-    .then(userCredential => {
-      console.log("Signed up!", userCredential.user.email);
-      alert("Signup successful! You can now log in.");
-      loginEmail.value = "";
-      loginPassword.value = "";
-    })
-    .catch(error => {
-      console.error(error);
-      switch(error.code){
-        case "auth/email-already-in-use":
-          alert("Email already in use. Please log in.");
-          break;
-        case "auth/invalid-email":
-          alert("Invalid email format.");
-          break;
-        case "auth/weak-password":
-          alert("Password is too weak. Use at least 6 characters.");
-          break;
-        default:
-          alert("Signup failed: " + error.message);
-      }
-    });
+  createUserWithEmailAndPassword(auth,email,password)
+    .then(u => { console.log("Signed up!", u.user.email); alert("Signup successful!"); loginEmail.value=""; loginPassword.value=""; })
+    .catch(e => { console.error(e); alert("Signup failed: "+e.message); });
 };
 
 logoutBtn.onclick = () => {
-  signOut(auth)
-    .then(() => console.log("Logged out"))
-    .catch(error => console.error("Logout error:", error));
+  signOut(auth).then(()=>console.log("Logged out")).catch(e=>console.error(e));
 };
 
 /* ==================== AUTH STATE ==================== */
-onAuthStateChanged(auth,u=>{
-  if(u){
-    currentUser=u;
-    authSection.style.display="none";
-    appSection.style.display="block";
-    loadClients();
-    loadExpenses();
-  } else {
-    authSection.style.display="block";
-    appSection.style.display="none";
-  }
+onAuthStateChanged(auth, u => {
+  if(u){ currentUser=u; authSection.style.display="none"; appSection.style.display="block"; loadClients(); loadExpenses(); }
+  else { authSection.style.display="block"; appSection.style.display="none"; }
 });
 
-/* ==================== CLIENTS ==================== */
-function loadClients(){
-  onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
-    clients={}; snap.forEach(d=>clients[d.id]=d.data());
-    renderClients(); updateDashboard();
-  });
-}
-function renderClients(){
-  clientsBody.innerHTML="";
-  Object.values(clients).forEach(c=>{
-    const bal=(c.debit||0)-(c.credit||0);
-    clientsBody.innerHTML+=`
-    <tr>
-      <td>${c.name}</td>
-      <td>${c.debit||0}</td>
-      <td>${c.credit||0}</td>
-      <td class="${bal>0?'debit-red':''}">${bal}</td>
-      <td><button onclick="viewClient('${c.name}')">View</button></td>
-    </tr>`;
-  });
-}
-window.viewClient=name=>{
-  const c=clients[cid(name)];
-  let d=0,cr=0;
-  viewBody.innerHTML="";
-  c.history.sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(h=>{
-    d+=h.debit||0; cr+=h.credit||0;
-    viewBody.innerHTML+=`
-    <tr class="${h.debit&&(d-cr)>0?'unpaid-row':''}">
-      <td>${new Date(h.date).toLocaleString()}</td>
-      <td>${h.debit||0}</td>
-      <td>${h.credit||0}</td>
-      <td>${h.remarks||''}</td>
-    </tr>`;
-  });
-  viewTitle.textContent=name;
-  viewSummary.innerHTML=`Debit:${d} Credit:${cr} Balance:${d-cr}`;
-  viewModal.style.display="block";
+/* ==================== ADMIN - View Report Button ==================== */
+const viewAdminBtn = document.createElement("button");
+viewAdminBtn.textContent = "View Report";
+viewAdminBtn.onclick = async () => {
+  if(!currentUser){ alert("Not logged in"); return; }
+  const docRef = doc(db, "users", currentUser.uid);
+  const docSnap = await getDoc(docRef);
+  if(docSnap.exists() && docSnap.data().notes) alert("Admin Notes:\n" + docSnap.data().notes);
+  else alert("No notes found.");
 };
-
-/* ==================== ADD CHARGE ==================== */
-bookingType.onchange=()=>{
-  singleDay.style.display=bookingType.value==="single"?"block":"none";
-  multiDay.style.display=bookingType.value==="multi"?"block":"none";
-};
-addChargeBtn.onclick = async () => {
-  if(!confirm(`Add charge of ${chargeAmount.value} to ${chargeName.value}?`)) return;
-  const ref=doc(db,"users",currentUser.uid,"clients",cid(chargeName.value));
-  const s=await getDoc(ref);
-  const c=s.exists()?s.data():{name:chargeName.value,debit:0,credit:0,history:[]};
-  c.history.push({date:chargeDate.value,debit:+chargeAmount.value,remarks:chargeRemarks.value});
-  await setDoc(ref,{...c,debit:c.debit+ +chargeAmount.value});
-};
-  function updateClientAuto() {
-  const clientNames = Object.values(clients).map(c => c.name);
-
-  // Charge Auto
-  chargeName.oninput = () => {
-    chargeAuto.innerHTML = "";
-    const val = chargeName.value.toLowerCase();
-    clientNames.filter(n => n.toLowerCase().includes(val)).forEach(n => {
-      const div = document.createElement("div");
-      div.textContent = n;
-      div.onclick = () => { chargeName.value = n; chargeAuto.innerHTML = ""; };
-      chargeAuto.appendChild(div);
-    });
-  };
-
-  // Payment Auto
-  paymentSearch.oninput = () => {
-    paymentAuto.innerHTML = "";
-    const val = paymentSearch.value.toLowerCase();
-    clientNames.filter(n => n.toLowerCase().includes(val)).forEach(n => {
-      const div = document.createElement("div");
-      div.textContent = n;
-      div.onclick = () => { paymentSearch.value = n; paymentAuto.innerHTML = ""; updatePaymentBalance(n); };
-      paymentAuto.appendChild(div);
-    });
-  };
-}
-
-// Call this after loading clients
-loadClients = () => {
-  onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
-    clients={}; snap.forEach(d=>clients[d.id]=d.data());
-    renderClients(); updateDashboard(); updateClientAuto();
-  });
-};
-
-function updatePaymentBalance(name){
-  const c = clients[cid(name)];
-  if(c) paymentBalance.value = (c.debit||0) - (c.credit||0);
-}
-
-
-/* ==================== PAYMENT ==================== */
-addPaymentBtn.onclick = async () => {
-  if(!confirm(`Add payment of ${paymentAmount.value} from ${paymentSearch.value}?`)) return;
-  const ref=doc(db,"users",currentUser.uid,"clients",cid(paymentSearch.value));
-  const s=await getDoc(ref); const c=s.data();
-  c.history.push({date:paymentDate.value,credit:+paymentAmount.value,remarks:paymentRemarks.value});
-  await setDoc(ref,{...c,credit:c.credit+ +paymentAmount.value});
-};
-function updateClientAuto() {
-  const clientNames = Object.values(clients).map(c => c.name);
-
-  // Charge Auto
-  chargeName.oninput = () => {
-    chargeAuto.innerHTML = "";
-    const val = chargeName.value.toLowerCase();
-    clientNames.filter(n => n.toLowerCase().includes(val)).forEach(n => {
-      const div = document.createElement("div");
-      div.textContent = n;
-      div.onclick = () => { chargeName.value = n; chargeAuto.innerHTML = ""; };
-      chargeAuto.appendChild(div);
-    });
-  };
-
-  // Payment Auto
-  paymentSearch.oninput = () => {
-    paymentAuto.innerHTML = "";
-    const val = paymentSearch.value.toLowerCase();
-    clientNames.filter(n => n.toLowerCase().includes(val)).forEach(n => {
-      const div = document.createElement("div");
-      div.textContent = n;
-      div.onclick = () => { paymentSearch.value = n; paymentAuto.innerHTML = ""; updatePaymentBalance(n); };
-      paymentAuto.appendChild(div);
-    });
-  };
-}
-
-// Call this after loading clients
-loadClients = () => {
-  onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
-    clients={}; snap.forEach(d=>clients[d.id]=d.data());
-    renderClients(); updateDashboard(); updateClientAuto();
-  });
-};
-
-function updatePaymentBalance(name){
-  const c = clients[cid(name)];
-  if(c) paymentBalance.value = (c.debit||0) - (c.credit||0);
-}
-
-
-/* ==================== EXPENSE ==================== */
-function loadExpenses(){
-  onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
-    expenses=[]; snap.forEach(d=>expenses.push(d.data()));
-    updateDashboard();
-  });
-}
-addExpenseBtn.onclick = () => {
-  if(!confirm(`Add expense of ${expenseAmount.value}?`)) return;
-  addDoc(collection(db,"users",currentUser.uid,"expenses"),{
-    date:expenseDate.value,amount:+expenseAmount.value,desc:expenseDesc.value
-  });
-};
-window.viewExpenses=()=>{
-  const s=new Date(expStart.value),e=new Date(expEnd.value);
-  let t=0,html="<table><tr><th>Date</th><th>Amount</th><th>Description</th></tr>";
-  expenses.forEach(x=>{
-    const d=new Date(x.date);
-    if(d>=s&&d<=e){t+=x.amount;html+=`<tr><td>${d.toLocaleDateString()}</td><td>${x.amount}</td><td>${x.desc}</td></tr>`;}
-  });
-  expenseResult.innerHTML=html+`</table>Total:${t}`;
-};
-
-/* ==================== DASHBOARD ==================== */
-let barChart,lineChart;
-function renderCharts(){
-  const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-  const incomeData=new Array(12).fill(0);
-  const expenseData=new Array(12).fill(0);
-
-  Object.values(clients).forEach(c=>{c.history.forEach(h=>{if(h.credit){incomeData[new Date(h.date).getMonth()]+=h.credit;}})});
-  expenses.forEach(e=>{expenseData[new Date(e.date).getMonth()]+=e.amount;});
-
-  const ctxBar=document.getElementById("barChart").getContext("2d");
-  if(barChart) barChart.destroy();
-  barChart=new Chart(ctxBar,{type:"bar",data:{labels:months,datasets:[{label:"Income",data:incomeData,backgroundColor:"rgba(46,125,50,0.7)"},{label:"Expenses",data:expenseData,backgroundColor:"rgba(198,40,40,0.7)"}]},options:{responsive:true,plugins:{legend:{position:"top"}}}});
-
-  const netData=incomeData.map((v,i)=>v-expenseData[i]);
-  const ctxLine=document.getElementById("lineChart").getContext("2d");
-  if(lineChart) lineChart.destroy();
-  lineChart=new Chart(ctxLine,{type:"line",data:{labels:months,datasets:[{label:"Net Balance",data:netData,borderColor:"blue",backgroundColor:"rgba(0,0,255,0.2)",fill:true}]},options:{responsive:true,plugins:{legend:{position:"top"}}}});
-}
-
-function updateDashboard(){
-  const m=new Date().getMonth(),y=new Date().getFullYear();
-  let inc=0,exp=0;
-  Object.values(clients).forEach(c=>c.history.forEach(h=>{const d=new Date(h.date);if(h.credit&&d.getMonth()===m&&d.getFullYear()===y)inc+=h.credit;}));
-  expenses.forEach(e=>{const d=new Date(e.date);if(d.getMonth()===m&&d.getFullYear()===y)exp+=e.amount;});
-  dashIncome.textContent=inc;
-  dashExpense.textContent=exp;
-  dashNet.textContent=inc-exp;
-  renderCharts();
-}
-
-/* ==================== ADMIN ==================== */
-window.openAdmin=()=>{
-  if(prompt("Admin code")===ADMIN_CODE)showSection("admin");
-  else alert("Access denied");
-};
-window.saveNotes=async()=>{
-  await setDoc(doc(db,"users",currentUser.uid),{notes:adminNotes.value},{merge:true});
-};
-
-window.showSection = id => {
-  document.querySelectorAll(".section").forEach(s => s.style.display="none");
-  document.getElementById(id).style.display="block";
-
-  // Toolbar highlight
-  document.querySelectorAll("#toolbar button").forEach(btn => btn.classList.remove("active"));
-  const activeBtn = Array.from(document.querySelectorAll("#toolbar button"))
-    .find(btn => btn.textContent.toLowerCase() === id.toLowerCase());
-  if(activeBtn) activeBtn.classList.add("active");
-};
+admin.appendChild(viewAdminBtn);
 
 </script>
 
-  
-};
-</script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </body>
 </html>
+
 
 
