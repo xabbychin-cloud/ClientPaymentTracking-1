@@ -17,12 +17,11 @@
     th { background: #eee }
     .debit-red { color: red; font-weight: bold }
     .unpaid-row { background: #ffd6d6 }
-    .highlight-row { background: #fff176 !important } /* Highlight latest balance */
     .autocomplete { position: relative }
     .autolist { position: absolute; background: white; border: 1px solid #ccc; width: 100%; z-index: 100 }
     .autolist div { padding: 6px; cursor: pointer }
     .autolist div:hover { background: #eee }
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.5); overflow-y: auto }
+    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.5) }
     .modal-content { background: white; width: 95%; max-width: 900px; margin: 5% auto; padding: 15px }
     #logoutBtn { background: #c62828; color: white; margin: 15px }
     @media (max-width: 768px) {
@@ -194,9 +193,11 @@ loginBtn.onclick = async () => {
         loginEmail.value = loginPassword.value = "";
         authSection.style.display = "none";
         appSection.style.display = "block";
-        loadClients(); loadExpenses();
+        loadClients();
+        loadExpenses();
     } catch(e) { alert("Login failed: " + e.message); }
 };
+
 signupBtn.onclick = async () => {
     const email = loginEmail.value.trim();
     const password = loginPassword.value;
@@ -207,9 +208,11 @@ signupBtn.onclick = async () => {
         loginEmail.value = loginPassword.value = "";
         authSection.style.display = "none";
         appSection.style.display = "block";
-        loadClients(); loadExpenses();
+        loadClients();
+        loadExpenses();
     } catch(e) { alert("Signup failed: " + e.message); }
 };
+
 logoutBtn.onclick = () => { signOut(auth).catch(console.error); };
 onAuthStateChanged(auth, u => {
     if (u) { currentUser = u; authSection.style.display="none"; appSection.style.display="block"; loadClients(); loadExpenses(); }
@@ -256,19 +259,16 @@ window.viewClient = name => {
     const balance = (c.debit||0) - (c.credit||0);
     viewSummary.textContent = `Balance: ${balance}`;
     let runningBalance = 0;
-    let lastRowIndex = -1;
     viewBody.innerHTML = "";
-    (c.history||[]).sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach((h,i)=>{
+    (c.history||[]).sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(h=>{
         runningBalance += (h.debit||0)-(h.credit||0);
-        const cls = runningBalance>0?'unpaid-row':'';
-        viewBody.innerHTML += `<tr class="${cls}" data-balance="${runningBalance}"><td>${new Date(h.date).toLocaleString()}</td><td>${h.debit||0}</td><td>${h.credit||0}</td><td>${h.remarks||''}</td></tr>`;
-        lastRowIndex = i;
+        viewBody.innerHTML += `<tr class="${runningBalance>0?'unpaid-row':''}">
+            <td>${new Date(h.date).toLocaleString()}</td>
+            <td>${h.debit||0}</td>
+            <td>${h.credit||0}</td>
+            <td>${h.remarks||''}</td>
+        </tr>`;
     });
-    // highlight the last row with outstanding balance
-    if(balance>0){
-        const rows = viewBody.querySelectorAll("tr");
-        rows[rows.length-1].classList.add("highlight-row");
-    }
     viewModal.style.display="block";
 };
 
