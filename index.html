@@ -47,20 +47,11 @@
 <div id="appSection" style="display:none">
 
     <div id="toolbar">
-        <button onclick="showSection('dashboard')" class="active">Dashboard</button>
         <button onclick="showSection('clients')">Clients</button>
         <button onclick="showSection('charge')">Add Charge</button>
         <button onclick="showSection('payment')">Add Payment</button>
         <button onclick="showSection('expense')">Expenses</button>
         <button onclick="openAdmin()">Admin Report</button>
-    </div>
-
-    <!-- DASHBOARD -->
-    <div id="dashboard" class="section" style="display:block">
-        <h2>Dashboard</h2>
-        <p>Income: <span id="dashIncome">0</span></p>
-        <p>Expenses: <span id="dashExpense">0</span></p>
-        <p>Net: <span id="dashNet">0</span></p>
     </div>
 
     <!-- CLIENTS -->
@@ -86,7 +77,6 @@
             <input id="chargeName" placeholder="Client Name">
             <div id="chargeAuto" class="autolist"></div>
         </div>
-        <input id="chargeDate" type="date">
         <select id="bookingType">
             <option value="">Booking Type</option>
             <option value="single">Single Day</option>
@@ -141,8 +131,7 @@
     <!-- ADMIN -->
     <div id="admin" class="section">
         <textarea id="adminNotes" placeholder="Notes"></textarea>
-        <button onclick="saveNotes()">Save Note</button>
-        <button id="viewAdminBtn">View Note</button>
+        <button id="saveNotesBtn">Save Note</button>
         <h3>Admin Report</h3>
         <input id="adminStart" type="date" placeholder="Start Date">
         <input id="adminEnd" type="date" placeholder="End Date">
@@ -169,7 +158,7 @@
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const ADMIN_CODE = "1234";
 const app = initializeApp({
@@ -224,9 +213,13 @@ window.showSection = id => {
     document.querySelectorAll(".section").forEach(s => s.style.display="none");
     const sec = document.getElementById(id);
     if(sec) sec.style.display="block";
+
     document.querySelectorAll("#toolbar button").forEach(btn=>btn.classList.remove("active"));
     const activeBtn = Array.from(document.querySelectorAll("#toolbar button"))
-        .find(btn=>btn.textContent.toLowerCase()===id.toLowerCase());
+        .find(btn=>{
+            const text = btn.textContent.toLowerCase();
+            return text===id.toLowerCase() || text.includes(id.toLowerCase());
+        });
     if(activeBtn) activeBtn.classList.add("active");
 };
 
@@ -272,36 +265,69 @@ window.viewClient = name => {
     viewModal.style.display="block";
 };
 
-// ---------------- ADMIN REPORT ----------------
+// ---------------- ADMIN ----------------
 window.openAdmin = () => {
     if(prompt("Admin code")===ADMIN_CODE) showSection("admin");
     else alert("Access denied");
 };
 window.generateAdminReport = () => {
-    if(!adminStart.value || !adminEnd.value){ alert("Select start and end dates."); return; }
-    const s = new Date(adminStart.value), e = new Date(adminEnd.value);
-    let inc=0, exp=0;
-    let clientHtml="<h4>Clients</h4><table><tr><th>Name</th><th>Balance</th></tr>";
+    if(!adminStart.value || !adminEnd.value){
+        alert("Select start and end dates.");
+        return;
+    }
+    const s = new Date(adminStart.value);
+    const e = new Date(adminEnd.value);
+    let totalIncome=0, totalExpenses=0, cashSales=0;
+
+    let clientHtml = "<h4>Clients</h4><table><tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th></tr>";
     Object.values(clients).forEach(c=>{
-        let bal=0;
+        let debit=0, credit=0;
         (c.history||[]).forEach(h=>{
             const d=new Date(h.date);
-            if(d>=s && d<=e){ bal += (h.debit||0)-(h.credit||0); if(h.credit) inc+=h.credit; }
+            if(d>=s && d<=e){
+                debit += h.debit||0;
+                credit += h.credit||0;
+                if(h.credit && (h.paymentType==="Cash" || h.paymentType==="cash")) cashSales += h.credit;
+            }
         });
-        clientHtml+=`<tr><td>${c.name}</td><td>${bal}</td></tr>`;
+        clientHtml += `<tr>
+            <td>${c.name}</td>
+            <td>${debit}</td>
+            <td>${credit}</td>
+            <td>${debit-credit}</td>
+        </tr>`;
+        totalIncome += credit;
     });
-    expenses.forEach(x=>{ const d=new Date(x.date); if(d>=s&&d<=e) exp+=x.amount; });
-    clientHtml+="</table>";
-    adminResult.innerHTML=`<p>Income: ${inc}</p><p>Expenses: ${exp}</p><p>Net: ${inc-exp}</p>${clientHtml}`;
+    clientHtml += "</table>";
+
+    expenses.forEach(x=>{
+        const d = new Date(x.date);
+        if(d>=s && d<=e) totalExpenses += x.amount;
+    });
+
+    const net = totalIncome - totalExpenses;
+    adminResult.innerHTML = `
+        <h4>Summary</h4>
+        <p>Total Income: ${totalIncome}</p>
+        <p>Total Cash Sales: ${cashSales}</p>
+        <p>Total Expenses: ${totalExpenses}</p>
+        <p>Net: ${net}</p>
+        ${clientHtml}
+    `;
 };
 
-// ---------------- DASHBOARD ----------------
-function updateDashboard(){
-    let inc=0, exp=0;
-    Object.values(clients).forEach(c=>(c.history||[]).forEach(h=>{ if(h.credit) inc+=h.credit; }));
-    expenses.forEach(e=>exp+=e.amount);
-    dashIncome.textContent=inc; dashExpense.textContent=exp; dashNet.textContent=inc-exp;
-}
+// ---------------- ADD CHARGE BOOKING TYPE ----------------
+bookingType.onchange = () => {
+    if(bookingType.value === "single") {
+        singleDay.style.display = "block";
+        multiDay.style.display = "none";
+    } else if(bookingType.value === "multi") {
+        singleDay.style.display = "none";
+        multiDay.style.display = "block";
+    } else {
+        singleDay.style.display = multiDay.style.display = "none";
+    }
+};
 
 // ---------------- AUTOCOMPLETE ----------------
 function updateClientAuto(){
@@ -340,14 +366,12 @@ function loadClients(){
         snap.forEach(d=>clients[d.id]=d.data());
         renderClients();
         updateClientAuto();
-        updateDashboard();
     });
 }
 function loadExpenses(){
     onSnapshot(collection(db,"users",currentUser.uid,"expenses"), snap=>{
         expenses=[];
         snap.forEach(d=>expenses.push(d.data()));
-        updateDashboard();
     });
 }
 </script>
