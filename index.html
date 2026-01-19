@@ -6,26 +6,33 @@
 <title>Client Payment Tracker</title>
 
 <style>
-body{margin:0;font-family:Arial;background:#f4f4f4}
+body{margin:0;font-family:Arial;background:#f4f6f9}
 h1{background:#2e7d32;color:white;padding:15px;text-align:center;margin:0}
 #toolbar{display:flex;gap:8px;padding:10px;background:#333;overflow-x:auto}
-#toolbar button{background:#4CAF50;color:white;border:none;padding:10px 14px;border-radius:4px;cursor:pointer}
-#toolbar button.active{background:yellow;color:black}
+#toolbar button{background:#4CAF50;color:white;border:none;padding:10px 14px;border-radius:4px}
+#toolbar button.active{background:gold;color:black}
 .section{display:none;background:white;margin:10px;padding:15px;border-radius:6px}
-input,select,button{width:100%;padding:8px;margin-top:6px}
+input,select,button,textarea{width:100%;padding:8px;margin-top:6px}
 table{width:100%;border-collapse:collapse;margin-top:10px}
 th,td{border:1px solid #ccc;padding:6px}
 th{background:#eee}
 .debit-red{color:red;font-weight:bold}
+.unpaid-row{background:#ffd6d6}
+.card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.card{background:#fff;border-radius:6px;padding:15px;text-align:center;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+.card h2{margin:5px 0}
+.autocomplete{position:relative}
+.autolist{position:absolute;background:white;border:1px solid #ccc;width:100%;z-index:100}
+.autolist div{padding:6px;cursor:pointer}
+.autolist div:hover{background:#eee}
 .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5)}
 .modal-content{background:white;width:95%;max-width:900px;margin:5% auto;padding:15px}
 #logoutBtn{background:#c62828;color:white;margin:15px}
 
-/* MOBILE */
-@media (max-width:768px){
+@media(max-width:768px){
   table,thead,tbody,th,td,tr{display:block}
   th{display:none}
-  tr{margin-bottom:10px;border:1px solid #ddd;padding:8px}
+  tr{margin-bottom:10px}
   td{display:flex;justify-content:space-between}
 }
 </style>
@@ -47,76 +54,128 @@ th{background:#eee}
 <div id="appSection" style="display:none">
 
 <div id="toolbar">
-  <button onclick="showSection('dashboardSection')" class="active">Dashboard</button>
-  <button onclick="showSection('clientSection')">Clients</button>
-  <button onclick="showSection('chargeSection')">Add Charge</button>
-  <button onclick="showSection('paymentSection')">Add Payment</button>
-  <button onclick="showSection('expenseSection')">Expenses</button>
+  <button onclick="showSection('dashboard')" class="active">Dashboard</button>
+  <button onclick="showSection('clients')">Clients</button>
+  <button onclick="showSection('charge')">Add Charge</button>
+  <button onclick="showSection('payment')">Add Payment</button>
+  <button onclick="showSection('expense')">Expenses</button>
   <button onclick="openAdmin()">Admin Report</button>
 </div>
 
 <!-- DASHBOARD -->
-<div id="dashboardSection" class="section" style="display:block">
-  <h3>Monthly Summary</h3>
-  <div id="dashboardResult"></div>
+<!-- DASHBOARD -->
+<div id="dashboard" class="section" style="display:block">
+  <div class="card-grid">
+    <div class="card"><h3>Income</h3><h2 id="dashIncome">0</h2></div>
+    <div class="card"><h3>Expenses</h3><h2 id="dashExpense">0</h2></div>
+    <div class="card"><h3>Net</h3><h2 id="dashNet">0</h2></div>
+  </div>
+
+  <h3>Monthly Income vs Expenses</h3>
+  <canvas id="barChart" style="width:100%;max-width:700px;height:300px"></canvas>
+
+  <h3>Net Balance Trend</h3>
+  <canvas id="lineChart" style="width:100%;max-width:700px;height:300px"></canvas>
 </div>
 
+
 <!-- CLIENTS -->
-<div id="clientSection" class="section">
+<div id="clients" class="section">
   <select id="clientFilter">
     <option value="all">All</option>
     <option value="outstanding">Outstanding</option>
     <option value="paid">Paid</option>
   </select>
   <table>
-    <thead><tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
+    <thead><tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th></th></tr></thead>
     <tbody id="clientsBody"></tbody>
   </table>
 </div>
 
-<!-- CHARGE -->
-<div id="chargeSection" class="section">
-  <input id="chargeName" placeholder="Client Name">
+<!-- ADD CHARGE -->
+<div id="charge" class="section">
+  <div class="autocomplete">
+    <input id="chargeName" placeholder="Client Name">
+    <div id="chargeAuto" class="autolist"></div>
+  </div>
+  <input id="chargeDate" type="date">
+  <select id="bookingType">
+    <option value="">Booking Type</option>
+    <option value="single">Single Day</option>
+    <option value="multi">Multi Day</option>
+  </select>
+  <div id="singleDay" style="display:none">
+    <input id="singleDate" type="date">
+  </div>
+  <div id="multiDay" style="display:none">
+    <input id="startDate" type="date">
+    <input id="endDate" type="date">
+  </div>
   <input id="chargeAmount" type="number" placeholder="Amount">
   <input id="chargeRemarks" placeholder="Remarks">
   <button id="addChargeBtn">Save Charge</button>
 </div>
 
-<!-- PAYMENT -->
-<div id="paymentSection" class="section">
-  <input id="paymentName" placeholder="Client Name">
+<!-- ADD PAYMENT -->
+<div id="payment" class="section">
+  <div class="autocomplete">
+    <input id="paymentSearch" placeholder="Client Name">
+    <div id="paymentAuto" class="autolist"></div>
+  </div>
+  <input id="paymentDate" type="date">
+  <input id="paymentBalance" readonly>
   <input id="paymentAmount" type="number" placeholder="Amount">
+  <select id="paymentType">
+    <option>Cash</option>
+    <option>Bank Transfer</option>
+    <option>Credit Card</option>
+    <option>Others</option>
+  </select>
+  <select id="paymentMode">
+    <option>Full</option>
+    <option>Partial</option>
+  </select>
   <input id="paymentRemarks" placeholder="Remarks">
   <button id="addPaymentBtn">Save Payment</button>
 </div>
 
 <!-- EXPENSE -->
-<div id="expenseSection" class="section">
+<div id="expense" class="section">
   <input id="expenseDate" type="date">
   <input id="expenseAmount" type="number" placeholder="Amount">
   <input id="expenseDesc" placeholder="Description">
   <button id="addExpenseBtn">Save Expense</button>
 
-  <h3>Expense Report</h3>
+  <h3>View Expenses</h3>
   <input id="expStart" type="date">
   <input id="expEnd" type="date">
-  <button onclick="exportExpensesCSV()">Export Excel</button>
-  <button onclick="exportExpensesPDF()">Export PDF</button>
+  <button onclick="viewExpenses()">Generate</button>
   <div id="expenseResult"></div>
 </div>
 
 <!-- ADMIN -->
-<div id="adminSection" class="section">
-  <h3>Admin Report</h3>
+<div id="admin" class="section">
   <input id="adminStart" type="date">
   <input id="adminEnd" type="date">
-  <button onclick="generateAdminReport()">Generate</button>
-  <button onclick="exportAdminCSV()">Export Excel</button>
-  <button onclick="exportAdminPDF()">Export PDF</button>
+  <textarea id="adminNotes" placeholder="Notes"></textarea>
+  <button onclick="saveNotes()">Save Notes</button>
   <div id="adminResult"></div>
 </div>
 
 <button id="logoutBtn">Logout</button>
+</div>
+
+<!-- VIEW MODAL -->
+<div id="viewModal" class="modal">
+  <div class="modal-content">
+    <button onclick="viewModal.style.display='none'">Close</button>
+    <h3 id="viewTitle"></h3>
+    <div id="viewSummary"></div>
+    <table>
+      <thead><tr><th>Date</th><th>Debit</th><th>Credit</th><th>Remarks</th></tr></thead>
+      <tbody id="viewBody"></tbody>
+    </table>
+  </div>
 </div>
 
 <script type="module">
@@ -124,79 +183,81 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebas
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-const ADMIN_CODE = "1234"; // 🔐 CHANGE THIS
-
-const app = initializeApp({
-  apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
-  authDomain:"client-payment-tracker-3572b.firebaseapp.com",
-  projectId:"client-payment-tracker-3572b"
-});
-
-const auth=getAuth(app);
-const db=getFirestore(app);
-
+const ADMIN_CODE="1234";
+const app=initializeApp({apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",authDomain:"client-payment-tracker-3572b.firebaseapp.com",projectId:"client-payment-tracker-3572b"});
+const auth=getAuth(app),db=getFirestore(app);
 let currentUser,clients={},expenses=[];
 
 const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
 
 /* AUTH */
 loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
-signupBtn.onclick=async()=>{
-  const c=await createUserWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
-  await setDoc(doc(db,"users",c.user.uid),{created:new Date()});
-};
+signupBtn.onclick=()=>createUserWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
 logoutBtn.onclick=()=>signOut(auth);
 
 onAuthStateChanged(auth,u=>{
-  if(u){
-    currentUser=u;
-    authSection.style.display="none";
-    appSection.style.display="block";
-    loadClients(); loadExpenses(); dashboard();
-  }else{
-    authSection.style.display="block";
-    appSection.style.display="none";
-  }
+  if(u){currentUser=u;authSection.style.display="none";appSection.style.display="block";loadClients();loadExpenses();}
+  else{authSection.style.display="block";appSection.style.display="none";}
 });
 
 /* CLIENTS */
 function loadClients(){
   onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
-    clients={};
-    snap.forEach(d=>clients[d.id]=d.data());
-    renderClients(); dashboard();
+    clients={}; snap.forEach(d=>clients[d.id]=d.data());
+    renderClients(); updateDashboard();
   });
 }
-
 function renderClients(){
   clientsBody.innerHTML="";
-  const f=clientFilter.value;
   Object.values(clients).forEach(c=>{
     const bal=(c.debit||0)-(c.credit||0);
-    if(f==="outstanding"&&bal<=0)return;
-    if(f==="paid"&&bal>0)return;
-    clientsBody.innerHTML+=`<tr>
-      <td>${c.name}</td><td>${c.debit||0}</td><td>${c.credit||0}</td><td>${bal}</td>
+    clientsBody.innerHTML+=`
+    <tr>
+      <td>${c.name}</td>
+      <td>${c.debit||0}</td>
+      <td>${c.credit||0}</td>
+      <td class="${bal>0?'debit-red':''}">${bal}</td>
+      <td><button onclick="viewClient('${c.name}')">View</button></td>
     </tr>`;
   });
 }
-clientFilter.onchange=renderClients;
+window.viewClient=name=>{
+  const c=clients[cid(name)];
+  let d=0,cr=0;
+  viewBody.innerHTML="";
+  c.history.sort((a,b)=>new Date(a.date)-new Date(b.date)).forEach(h=>{
+    d+=h.debit||0; cr+=h.credit||0;
+    viewBody.innerHTML+=`
+    <tr class="${h.debit&&(d-cr)>0?'unpaid-row':''}">
+      <td>${new Date(h.date).toLocaleString()}</td>
+      <td>${h.debit||0}</td>
+      <td>${h.credit||0}</td>
+      <td>${h.remarks||''}</td>
+    </tr>`;
+  });
+  viewTitle.textContent=name;
+  viewSummary.innerHTML=`Debit:${d} Credit:${cr} Balance:${d-cr}`;
+  viewModal.style.display="block";
+};
 
-/* CHARGE */
+/* ADD CHARGE */
+bookingType.onchange=()=>{
+  singleDay.style.display=bookingType.value==="single"?"block":"none";
+  multiDay.style.display=bookingType.value==="multi"?"block":"none";
+};
 addChargeBtn.onclick=async()=>{
   const ref=doc(db,"users",currentUser.uid,"clients",cid(chargeName.value));
   const s=await getDoc(ref);
   const c=s.exists()?s.data():{name:chargeName.value,debit:0,credit:0,history:[]};
-  c.history.push({date:new Date().toISOString(),debit:+chargeAmount.value,remarks:chargeRemarks.value});
+  c.history.push({date:chargeDate.value,debit:+chargeAmount.value,remarks:chargeRemarks.value});
   await setDoc(ref,{...c,debit:c.debit+ +chargeAmount.value});
 };
 
 /* PAYMENT */
 addPaymentBtn.onclick=async()=>{
-  const ref=doc(db,"users",currentUser.uid,"clients",cid(paymentName.value));
-  const s=await getDoc(ref);
-  const c=s.data();
-  c.history.push({date:new Date().toISOString(),credit:+paymentAmount.value,remarks:paymentRemarks.value});
+  const ref=doc(db,"users",currentUser.uid,"clients",cid(paymentSearch.value));
+  const s=await getDoc(ref); const c=s.data();
+  c.history.push({date:paymentDate.value,credit:+paymentAmount.value,remarks:paymentRemarks.value});
   await setDoc(ref,{...c,credit:c.credit+ +paymentAmount.value});
 };
 
@@ -204,56 +265,123 @@ addPaymentBtn.onclick=async()=>{
 function loadExpenses(){
   onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
     expenses=[]; snap.forEach(d=>expenses.push(d.data()));
+    updateDashboard();
   });
 }
 addExpenseBtn.onclick=()=>addDoc(collection(db,"users",currentUser.uid,"expenses"),{
   date:expenseDate.value,amount:+expenseAmount.value,desc:expenseDesc.value
 });
+window.viewExpenses=()=>{
+  const s=new Date(expStart.value),e=new Date(expEnd.value);
+  let t=0,html="<table><tr><th>Date</th><th>Amount</th><th>Description</th></tr>";
+  expenses.forEach(x=>{
+    const d=new Date(x.date);
+    if(d>=s&&d<=e){t+=x.amount;html+=`<tr><td>${d.toLocaleDateString()}</td><td>${x.amount}</td><td>${x.desc}</td></tr>`;}
+  });
+  expenseResult.innerHTML=html+`</table>Total:${t}`;
+};
 
 /* DASHBOARD */
-function dashboard(){
+function updateDashboard(){
   const m=new Date().getMonth(),y=new Date().getFullYear();
-  let income=0,exp=0;
+  let inc=0,exp=0;
   Object.values(clients).forEach(c=>c.history.forEach(h=>{
     const d=new Date(h.date);
-    if(d.getMonth()===m&&d.getFullYear()===y&&h.credit)income+=h.credit;
+    if(h.credit&&d.getMonth()===m&&d.getFullYear()===y)inc+=h.credit;
   }));
   expenses.forEach(e=>{
     const d=new Date(e.date);
     if(d.getMonth()===m&&d.getFullYear()===y)exp+=e.amount;
   });
-  dashboardResult.innerHTML=`Income: ${income}<br>Expenses: ${exp}<br>Net: ${income-exp}`;
+  dashIncome.textContent=inc;
+  dashExpense.textContent=exp;
+  dashNet.textContent=inc-exp;
+
+  let barChart,lineChart;
+
+function renderCharts(){
+  // Monthly labels (Jan-Dec)
+  const months=["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+  
+  // Prepare income and expense per month
+  const incomeData=new Array(12).fill(0);
+  const expenseData=new Array(12).fill(0);
+
+  Object.values(clients).forEach(c=>{
+    c.history.forEach(h=>{
+      if(h.credit){
+        const d=new Date(h.date);
+        incomeData[d.getMonth()]+=h.credit;
+      }
+    });
+  });
+
+  expenses.forEach(e=>{
+    const d=new Date(e.date);
+    expenseData[d.getMonth()]+=e.amount;
+  });
+
+  // Bar Chart: Income vs Expense
+  const ctxBar=document.getElementById("barChart").getContext("2d");
+  if(barChart) barChart.destroy();
+  barChart=new Chart(ctxBar,{
+    type:"bar",
+    data:{
+      labels:months,
+      datasets:[
+        {label:"Income",data:incomeData,backgroundColor:"rgba(46,125,50,0.7)"},
+        {label:"Expenses",data:expenseData,backgroundColor:"rgba(198,40,40,0.7)"}
+      ]
+    },
+    options:{responsive:true,plugins:{legend:{position:"top"}}}
+  });
+
+  // Line Chart: Net Balance
+  const netData=incomeData.map((v,i)=>v-expenseData[i]);
+  const ctxLine=document.getElementById("lineChart").getContext("2d");
+  if(lineChart) lineChart.destroy();
+  lineChart=new Chart(ctxLine,{
+    type:"line",
+    data:{
+      labels:months,
+      datasets:[{label:"Net Balance",data:netData,borderColor:"blue",backgroundColor:"rgba(0,0,255,0.2)",fill:true}]
+    },
+    options:{responsive:true,plugins:{legend:{position:"top"}}}
+  });
 }
 
-/* ADMIN LOCK */
+// Call after dashboard update
+function updateDashboard(){
+  const m=new Date().getMonth(),y=new Date().getFullYear();
+  let inc=0,exp=0;
+  Object.values(clients).forEach(c=>c.history.forEach(h=>{
+    const d=new Date(h.date);
+    if(h.credit&&d.getMonth()===m&&d.getFullYear()===y)inc+=h.credit;
+  }));
+  expenses.forEach(e=>{
+    const d=new Date(e.date);
+    if(d.getMonth()===m&&d.getFullYear()===y)exp+=e.amount;
+  });
+  dashIncome.textContent=inc;
+  dashExpense.textContent=exp;
+  dashNet.textContent=inc-exp;
+  renderCharts(); // 🔥 draw charts
+}
+
+/* ADMIN */
 window.openAdmin=()=>{
-  const code=prompt("Enter admin code:");
-  if(code===ADMIN_CODE) showSection("adminSection");
+  if(prompt("Admin code")===ADMIN_CODE)showSection("admin");
   else alert("Access denied");
 };
-
-/* EXPORT HELPERS */
-function exportCSV(rows,name){
-  const csv=rows.map(r=>r.join(",")).join("\n");
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(new Blob([csv]));
-  a.download=name; a.click();
-}
-
-window.exportExpensesCSV=()=>exportCSV(
-  [["Date","Amount","Description"],...expenses.map(e=>[e.date,e.amount,e.desc])],
-  "expenses.csv"
-);
-
-window.exportExpensesPDF=()=>window.print();
-window.exportAdminCSV=()=>alert("Admin CSV exported");
-window.exportAdminPDF=()=>window.print();
+window.saveNotes=async()=>{
+  await setDoc(doc(db,"users",currentUser.uid),{notes:adminNotes.value},{merge:true});
+};
 
 window.showSection=id=>{
   document.querySelectorAll(".section").forEach(s=>s.style.display="none");
   document.getElementById(id).style.display="block";
 };
 </script>
-
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </body>
 </html>
