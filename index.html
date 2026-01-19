@@ -5,31 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Client Payment Tracker</title>
 <style>
-    body { margin: 0; font-family: Arial; background: #f4f6f9 }
-    h1 { background: #2e7d32; color: white; padding: 15px; text-align: center; margin: 0 }
-    #toolbar { display: flex; gap: 8px; padding: 10px; background: #333; overflow-x: auto }
-    #toolbar button { background: #4CAF50; color: white; border: none; padding: 10px 14px; border-radius: 4px; cursor: pointer }
-    #toolbar button.active { background: gold; color: black }
-    .section { display: none; background: white; margin: 10px; padding: 15px; border-radius: 6px }
-    input, select, button, textarea { width: 100%; padding: 8px; margin-top: 6px }
-    table { width: 100%; border-collapse: collapse; margin-top: 10px }
-    th, td { border: 1px solid #ccc; padding: 6px }
-    th { background: #eee }
-    .debit-red { color: red; font-weight: bold }
-    .unpaid-row { background: #ffd6d6 }
-    .autocomplete { position: relative }
-    .autolist { position: absolute; background: white; border: 1px solid #ccc; width: 100%; z-index: 100 }
-    .autolist div { padding: 6px; cursor: pointer }
-    .autolist div:hover { background: #eee }
-    .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.5) }
-    .modal-content { background: white; width: 95%; max-width: 900px; margin: 5% auto; padding: 15px }
-    #logoutBtn { background: #c62828; color: white; margin: 15px }
-    @media (max-width: 768px) {
-        table, thead, tbody, th, td, tr { display: block }
-        th { display: none }
-        tr { margin-bottom: 10px }
-        td { display: flex; justify-content: space-between }
-    }
+body { margin: 0; font-family: Arial; background: #f4f6f9 }
+h1 { background: #2e7d32; color: white; padding: 15px; text-align: center; margin: 0 }
+#toolbar { display: flex; gap: 8px; padding: 10px; background: #333; overflow-x: auto }
+#toolbar button { background: #4CAF50; color: white; border: none; padding: 10px 14px; border-radius: 4px; cursor: pointer }
+#toolbar button.active { background: gold; color: black }
+.section { display: none; background: white; margin: 10px; padding: 15px; border-radius: 6px }
+input, select, button, textarea { width: 100%; padding: 8px; margin-top: 6px }
+table { width: 100%; border-collapse: collapse; margin-top: 10px }
+th, td { border: 1px solid #ccc; padding: 6px }
+th { background: #eee }
+.debit-red { color: red; font-weight: bold }
+.unpaid-row { background: #ffd6d6 }
+.autocomplete { position: relative }
+.autolist { position: absolute; background: white; border: 1px solid #ccc; width: 100%; z-index: 100 }
+.autolist div { padding: 6px; cursor: pointer }
+.autolist div:hover { background: #eee }
+.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.5) }
+.modal-content { background: white; width: 95%; max-width: 900px; margin: 5% auto; padding: 15px }
+#logoutBtn { background: #c62828; color: white; margin: 15px }
+@media (max-width: 768px) {
+    table, thead, tbody, th, td, tr { display: block }
+    th { display: none }
+    tr { margin-bottom: 10px }
+    td { display: flex; justify-content: space-between }
+}
 </style>
 </head>
 <body>
@@ -77,6 +77,7 @@
             <input id="chargeName" placeholder="Client Name">
             <div id="chargeAuto" class="autolist"></div>
         </div>
+        <input id="chargeDate" type="date">
         <select id="bookingType">
             <option value="">Booking Type</option>
             <option value="single">Single Day</option>
@@ -93,82 +94,36 @@
     </div>
 
     <!-- ADD PAYMENT -->
-<div id="payment" class="section">
-    <div class="autocomplete">
-        <input id="paymentSearch" placeholder="Client Name">
-        <div id="paymentAuto" class="autolist"></div>
+    <div id="payment" class="section">
+        <div class="autocomplete">
+            <input id="paymentSearch" placeholder="Client Name">
+            <div id="paymentAuto" class="autolist"></div>
+        </div>
+
+        <!-- Calendar based on booking type -->
+        <div id="paymentCalendarSingle" style="display:none">
+            <input id="paymentSingleDate" type="date">
+        </div>
+        <div id="paymentCalendarMulti" style="display:none">
+            <input id="paymentStartDate" type="date">
+            <input id="paymentEndDate" type="date">
+        </div>
+
+        <input id="paymentBalance" readonly placeholder="Balance">
+        <input id="paymentAmount" type="number" placeholder="Amount">
+        <select id="paymentType">
+            <option>Cash</option>
+            <option>Bank Transfer</option>
+            <option>Credit Card</option>
+            <option>Others</option>
+        </select>
+        <select id="paymentMode">
+            <option>Full</option>
+            <option>Partial</option>
+        </select>
+        <input id="paymentRemarks" placeholder="Remarks">
+        <button id="addPaymentBtn">Save Payment</button>
     </div>
-
-    <!-- Show calendar based on booking type -->
-    <div id="paymentCalendarSingle" style="display:none">
-        <input id="paymentSingleDate" type="date">
-    </div>
-    <div id="paymentCalendarMulti" style="display:none">
-        <input id="paymentStartDate" type="date">
-        <input id="paymentEndDate" type="date">
-    </div>
-
-    <input id="paymentBalance" readonly placeholder="Balance">
-    <input id="paymentAmount" type="number" placeholder="Amount">
-    <select id="paymentType">
-        <option>Cash</option>
-        <option>Bank Transfer</option>
-        <option>Credit Card</option>
-        <option>Others</option>
-    </select>
-    <select id="paymentMode">
-        <option>Full</option>
-        <option>Partial</option>
-    </select>
-    <input id="paymentRemarks" placeholder="Remarks">
-    <button id="addPaymentBtn">Save Payment</button>
-</div>
-
-<script>
-function updatePaymentCalendar(clientName){
-    const c = clients[cid(clientName)];
-    if(!c) { 
-        paymentCalendarSingle.style.display = paymentCalendarMulti.style.display = "none"; 
-        return; 
-    }
-
-    const lastBooking = (c.history||[]).slice(-1)[0]; // last booking
-    if(lastBooking){
-        if(lastBooking.bookingType === "single"){
-            paymentCalendarSingle.style.display = "block";
-            paymentCalendarMulti.style.display = "none";
-            paymentSingleDate.value = lastBooking.date || "";
-        } else if(lastBooking.bookingType === "multi"){
-            paymentCalendarSingle.style.display = "none";
-            paymentCalendarMulti.style.display = "block";
-            paymentStartDate.value = lastBooking.startDate || "";
-            paymentEndDate.value = lastBooking.endDate || "";
-        }
-    } else {
-        paymentCalendarSingle.style.display = paymentCalendarMulti.style.display = "none";
-    }
-}
-
-// Autocomplete + calendar update
-paymentSearch.oninput = ()=>{
-    paymentAuto.innerHTML="";
-    const val = paymentSearch.value.toLowerCase();
-    Object.values(clients).map(c=>c.name)
-        .filter(n=>n.toLowerCase().includes(val))
-        .forEach(n=>{
-            const div = document.createElement("div");
-            div.textContent=n;
-            div.onclick = ()=>{
-                paymentSearch.value = n;
-                paymentAuto.innerHTML="";
-                const c = clients[cid(n)];
-                if(c) paymentBalance.value=(c.debit||0)-(c.credit||0);
-                updatePaymentCalendar(n);
-            };
-            paymentAuto.appendChild(div);
-        });
-};
-   
 
     <!-- EXPENSE -->
     <div id="expense" class="section">
@@ -183,75 +138,16 @@ paymentSearch.oninput = ()=>{
         <div id="expenseResult"></div>
     </div>
 
-    window.openAdmin = () => {
-    const code = prompt("Enter Admin Code");
-    if(code===ADMIN_CODE){
-        showSection("admin");
-        // Load notes if any
-        const storedNotes = localStorage.getItem("adminNotes") || "";
-        adminNotes.value = storedNotes;
-    } else alert("Access denied");
-};
-
-document.getElementById("saveNotesBtn").onclick = ()=>{
-    localStorage.setItem("adminNotes", adminNotes.value);
-};
-
-window.generateAdminReport = () => {
-    if(!adminStart.value || !adminEnd.value){ alert("Select start and end dates."); return; }
-    const s = new Date(adminStart.value), e = new Date(adminEnd.value);
-    let totalIncome=0, totalExpenses=0, cashSales=0;
-
-    let clientHtml = "<h4>Clients</h4><table><tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th></tr>";
-    Object.values(clients).forEach(c=>{
-        let debit=0, credit=0;
-        (c.history||[]).forEach(h=>{
-            const d=new Date(h.date);
-            if(d>=s && d<=e){
-                debit += h.debit||0;
-                credit += h.credit||0;
-                if(h.credit && (h.paymentType==="Cash" || h.paymentType==="cash")) cashSales += h.credit;
-            }
-        });
-        clientHtml += `<tr>
-            <td>${c.name}</td>
-            <td>${debit}</td>
-            <td>${credit}</td>
-            <td>${debit-credit}</td>
-        </tr>`;
-        totalIncome += credit;
-    });
-    clientHtml += "</table>";
-
-    expenses.forEach(x=>{
-        const d = new Date(x.date);
-        if(d>=s && d<=e) totalExpenses += x.amount;
-    });
-
-    const net = totalIncome - totalExpenses;
-    adminResult.innerHTML = `
-        <h4>Summary</h4>
-        <p>Total Income: ${totalIncome}</p>
-        <p>Total Cash Sales: ${cashSales}</p>
-        <p>Total Expenses: ${totalExpenses}</p>
-        <p>Net: ${net}</p>
-        ${clientHtml}
-    `;
-};
-    // ---------------- RESTORE CLIENT HISTORY ----------------
-function loadClients(){
-    onSnapshot(collection(db,"users",currentUser.uid,"clients"), snap=>{
-        clients={};
-        snap.forEach(d=>{
-            clients[d.id] = d.data();
-            clients[d.id].history = clients[d.id].history || []; // ensure history exists
-        });
-        renderClients();
-        updateClientAuto();
-    });
-}
-</script>
-
+    <!-- ADMIN -->
+    <div id="admin" class="section">
+        <textarea id="adminNotes" placeholder="Notes"></textarea>
+        <button id="saveNotesBtn">Save Note</button>
+        <h3>Admin Report</h3>
+        <input id="adminStart" type="date" placeholder="Start Date">
+        <input id="adminEnd" type="date" placeholder="End Date">
+        <button onclick="generateAdminReport()">Generate Report</button>
+        <div id="adminResult"></div>
+    </div>
 
     <!-- VIEW MODAL -->
     <div id="viewModal" class="modal">
@@ -330,10 +226,7 @@ window.showSection = id => {
 
     document.querySelectorAll("#toolbar button").forEach(btn=>btn.classList.remove("active"));
     const activeBtn = Array.from(document.querySelectorAll("#toolbar button"))
-        .find(btn=>{
-            const text = btn.textContent.toLowerCase();
-            return text===id.toLowerCase() || text.includes(id.toLowerCase());
-        });
+        .find(btn=>btn.textContent.toLowerCase()===id.toLowerCase() || (id.toLowerCase().includes(btn.textContent.toLowerCase())));
     if(activeBtn) activeBtn.classList.add("active");
 };
 
@@ -381,16 +274,16 @@ window.viewClient = name => {
 
 // ---------------- ADMIN ----------------
 window.openAdmin = () => {
-    if(prompt("Admin code")===ADMIN_CODE) showSection("admin");
+    const code = prompt("Enter Admin Code");
+    if(code===ADMIN_CODE) showSection("admin");
     else alert("Access denied");
 };
+
+saveNotesBtn.onclick = () => { localStorage.setItem("adminNotes", adminNotes.value); };
+
 window.generateAdminReport = () => {
-    if(!adminStart.value || !adminEnd.value){
-        alert("Select start and end dates.");
-        return;
-    }
-    const s = new Date(adminStart.value);
-    const e = new Date(adminEnd.value);
+    if(!adminStart.value || !adminEnd.value){ alert("Select start and end dates."); return; }
+    const s = new Date(adminStart.value), e = new Date(adminEnd.value);
     let totalIncome=0, totalExpenses=0, cashSales=0;
 
     let clientHtml = "<h4>Clients</h4><table><tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th></tr>";
@@ -430,17 +323,11 @@ window.generateAdminReport = () => {
     `;
 };
 
-// ---------------- ADD CHARGE BOOKING TYPE ----------------
+// ---------------- ADD CHARGE ----------------
 bookingType.onchange = () => {
-    if(bookingType.value === "single") {
-        singleDay.style.display = "block";
-        multiDay.style.display = "none";
-    } else if(bookingType.value === "multi") {
-        singleDay.style.display = "none";
-        multiDay.style.display = "block";
-    } else {
-        singleDay.style.display = multiDay.style.display = "none";
-    }
+    if(bookingType.value==="single"){ singleDay.style.display="block"; multiDay.style.display="none"; }
+    else if(bookingType.value==="multi"){ singleDay.style.display="none"; multiDay.style.display="block"; }
+    else { singleDay.style.display=multiDay.style.display="none"; }
 };
 
 // ---------------- AUTOCOMPLETE ----------------
@@ -467,17 +354,40 @@ function updateClientAuto(){
                 paymentAuto.innerHTML="";
                 const c = clients[cid(n)];
                 if(c) paymentBalance.value=(c.debit||0)-(c.credit||0);
+                updatePaymentCalendar(n);
             };
             paymentAuto.appendChild(div);
         });
     };
 }
 
-// ---------------- INITIAL LOAD ----------------
+// ---------------- PAYMENT CALENDAR ----------------
+function updatePaymentCalendar(clientName){
+    const c = clients[cid(clientName)];
+    if(!c){ paymentCalendarSingle.style.display=paymentCalendarMulti.style.display="none"; return; }
+    const lastBooking = (c.history||[]).slice(-1)[0];
+    if(lastBooking){
+        if(lastBooking.bookingType==="single"){
+            paymentCalendarSingle.style.display="block";
+            paymentCalendarMulti.style.display="none";
+            paymentSingleDate.value=lastBooking.date||"";
+        } else if(lastBooking.bookingType==="multi"){
+            paymentCalendarSingle.style.display="none";
+            paymentCalendarMulti.style.display="block";
+            paymentStartDate.value=lastBooking.startDate||"";
+            paymentEndDate.value=lastBooking.endDate||"";
+        }
+    } else { paymentCalendarSingle.style.display=paymentCalendarMulti.style.display="none"; }
+}
+
+// ---------------- LOAD CLIENTS & EXPENSES ----------------
 function loadClients(){
     onSnapshot(collection(db,"users",currentUser.uid,"clients"), snap=>{
         clients={};
-        snap.forEach(d=>clients[d.id]=d.data());
+        snap.forEach(d=>{
+            clients[d.id]=d.data();
+            clients[d.id].history = clients[d.id].history || [];
+        });
         renderClients();
         updateClientAuto();
     });
@@ -491,4 +401,3 @@ function loadExpenses(){
 </script>
 </body>
 </html>
-
