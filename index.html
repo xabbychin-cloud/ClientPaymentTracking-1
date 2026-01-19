@@ -377,20 +377,14 @@ window.viewClient = name => {
   viewBody.innerHTML = "";
   // Sort history by date to process in order
   const sortedHistory = c.history.sort((a, b) => new Date(a.date) - new Date(b.date));
-  let remainingPayment = 0; // Tracks how much payment is left to apply to charges
+  let remainingOutstanding = bal; // Total outstanding balance
   sortedHistory.forEach(h => {
     let rowClass = '';
+    if (h.debit > 0 && remainingOutstanding > 0) {
+      rowClass = 'unpaid-row';
+    }
     if (h.debit > 0) {
-      // It's a charge: Check if it's fully covered by remaining payment
-      if (remainingPayment >= h.debit) {
-        remainingPayment -= h.debit; // Fully covered, no highlight
-      } else {
-        rowClass = 'unpaid-row'; // Partially or not covered, highlight
-        remainingPayment = 0; // Reset for next charges
-      }
-    } else if (h.credit > 0) {
-      // It's a payment: Add to remaining payment for future charges
-      remainingPayment += h.credit;
+      remainingOutstanding -= h.debit;
     }
     viewBody.innerHTML += `
     <tr class="${rowClass}">
@@ -428,153 +422,4 @@ function selectClient(name) {
   let d = 0, cr = 0, remarks = [];
   c.history.forEach(h => {
     d += h.debit || 0; cr += h.credit || 0;
-    if (h.debit > 0 && h.remarks) remarks.push(h.remarks);
-  });
-  const bal = d - cr;
-  paymentClientName.value = name;
-  paymentBalance.value = `Balance: ${bal}`;
-  paymentRemarks.value = bal > 0 && remarks.length ? remarks.join(', ') : '';
-  paymentAuto.innerHTML = "";
-}
-
-// PAYMENT
-addPaymentBtn.onclick = async () => {
-  const name = paymentClientName.value;
-  const ref = doc(db, "users", currentUser.uid, "clients", cid(name));
-  const s = await getDoc(ref);
-  const c = s.data();
-  c.history.push({ date: paymentDate.value, debit: 0, credit: +paymentAmount.value, method: "payment", mode: paymentMode.value, type: paymentType.value, remarks: paymentRemarks.value });
-  await setDoc(ref, { ...c, credit: c.credit + +paymentAmount.value });
-  alert("Payment added");
-  // Clear form after save
-  paymentSearch.value = '';
-  paymentClientName.value = '';
-  paymentBalance.value = '';
-  paymentAmount.value = '';
-  paymentType.value = '';
-  paymentMode.value = '';
-  paymentDate.value = '';
-  paymentRemarks.value = '';
-};
-
-// EXPENSE
-function loadExpenses() {
-  onSnapshot(collection(db, "users", currentUser.uid, "expenses"), snap => {
-    expenses = []; snap.forEach(d => expenses.push(d.data()));
-  });
-}
-addExpenseBtn.onclick = async () => {
-  await addDoc(collection(db, "users", currentUser.uid, "expenses"), {
-    date: expenseDate.value, amount: +expenseAmount.value, desc: expenseDesc.value, invoice: expenseInvoice.value
-  });
-  alert("Expense saved");
-};
-
-// VIEW EXPENSES
-viewExpenseBtn.onclick = () => {
-  const s = new Date(viewExpenseStart.value);
-  const e = new Date(viewExpenseEnd.value);
-  const filtered = expenses.filter(x => new Date(x.date) >= s && new Date(x.date) <= e);
-  let html = "<table><thead><tr><th>Date</th><th>Amount</th><th>Description</th><th>Invoice</th></tr></thead><tbody>";
-  filtered.forEach(x => html += `<tr><td>${formatDate(x.date)}</td><td>${x.amount}</td><td>${x.desc}</td><td>${x.invoice || ''}</td></tr>`);
-  html += "</tbody></table>";
-  viewExpenseResult.innerHTML = html;
-};
-
-// NOTES
-function loadNotes() {
-  const userRef = doc(db, "users", currentUser.uid);
-  getDoc(userRef).then(docSnap => {
-    if (docSnap.exists()) {
-      notes = docSnap.data().content || '';
-      notesTextarea.value = notes;
-      notesDisplay.innerHTML = notes.replace(/\n/g, '<br>');
-    }
-  }).catch(e => console.error("Error loading notes:", e));
-}
-
-// Edit/Save Notes
-let isEditingNotes = false;
-const editNotesBtn = document.createElement('button');
-editNotesBtn.textContent = 'Edit';
-editNotesBtn.style.marginLeft = '10px';
-notesTextarea.parentNode.insertBefore(editNotesBtn, notesTextarea.nextSibling);
-
-editNotesBtn.onclick = () => {
-  if (isEditingNotes) {
-    // Save mode
-    saveNotes();
-    notesTextarea.readOnly = true;
-    editNotesBtn.textContent = 'Edit';
-    isEditingNotes = false;
-  } else {
-    // Edit mode
-    notesTextarea.readOnly = false;
-    notesTextarea.focus();
-    editNotesBtn.textContent = 'Save';
-    isEditingNotes = true;
-  }
-};
-
-async function saveNotes() {
-  if (!currentUser) return alert("Please log in to save notes.");
-  notes = notesTextarea.value;
-  const userRef = doc(db, "users", currentUser.uid);
-  try {
-    await setDoc(userRef, { content: notes }, { merge: true }); // Use merge to update only the content field
-    alert("Notes saved successfully!");
-    notesDisplay.innerHTML = notes.replace(/\n/g, '<br>');
-  } catch (e) {
-    alert(`Failed to save notes: ${e.message}`);
-  }
-}
-
-// REPORT
-generateReportBtn.onclick = () => {
-  const s = new Date(reportStart.value);
-  const e = new Date(reportEnd.value);
-  let cashSales = 0, bankTransferSales = 0, creditCardSales = 0, otherSales = 0;
-  Object.values(clients).forEach(c => c.history.forEach(h => {
-    const d = new Date(h.date);
-    if (h.credit && d >= s && d <= e) {
-      if (h.type === "Cash") cashSales += h.credit;
-      else if (h.type === "Bank Transfer") bankTransferSales += h.credit;
-      else if (h.type === "Credit Card") creditCardSales += h.credit;
-      else otherSales += h.credit;
-    }
-  }));
-  // Merge otherSales into cashSales
-  cashSales += otherSales;
-  otherSales = 0;
-  const totalCollection = cashSales + bankTransferSales + creditCardSales + otherSales;
-  const totalExpenses = expenses.filter(x => new Date(x.date) >= s && new Date(x.date) <= e).reduce((a, b) => a + b.amount, 0);
-  const netSales = totalCollection - totalExpenses;
-  const cashOnHand = netSales - (bankTransferSales + creditCardSales + otherSales);
-  reportResult.innerHTML = `
-    <strong>Sales Breakdown:</strong><br>
-    Total Cash Sales: ${cashSales}<br>
-    Total Bank Transfer Sales: ${bankTransferSales}<br>
-    Total Credit Card Sales: ${creditCardSales}<br>
-    Total Other Sales: ${otherSales}<br><br>
-    <strong>Total Collection: ${totalCollection}</strong><br>
-    <strong>Total Expenses: ${totalExpenses}</strong><br>
-    <strong>Net Sales: ${netSales}</strong><br>
-    <strong>Cash on Hand: ${cashOnHand}</strong>
-  `;
-};
-
-logoutBtn.onclick = () => signOut(auth);
-window.showSection = id => {
-  document.querySelectorAll(".section").forEach(s => s.style.display = "none");
-  document.getElementById(id).style.display = "block";
-  // Highlight active toolbar button
-  document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active"));
-  const activeBtn = Array.from(document.querySelectorAll("#toolbar button")).find(b => b.onclick.toString().includes(id));
-  if (activeBtn) activeBtn.classList.add("active");
-};
-</script>
-
-
-
-
-
+    if (h.debit > 0 && h.remarks) remarks.push
