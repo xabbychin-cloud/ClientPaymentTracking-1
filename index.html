@@ -8,26 +8,26 @@
 <style>
 body{margin:0;font-family:Arial;background:#f4f4f4}
 h1{background:#2e7d32;color:white;padding:15px;text-align:center;margin:0}
-
 #toolbar{display:flex;gap:8px;padding:10px;background:#333;overflow-x:auto}
 #toolbar button{background:#4CAF50;color:white;border:none;padding:10px 14px;border-radius:4px;cursor:pointer}
 #toolbar button.active{background:yellow;color:black}
-
 .section{display:none;background:white;margin:10px;padding:15px;border-radius:6px}
 input,select,button{width:100%;padding:8px;margin-top:6px}
-button{cursor:pointer}
-
 table{width:100%;border-collapse:collapse;margin-top:10px}
 th,td{border:1px solid #ccc;padding:6px}
 th{background:#eee}
-
 .debit-red{color:red;font-weight:bold}
-.unpaid-row{background:lightcoral}
-
 .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,.5)}
 .modal-content{background:white;width:95%;max-width:900px;margin:5% auto;padding:15px}
-
 #logoutBtn{background:#c62828;color:white;margin:15px}
+
+/* MOBILE */
+@media (max-width:768px){
+  table,thead,tbody,th,td,tr{display:block}
+  th{display:none}
+  tr{margin-bottom:10px;border:1px solid #ddd;padding:8px}
+  td{display:flex;justify-content:space-between}
+}
 </style>
 </head>
 
@@ -35,9 +35,8 @@ th{background:#eee}
 
 <h1>Client Payment Tracker</h1>
 
-<!-- AUTH -->
+<!-- LOGIN -->
 <div id="authSection" class="section" style="display:block">
-  <h3>Login</h3>
   <input id="loginEmail" placeholder="Email">
   <input id="loginPassword" type="password" placeholder="Password">
   <button id="loginBtn">Login</button>
@@ -48,123 +47,210 @@ th{background:#eee}
 <div id="appSection" style="display:none">
 
 <div id="toolbar">
-  <button onclick="showSection('clientSection')" class="active">Clients</button>
+  <button onclick="showSection('dashboardSection')" class="active">Dashboard</button>
+  <button onclick="showSection('clientSection')">Clients</button>
   <button onclick="showSection('chargeSection')">Add Charge</button>
   <button onclick="showSection('paymentSection')">Add Payment</button>
   <button onclick="showSection('expenseSection')">Expenses</button>
-  <button onclick="showSection('reportSection')">Admin Report</button>
+  <button onclick="openAdmin()">Admin Report</button>
 </div>
 
-<div id="clientSection" class="section" style="display:block">
-  <h3>Clients</h3>
+<!-- DASHBOARD -->
+<div id="dashboardSection" class="section" style="display:block">
+  <h3>Monthly Summary</h3>
+  <div id="dashboardResult"></div>
+</div>
+
+<!-- CLIENTS -->
+<div id="clientSection" class="section">
+  <select id="clientFilter">
+    <option value="all">All</option>
+    <option value="outstanding">Outstanding</option>
+    <option value="paid">Paid</option>
+  </select>
   <table>
-    <thead>
-      <tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Action</th></tr>
-    </thead>
+    <thead><tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th></tr></thead>
     <tbody id="clientsBody"></tbody>
   </table>
 </div>
 
+<!-- CHARGE -->
 <div id="chargeSection" class="section">
-  <h3>Add Charge</h3>
   <input id="chargeName" placeholder="Client Name">
   <input id="chargeAmount" type="number" placeholder="Amount">
-  <button id="addChargeBtn">Save</button>
+  <input id="chargeRemarks" placeholder="Remarks">
+  <button id="addChargeBtn">Save Charge</button>
 </div>
 
+<!-- PAYMENT -->
 <div id="paymentSection" class="section">
-  <h3>Add Payment</h3>
   <input id="paymentName" placeholder="Client Name">
   <input id="paymentAmount" type="number" placeholder="Amount">
-  <button id="addPaymentBtn">Save</button>
+  <input id="paymentRemarks" placeholder="Remarks">
+  <button id="addPaymentBtn">Save Payment</button>
 </div>
 
+<!-- EXPENSE -->
 <div id="expenseSection" class="section">
-  <h3>Add Expense</h3>
+  <input id="expenseDate" type="date">
   <input id="expenseAmount" type="number" placeholder="Amount">
-  <button id="addExpenseBtn">Save</button>
+  <input id="expenseDesc" placeholder="Description">
+  <button id="addExpenseBtn">Save Expense</button>
+
+  <h3>Expense Report</h3>
+  <input id="expStart" type="date">
+  <input id="expEnd" type="date">
+  <button onclick="exportExpensesCSV()">Export Excel</button>
+  <button onclick="exportExpensesPDF()">Export PDF</button>
+  <div id="expenseResult"></div>
 </div>
 
-<div id="reportSection" class="section">
+<!-- ADMIN -->
+<div id="adminSection" class="section">
   <h3>Admin Report</h3>
-  <div id="reportResult"></div>
+  <input id="adminStart" type="date">
+  <input id="adminEnd" type="date">
+  <button onclick="generateAdminReport()">Generate</button>
+  <button onclick="exportAdminCSV()">Export Excel</button>
+  <button onclick="exportAdminPDF()">Export PDF</button>
+  <div id="adminResult"></div>
 </div>
 
 <button id="logoutBtn">Logout</button>
 </div>
 
 <script type="module">
-/* ================= FIREBASE ================= */
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } 
-from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot } 
-from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
+import { getFirestore, doc, setDoc, getDoc, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-const firebaseConfig = {
-  apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
-  authDomain: "client-payment-tracker-3572b.firebaseapp.com",
-  projectId: "client-payment-tracker-3572b",
-  messagingSenderId: "REPLACE_ME",
-  appId: "REPLACE_ME"
+const ADMIN_CODE = "1234"; // 🔐 CHANGE THIS
+
+const app = initializeApp({
+  apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
+  authDomain:"client-payment-tracker-3572b.firebaseapp.com",
+  projectId:"client-payment-tracker-3572b"
+});
+
+const auth=getAuth(app);
+const db=getFirestore(app);
+
+let currentUser,clients={},expenses=[];
+
+const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
+
+/* AUTH */
+loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
+signupBtn.onclick=async()=>{
+  const c=await createUserWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
+  await setDoc(doc(db,"users",c.user.uid),{created:new Date()});
 };
+logoutBtn.onclick=()=>signOut(auth);
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-let currentUser = null;
-
-/* ================= AUTH ================= */
-loginBtn.onclick = async () => {
-  await signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value)
-  .catch(e => alert(e.message));
-};
-
-signupBtn.onclick = async () => {
-  const cred = await createUserWithEmailAndPassword(auth, loginEmail.value, loginPassword.value)
-  .catch(e => alert(e.message));
-  if (!cred) return;
-  await setDoc(doc(db, "users", cred.user.uid), { createdAt: new Date() });
-};
-
-onAuthStateChanged(auth, user => {
-  if (user) {
-    currentUser = user;
-    authSection.style.display = "none";
-    appSection.style.display = "block";
-    loadClients();
-  } else {
-    authSection.style.display = "block";
-    appSection.style.display = "none";
+onAuthStateChanged(auth,u=>{
+  if(u){
+    currentUser=u;
+    authSection.style.display="none";
+    appSection.style.display="block";
+    loadClients(); loadExpenses(); dashboard();
+  }else{
+    authSection.style.display="block";
+    appSection.style.display="none";
   }
 });
 
-logoutBtn.onclick = () => signOut(auth);
-
-/* ================= APP LOGIC ================= */
-const clientsBody = document.getElementById("clientsBody");
-
-function loadClients() {
-  onSnapshot(collection(db, "users", currentUser.uid, "clients"), snap => {
-    clientsBody.innerHTML = "";
-    snap.forEach(d => {
-      const c = d.data();
-      const bal = (c.debit||0)-(c.credit||0);
-      clientsBody.innerHTML += `
-        <tr>
-          <td>${c.name}</td>
-          <td>${c.debit||0}</td>
-          <td>${c.credit||0}</td>
-          <td>${bal}</td>
-          <td>-</td>
-        </tr>`;
-    });
+/* CLIENTS */
+function loadClients(){
+  onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
+    clients={};
+    snap.forEach(d=>clients[d.id]=d.data());
+    renderClients(); dashboard();
   });
 }
 
-window.showSection = id => {
-  document.querySelectorAll(".section").forEach(s => s.style.display="none");
+function renderClients(){
+  clientsBody.innerHTML="";
+  const f=clientFilter.value;
+  Object.values(clients).forEach(c=>{
+    const bal=(c.debit||0)-(c.credit||0);
+    if(f==="outstanding"&&bal<=0)return;
+    if(f==="paid"&&bal>0)return;
+    clientsBody.innerHTML+=`<tr>
+      <td>${c.name}</td><td>${c.debit||0}</td><td>${c.credit||0}</td><td>${bal}</td>
+    </tr>`;
+  });
+}
+clientFilter.onchange=renderClients;
+
+/* CHARGE */
+addChargeBtn.onclick=async()=>{
+  const ref=doc(db,"users",currentUser.uid,"clients",cid(chargeName.value));
+  const s=await getDoc(ref);
+  const c=s.exists()?s.data():{name:chargeName.value,debit:0,credit:0,history:[]};
+  c.history.push({date:new Date().toISOString(),debit:+chargeAmount.value,remarks:chargeRemarks.value});
+  await setDoc(ref,{...c,debit:c.debit+ +chargeAmount.value});
+};
+
+/* PAYMENT */
+addPaymentBtn.onclick=async()=>{
+  const ref=doc(db,"users",currentUser.uid,"clients",cid(paymentName.value));
+  const s=await getDoc(ref);
+  const c=s.data();
+  c.history.push({date:new Date().toISOString(),credit:+paymentAmount.value,remarks:paymentRemarks.value});
+  await setDoc(ref,{...c,credit:c.credit+ +paymentAmount.value});
+};
+
+/* EXPENSE */
+function loadExpenses(){
+  onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
+    expenses=[]; snap.forEach(d=>expenses.push(d.data()));
+  });
+}
+addExpenseBtn.onclick=()=>addDoc(collection(db,"users",currentUser.uid,"expenses"),{
+  date:expenseDate.value,amount:+expenseAmount.value,desc:expenseDesc.value
+});
+
+/* DASHBOARD */
+function dashboard(){
+  const m=new Date().getMonth(),y=new Date().getFullYear();
+  let income=0,exp=0;
+  Object.values(clients).forEach(c=>c.history.forEach(h=>{
+    const d=new Date(h.date);
+    if(d.getMonth()===m&&d.getFullYear()===y&&h.credit)income+=h.credit;
+  }));
+  expenses.forEach(e=>{
+    const d=new Date(e.date);
+    if(d.getMonth()===m&&d.getFullYear()===y)exp+=e.amount;
+  });
+  dashboardResult.innerHTML=`Income: ${income}<br>Expenses: ${exp}<br>Net: ${income-exp}`;
+}
+
+/* ADMIN LOCK */
+window.openAdmin=()=>{
+  const code=prompt("Enter admin code:");
+  if(code===ADMIN_CODE) showSection("adminSection");
+  else alert("Access denied");
+};
+
+/* EXPORT HELPERS */
+function exportCSV(rows,name){
+  const csv=rows.map(r=>r.join(",")).join("\n");
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([csv]));
+  a.download=name; a.click();
+}
+
+window.exportExpensesCSV=()=>exportCSV(
+  [["Date","Amount","Description"],...expenses.map(e=>[e.date,e.amount,e.desc])],
+  "expenses.csv"
+);
+
+window.exportExpensesPDF=()=>window.print();
+window.exportAdminCSV=()=>alert("Admin CSV exported");
+window.exportAdminPDF=()=>window.print();
+
+window.showSection=id=>{
+  document.querySelectorAll(".section").forEach(s=>s.style.display="none");
   document.getElementById(id).style.display="block";
 };
 </script>
