@@ -152,6 +152,15 @@ th { background:#eee }
 </div>
 </div>
 
+<!-- ADMIN SECTION -->
+<div id="admin" class="section">
+<h3>Admin Report</h3>
+<input id="adminStart" type="date">
+<input id="adminEnd" type="date">
+<button onclick="generateAdminReport()">Generate Report</button>
+<div id="adminResult"></div>
+</div>
+
 <button id="logoutBtn">Logout</button>
 </div>
 
@@ -209,7 +218,7 @@ function renderClients(){
 
   clientsBody.innerHTML="";
   Object.values(clients).forEach(c=>{
-    const bal=(c.debit||0)-(c.credit||0);
+    const bal=(Number(c.debit)||0)-(Number(c.credit)||0);
 
     if(q && !c.name.toLowerCase().includes(q)) return;
     if(f==="outstanding" && bal<=0) return;
@@ -228,26 +237,40 @@ function renderClients(){
 
 /* VIEW MODAL – FIXED */
 window.viewClient=name=>{
-  const c=clients[cid(name)];
-  const outstanding=(c.debit||0)-(c.credit||0);
+  // FIND CLIENT BY NAME (NOT BY ID)
+  const c = Object.values(clients).find(x => x.name === name);
+  if(!c) return alert("Client not found");
+
+  const outstanding=(Number(c.debit)||0)-(Number(c.credit)||0);
 
   let running=0;
+  let highlightIndex=-1;
+  const rows=[];
+
   viewTitle.textContent=name;
   viewSummary.innerHTML=`Outstanding Balance: <span class="debit-red">${outstanding}</span>`;
   viewBody.innerHTML="";
 
-  [...(c.history||[])].sort((a,b)=>new Date(a.date)-new Date(b.date))
-  .forEach(h=>{
-    running+=(h.debit||0)-(h.credit||0);
-    const hl = running===outstanding ? "match-balance":"";
+  const sortedHistory = [...(c.history||[])].sort((a,b)=>new Date(a.date)-new Date(b.date));
+
+  sortedHistory.forEach((h,i)=>{
+    running += (Number(h.debit)||0)-(Number(h.credit)||0);
+    if(running === outstanding && highlightIndex===-1){
+      highlightIndex = i; // highlight first match
+    }
+    rows.push({h, running});
+  });
+
+  rows.forEach((row,i)=>{
+    const hl = (i===highlightIndex) ? "match-balance" : "";
     viewBody.innerHTML+=`
-    <tr class="${hl}">
-      <td>${new Date(h.date).toLocaleString()}</td>
-      <td>${h.debit||0}</td>
-      <td>${h.credit||0}</td>
-      <td>${running}</td>
-      <td>${h.remarks||""}</td>
-    </tr>`;
+      <tr class="${hl}">
+        <td>${new Date(row.h.date).toLocaleString()}</td>
+        <td>${row.h.debit||0}</td>
+        <td>${row.h.credit||0}</td>
+        <td>${row.running}</td>
+        <td>${row.h.remarks||""}</td>
+      </tr>`;
   });
 
   viewModal.style.display="block";
@@ -264,12 +287,12 @@ window.generateAdminReport=()=>{
   Object.values(clients).forEach(c=>{
     (c.history||[]).forEach(h=>{
       const d=new Date(h.date);
-      if(d>=s&&d<=e&&h.credit){
-        income+=h.credit;
-        if(h.paymentType==="Cash") cash+=h.credit;
-        else if(h.paymentType==="Bank Transfer") bank+=h.credit;
-        else if(h.paymentType==="Credit Card") card+=h.credit;
-        else other+=h.credit;
+      if(d>=s&&d<=e && h.credit){
+        income += Number(h.credit);
+        if(h.paymentType==="Cash") cash += Number(h.credit);
+        else if(h.paymentType==="Bank Transfer") bank += Number(h.credit);
+        else if(h.paymentType==="Credit Card") card += Number(h.credit);
+        else other += Number(h.credit);
       }
     });
   });
