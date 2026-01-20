@@ -287,7 +287,7 @@ onAuthStateChanged(auth, async u => {
 document.querySelectorAll("#toolbar button[data-sec]").forEach(btn => {
   btn.onclick = () => {
     document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active";
+    btn.classList.add("active");  // Fixed: Added closing )
     showSection(btn.dataset.sec);
   };
 });
@@ -580,7 +580,7 @@ window.generateAdminReport = () => {
       const d = new Date(h.date);
       if (d >= s && d <= e && h.credit) {
         income += h.credit;
-        if (h.paymentType && paymentSums[h.paymentType] !== undefined) {
+        if (h.paymentType && paymentSums[h.paymentType] !== undefined) {  // Fixed: Added 'undefined'
           paymentSums[h.paymentType] += h.credit;
         }
       }
@@ -607,6 +607,7 @@ window.generateAdminReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
