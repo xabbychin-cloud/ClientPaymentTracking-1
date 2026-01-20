@@ -51,8 +51,9 @@ td { display: flex; justify-content: space-between }
 <button onclick="showSection('clients')" class="active">Clients</button>
 <button onclick="showSection('charge')">Add Charge</button>
 <button onclick="showSection('payment')">Add Payment</button>
-<button onclick="showSection('expense')">Expenses</button>
+<button onclick="showSection('expenses')">Expenses</button>
 <button onclick="openAdmin()">Admin Report</button>
+<button onclick="generateAdminReport()">Generate Report</button>
 </div>
 
 <div id="clients" class="section" style="display:block">
@@ -208,6 +209,17 @@ window.showSection = id=>{
 
 window.openAdmin = ()=>{
   if(prompt("Enter Admin Code") === ADMIN_CODE) showSection("admin");
+
+  window.openAdmin = () => {
+    const code = prompt("Enter Admin Code");
+    if (code === ADMIN_CODE) {
+        adminNotes.value = localStorage.getItem("adminNotes") || "";
+        showSection("admin");
+    } else {
+        alert("Access denied");
+    }
+};
+
 };
 
 
@@ -329,6 +341,23 @@ addExpenseBtn.onclick = async()=>{
   expenseAmount.value="";
   expenseDesc.value="";
 };
+  window.addExpense = async () => {
+    if (!expenseDate.value || !expenseAmount.value) {
+        alert("Enter date and amount");
+        return;
+    }
+
+    await addDoc(collection(db,"users",currentUser.uid,"expenses"),{
+        date: expenseDate.value,
+        amount: Number(expenseAmount.value),
+        desc: expenseDesc.value
+    });
+
+    expenseDate.value="";
+    expenseAmount.value="";
+    expenseDesc.value="";
+};
+
 
 window.viewExpenses = ()=>{
   if(!expStart.value||!expEnd.value) return;
@@ -353,23 +382,47 @@ saveNotesBtn.onclick = ()=>{
   alert("Note saved. You can edit anytime.");
 };
 
-window.generateAdminReport = ()=>{
-  if(!adminStart.value||!adminEnd.value) return alert("Select dates");
-  const s=new Date(adminStart.value), e=new Date(adminEnd.value);
+window.generateAdminReport = () => {
+    if (!adminStart.value || !adminEnd.value) {
+        alert("Select start and end dates");
+        return;
+    }
 
-  let totalIncome=0, cashSales=0, totalExpenses=0;
+    const s = new Date(adminStart.value);
+    const e = new Date(adminEnd.value);
 
-  Object.values(clients).forEach(c=>{
-    (c.history||[]).forEach(h=>{
-      const d=new Date(h.date);
-      if(d>=s && d<=e){
-        if(h.credit){
-          totalIncome+=h.credit;
-          if(h.paymentType==="Cash") cashSales+=h.credit;
-        }
-      }
+    let totalIncome = 0;
+    let totalExpenses = 0;
+    let cashSales = 0;
+
+    Object.values(clients).forEach(c => {
+        (c.history || []).forEach(h => {
+            const d = new Date(h.date);
+            if (d >= s && d <= e && h.credit) {
+                totalIncome += h.credit;
+                if (h.paymentType === "Cash") {
+                    cashSales += h.credit;
+                }
+            }
+        });
     });
-  });
+
+    expenses.forEach(x => {
+        const d = new Date(x.date);
+        if (d >= s && d <= e) {
+            totalExpenses += x.amount;
+        }
+    });
+
+    adminResult.innerHTML = `
+        <h4>Summary</h4>
+        <p>Total Income: ${totalIncome}</p>
+        <p>Total Cash Sales: ${cashSales}</p>
+        <p>Total Expenses: ${totalExpenses}</p>
+        <p><b>Net:</b> ${totalIncome - totalExpenses}</p>
+    `;
+};
+
 
   expenses.forEach(x=>{
     const d=new Date(x.date);
@@ -386,4 +439,5 @@ window.generateAdminReport = ()=>{
 </script>
 </body>
 </html>
+
 
