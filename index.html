@@ -45,7 +45,6 @@ th { background:#eee }
 
 .debit-red { color:red; font-weight:bold }
 
-/* Highlight ONLY matching outstanding balance */
 .match-balance {
   background:#ffcccc;
   font-weight:bold;
@@ -85,7 +84,6 @@ th { background:#eee }
   margin:15px;
 }
 
-/* ---------- MOBILE FRIENDLY ---------- */
 @media (max-width:768px){
   table, thead, tbody, th, td, tr { display:block }
   th { display:none }
@@ -107,7 +105,6 @@ th { background:#eee }
 <body>
 <h1>Client Payment Tracker</h1>
 
-<!-- LOGIN -->
 <div id="authSection" class="section" style="display:block">
 <input id="loginEmail" placeholder="Email">
 <input id="loginPassword" type="password" placeholder="Password">
@@ -115,7 +112,6 @@ th { background:#eee }
 <button id="signupBtn">Sign Up</button>
 </div>
 
-<!-- APP -->
 <div id="appSection" style="display:none">
 
 <div id="toolbar">
@@ -126,7 +122,6 @@ th { background:#eee }
 <button onclick="openAdmin()">Admin Report</button>
 </div>
 
-<!-- CLIENTS -->
 <div id="clients" class="section" style="display:block">
 <input id="clientSearch" placeholder="Search Client">
 <select id="clientFilter">
@@ -135,82 +130,11 @@ th { background:#eee }
 <option value="paid">Paid</option>
 </select>
 <table>
-<thead><tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Action</th></tr></thead>
+<thead>
+<tr><th>Name</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Action</th></tr>
+</thead>
 <tbody id="clientsBody"></tbody>
 </table>
-</div>
-
-<!-- CHARGE -->
-<div id="charge" class="section">
-<div class="autocomplete">
-<input id="chargeName" placeholder="Client Name">
-<div id="chargeAuto" class="autolist"></div>
-</div>
-
-<select id="bookingType">
-<option value="">Booking Type</option>
-<option value="single">Single Day</option>
-<option value="multi">Multi Day</option>
-</select>
-
-<div id="singleDay" style="display:none"><input id="singleDate" type="date"></div>
-<div id="multiDay" style="display:none">
-<input id="startDate" type="date">
-<input id="endDate" type="date">
-</div>
-
-<input id="chargeAmount" type="number" placeholder="Amount">
-<input id="chargeRemarks" placeholder="Remarks">
-<button id="addChargeBtn">Save Charge</button>
-</div>
-
-<!-- PAYMENT -->
-<div id="payment" class="section">
-<div class="autocomplete">
-<input id="paymentSearch" placeholder="Client Name">
-<div id="paymentAuto" class="autolist"></div>
-</div>
-
-<input id="paymentBalance" readonly placeholder="Balance">
-<input id="paymentAmount" type="number" placeholder="Amount">
-<select id="paymentType">
-<option>Cash</option>
-<option>Bank Transfer</option>
-<option>Credit Card</option>
-<option>Others</option>
-</select>
-<select id="paymentMode">
-<option>Full</option>
-<option>Partial</option>
-</select>
-<input id="paymentRemarks" placeholder="Remarks">
-<button id="addPaymentBtn">Save Payment</button>
-</div>
-
-<!-- EXPENSE -->
-<div id="expense" class="section">
-<input id="expenseDate" type="date">
-<input id="expenseAmount" type="number" placeholder="Amount">
-<input id="expenseDesc" placeholder="Description">
-<button id="addExpenseBtn">Save Expense</button>
-
-<h3>View Expenses</h3>
-<input id="expStart" type="date">
-<input id="expEnd" type="date">
-<button onclick="viewExpenses()">Generate</button>
-<div id="expenseResult"></div>
-</div>
-
-<!-- ADMIN -->
-<div id="admin" class="section">
-<textarea id="adminNotes" placeholder="Notes"></textarea>
-<button id="saveNotesBtn">Save / Edit Note</button>
-
-<h3>Admin Report</h3>
-<input id="adminStart" type="date">
-<input id="adminEnd" type="date">
-<button onclick="generateAdminReport()">Generate Report</button>
-<div id="adminResult"></div>
 </div>
 
 <!-- VIEW MODAL -->
@@ -220,7 +144,9 @@ th { background:#eee }
 <h3 id="viewTitle"></h3>
 <div id="viewSummary"></div>
 <table>
-<thead><tr><th>Date</th><th>Debit</th><th>Credit</th><th>Remarks</th></tr></thead>
+<thead>
+<tr><th>Date</th><th>Debit</th><th>Credit</th><th>Balance</th><th>Remarks</th></tr>
+</thead>
 <tbody id="viewBody"></tbody>
 </table>
 </div>
@@ -246,7 +172,7 @@ const auth=getAuth(app);
 const db=getFirestore(app);
 
 let currentUser, clients={}, expenses=[];
-const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
+const cid=n=>n.toLowerCase().replace(/\s+/g,'');
 
 /* AUTH */
 loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
@@ -259,36 +185,13 @@ onAuthStateChanged(auth,u=>{
     authSection.style.display="none";
     appSection.style.display="block";
     loadClients();
-    loadExpenses();
-    adminNotes.value=localStorage.getItem("adminNotes")||"";
   }else{
     authSection.style.display="block";
     appSection.style.display="none";
   }
 });
 
-/* ---------- TOOLBAR ACTIVE FIX ---------- */
-document.querySelectorAll("#toolbar button[data-sec]").forEach(btn=>{
-  btn.onclick=()=>{
-    document.querySelectorAll("#toolbar button").forEach(b=>b.classList.remove("active"));
-    btn.classList.add("active");
-    showSection(btn.dataset.sec);
-  };
-});
-
-window.showSection=id=>{
-  document.querySelectorAll(".section").forEach(s=>s.style.display="none");
-  document.getElementById(id).style.display="block";
-};
-
-window.openAdmin=()=>{
-  if(prompt("Enter Admin Code")===ADMIN_CODE){
-    document.querySelectorAll("#toolbar button").forEach(b=>b.classList.remove("active"));
-    showSection("admin");
-  }
-};
-
-/* ---------- CLIENTS ---------- */
+/* CLIENTS + FILTER */
 function loadClients(){
   onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
     clients={};
@@ -297,10 +200,21 @@ function loadClients(){
   });
 }
 
-window.renderClients=()=>{
+clientSearch.oninput=renderClients;
+clientFilter.onchange=renderClients;
+
+function renderClients(){
+  const q=clientSearch.value.toLowerCase();
+  const f=clientFilter.value;
+
   clientsBody.innerHTML="";
   Object.values(clients).forEach(c=>{
     const bal=(c.debit||0)-(c.credit||0);
+
+    if(q && !c.name.toLowerCase().includes(q)) return;
+    if(f==="outstanding" && bal<=0) return;
+    if(f==="paid" && bal>0) return;
+
     clientsBody.innerHTML+=`
     <tr>
       <td>${c.name}</td>
@@ -310,122 +224,42 @@ window.renderClients=()=>{
       <td><button onclick="viewClient('${c.name}')">View</button></td>
     </tr>`;
   });
-};
+}
 
-/* ---------- VIEW MODAL (FIXED HIGHLIGHT) ---------- */
+/* VIEW MODAL – FIXED */
 window.viewClient=name=>{
   const c=clients[cid(name)];
   const outstanding=(c.debit||0)-(c.credit||0);
 
   let running=0;
-
   viewTitle.textContent=name;
   viewSummary.innerHTML=`Outstanding Balance: <span class="debit-red">${outstanding}</span>`;
   viewBody.innerHTML="";
 
-  (c.history||[]).forEach(h=>{
-    running += (h.debit||0) - (h.credit||0);
-
-    const highlight = running === outstanding ? "match-balance" : "";
-
-    viewBody.innerHTML += `
-      <tr class="${highlight}">
-        <td>${new Date(h.date).toLocaleString()}</td>
-        <td>${h.debit||0}</td>
-        <td>${h.credit||0}</td>
-        <td>${running}</td>
-        <td>${h.remarks||""}</td>
-      </tr>
-    `;
+  [...(c.history||[])].sort((a,b)=>new Date(a.date)-new Date(b.date))
+  .forEach(h=>{
+    running+=(h.debit||0)-(h.credit||0);
+    const hl = running===outstanding ? "match-balance":"";
+    viewBody.innerHTML+=`
+    <tr class="${hl}">
+      <td>${new Date(h.date).toLocaleString()}</td>
+      <td>${h.debit||0}</td>
+      <td>${h.credit||0}</td>
+      <td>${running}</td>
+      <td>${h.remarks||""}</td>
+    </tr>`;
   });
 
   viewModal.style.display="block";
 };
 
-/* ---------- AUTOCOMPLETE ---------- */
-chargeName.oninput=()=>{
-  chargeAuto.innerHTML="";
-  Object.values(clients).map(c=>c.name)
-  .filter(n=>n.toLowerCase().includes(chargeName.value.toLowerCase()))
-  .forEach(n=>{
-    const d=document.createElement("div");
-    d.textContent=n;
-    d.onclick=()=>{ chargeName.value=n; chargeAuto.innerHTML=""; };
-    chargeAuto.appendChild(d);
-  });
-};
-
-paymentSearch.oninput=()=>{
-  paymentAuto.innerHTML="";
-  Object.values(clients).map(c=>c.name)
-  .filter(n=>n.toLowerCase().includes(paymentSearch.value.toLowerCase()))
-  .forEach(n=>{
-    const d=document.createElement("div");
-    d.textContent=n;
-    d.onclick=()=>{
-      paymentSearch.value=n;
-      paymentAuto.innerHTML="";
-
-      const c=clients[cid(n)];
-      const bal=(c.debit||0)-(c.credit||0);
-
-      paymentBalance.value=bal;
-      paymentAmount.value=bal; // helpful default
-      paymentRemarks.value=`Payment against outstanding balance (${bal})`;
-    };
-    paymentAuto.appendChild(d);
-  });
-};
-
-/* ---------- BOOKING ---------- */
-bookingType.onchange=()=>{
-  singleDay.style.display="none";
-  multiDay.style.display="none";
-  if(bookingType.value==="single") singleDay.style.display="block";
-  if(bookingType.value==="multi") multiDay.style.display="block";
-};
-
-/* ---------- EXPENSES ---------- */
-function loadExpenses(){
-  onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
-    expenses=[];
-    snap.forEach(d=>expenses.push(d.data()));
-  });
-}
-
-addExpenseBtn.onclick=async()=>{
-  if(!expenseDate.value||!expenseAmount.value) return alert("Missing fields");
-  await addDoc(collection(db,"users",currentUser.uid,"expenses"),{
-    date:expenseDate.value,
-    amount:Number(expenseAmount.value),
-    desc:expenseDesc.value
-  });
-  expenseDate.value=expenseAmount.value=expenseDesc.value="";
-};
-
-window.viewExpenses=()=>{
-  if(!expStart.value||!expEnd.value) return;
-  const s=new Date(expStart.value), e=new Date(expEnd.value);
-  let total=0;
-  let html="<table><tr><th>Date</th><th>Amount</th><th>Description</th></tr>";
-  expenses.forEach(x=>{
-    const d=new Date(x.date);
-    if(d>=s&&d<=e){
-      total+=x.amount;
-      html+=`<tr><td>${x.date}</td><td>${x.amount}</td><td>${x.desc}</td></tr>`;
-    }
-  });
-  html+=`</table><p><b>Total Expenses:</b> ${total}</p>`;
-  expenseResult.innerHTML=html;
-};
-
-/* ---------- ADMIN ---------- */
-saveNotesBtn.onclick=()=>localStorage.setItem("adminNotes",adminNotes.value);
-
+/* ADMIN REPORT – SALES SUMMARY */
 window.generateAdminReport=()=>{
   if(!adminStart.value||!adminEnd.value) return alert("Select dates");
+
   const s=new Date(adminStart.value), e=new Date(adminEnd.value);
-  let income=0, cash=0, exp=0;
+  let income=0, exp=0;
+  let cash=0, bank=0, card=0, other=0;
 
   Object.values(clients).forEach(c=>{
     (c.history||[]).forEach(h=>{
@@ -433,23 +267,22 @@ window.generateAdminReport=()=>{
       if(d>=s&&d<=e&&h.credit){
         income+=h.credit;
         if(h.paymentType==="Cash") cash+=h.credit;
+        else if(h.paymentType==="Bank Transfer") bank+=h.credit;
+        else if(h.paymentType==="Credit Card") card+=h.credit;
+        else other+=h.credit;
       }
     });
   });
 
-  expenses.forEach(x=>{
-    const d=new Date(x.date);
-    if(d>=s&&d<=e) exp+=x.amount;
-  });
-
   adminResult.innerHTML=`
-  <h4>Summary</h4>
+  <h4>Sales Summary</h4>
   <p>Total Income: ${income}</p>
-  <p>Total Cash Sales: ${cash}</p>
-  <p>Total Expenses: ${exp}</p>
+  <p>Cash: ${cash}</p>
+  <p>Bank Transfer: ${bank}</p>
+  <p>Credit Card: ${card}</p>
+  <p>Others: ${other}</p>
   <p><b>Net:</b> ${income-exp}</p>`;
 };
 </script>
 </body>
 </html>
-
