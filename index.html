@@ -215,12 +215,6 @@ th { background:#eee }
 <div id="adminResult"></div>
 </div>
 
-<h3>Admin Report</h3>
-<input id="customTotal" type="number" placeholder="Override Total Income (optional)">
-<input id="adminStart" type="date">
-<input id="adminEnd" type="date">
-<button onclick="generateAdminReport()">Generate Report</button>
-
 <!-- VIEW MODAL -->
 <div id="viewModal" class="modal">
 <div class="modal-content">
@@ -517,10 +511,6 @@ addPaymentBtn.onclick = async () => {
   paymentRemarks.value = '';
 };
 
-// Before adding the payment
-const existingPayments = c.history.filter(h => h.credit === amount && h.date === historyEntry.date);
-if (existingPayments.length > 0) return alert("Duplicate payment detected!");
-  
 /* ---------- EXPENSES ---------- */
 function loadExpenses(){
   onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
@@ -559,45 +549,40 @@ window.viewExpenses=()=>{
 saveAdminCodeBtn.onclick=()=>localStorage.setItem(`adminCode_${currentUser.uid}`,adminCode.value);
 saveNotesBtn.onclick=()=>localStorage.setItem(`adminNotes_${currentUser.uid}`,adminNotes.value);
 
-window.generateAdminReport = () => {
-  if (!adminStart.value || !adminEnd.value) return alert("Select dates");
-  const s = new Date(adminStart.value), e = new Date(adminEnd.value);
-  let income = 0, exp = 0;
+window.generateAdminReport=()=>{
+  if(!adminStart.value||!adminEnd.value) return alert("Select dates");
+  const s=new Date(adminStart.value), e=new Date(adminEnd.value);
+  let income=0, exp=0;
   let paymentSums = { "Cash": 0, "Bank Transfer": 0, "Credit Card": 0, "Others": 0 };
 
-  Object.values(clients).forEach(c => {
-    (c.history || []).forEach(h => {
-      const d = new Date(h.date);
-      if (d >= s && d <= e && h.credit) {
-        income += h.credit;
-        if (h.paymentType && paymentSums[h.paymentType] !== undefined) {
-          paymentSums[h.paymentType] += h.credit;
+  Object.values(clients).forEach(c=>{
+    (c.history||[]).forEach(h=>{
+      const d=new Date(h.date);
+      if(d>=s&&d<=e&&h.credit){
+        income+=h.credit;
+        if(h.paymentType && paymentSums[h.paymentType] !== undefined){
+          paymentSums[h.paymentType]+=h.credit;
         }
       }
     });
   });
 
-  expenses.forEach(x => {
-    const d = new Date(x.date);
-    if (d >= s && d <= e) exp += x.amount;
+  expenses.forEach(x=>{
+    const d=new Date(x.date);
+    if(d>=s&&d<=e) exp+=x.amount;
   });
 
-  // Override income if custom value is provided
-  if (customTotal.value) {
-    income = Number(customTotal.value);
-  }
-
   let paymentSummary = "";
-  Object.keys(paymentSums).forEach(type => {
+  Object.keys(paymentSums).forEach(type=>{
     paymentSummary += `<p>Total ${type}: ${paymentSums[type]}</p>`;
   });
 
-  adminResult.innerHTML = `
+  adminResult.innerHTML=`
   <h4>Summary</h4>
   <p>Total Income: ${income}</p>
   ${paymentSummary}
   <p>Total Expenses: ${exp}</p>
-  <p><b>Net:</b> ${income - exp}</p>`;
+  <p><b>Net:</b> ${income-exp}</p>`;
 };
 </script>
 </body>
