@@ -332,8 +332,7 @@ clientSearch.oninput = renderClients;
 clientFilter.onchange = renderClients;
 
 /* ---------- VIEW MODAL (FIXED HIGHLIGHT) ---------- */
-
-  window.viewClient=name=>{
+window.viewClient=name=>{
   const c=clients[cid(name)];
   const outstanding=(c.debit||0)-(c.credit||0);
   let running=0;
@@ -362,8 +361,8 @@ clientFilter.onchange = renderClients;
       <td>${new Date(h.date).toLocaleString()}</td>
       <td>${h.startDate || ""}</td>
       <td>${h.endDate || ""}</td>
-      <td>${h.debit || 0}</td>
-      <td>${h.credit || 0}</td>
+      <td style="font-weight: bold;">${h.debit || 0}</td>
+      <td style="font-style: italic;">${h.credit || 0}</td>
       <td>${h.remarks || ""}</td>
     </tr>`;
   }
@@ -586,3 +585,4 @@ window.generateAdminReport=()=>{
 </script>
 </body>
 </html>
+
