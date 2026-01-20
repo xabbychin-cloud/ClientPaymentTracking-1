@@ -343,19 +343,29 @@ window.viewClient=name=>{
   viewSummary.innerHTML=`Outstanding Balance: ${outstanding}<br>Total Debit: ${c.debit||0}<br>Total Credit: ${c.credit||0}`;
   viewBody.innerHTML="";
 
-  (c.history||[]).forEach(h=>{
-    running+=(h.debit||0)-(h.credit||0);
-    const match = h.debit && h.debit === outstanding ? "match-balance" : "";
-    viewBody.innerHTML+=`
-    <tr class="${match}">
+  // Find the last credit index
+  let lastCreditIndex = -1;
+  for (let i = (c.history||[]).length - 1; i >= 0; i--) {
+    if ((c.history[i].credit || 0) > 0) {
+      lastCreditIndex = i;
+      break;
+    }
+  }
+
+  for (let i = 0; i < (c.history||[]).length; i++) {
+    const h = c.history[i];
+    running += (h.debit || 0) - (h.credit || 0);
+    const isUnpaidDebit = h.debit && i > lastCreditIndex ? "match-balance" : "";
+    viewBody.innerHTML += `
+    <tr class="${isUnpaidDebit}">
       <td>${new Date(h.date).toLocaleString()}</td>
-      <td>${h.startDate||""}</td>
-      <td>${h.endDate||""}</td>
-      <td>${h.debit||0}</td>
-      <td>${h.credit||0}</td>
-      <td>${h.remarks||""}</td>
+      <td>${h.startDate || ""}</td>
+      <td>${h.endDate || ""}</td>
+      <td>${h.debit || 0}</td>
+      <td>${h.credit || 0}</td>
+      <td>${h.remarks || ""}</td>
     </tr>`;
-  });
+  }
   viewModal.style.display="block";
 };
 
