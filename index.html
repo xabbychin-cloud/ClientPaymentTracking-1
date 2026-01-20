@@ -419,6 +419,7 @@ bookingType.onchange=()=>{
 };
 
 /* ---------- ADD CHARGE ---------- */
+/* ---------- ADD CHARGE ---------- */
 addChargeBtn.onclick = async () => {
   const name = chargeName.value.trim();
   if (!name || !chargeAmount.value) return alert("Missing required fields");
@@ -435,6 +436,7 @@ addChargeBtn.onclick = async () => {
     endDate = document.getElementById('endDate').value;
     if (!startDate || !endDate) return alert("Please select start and end dates for multi day booking");
   }
+  console.log('Start Date:', startDate, 'End Date:', endDate);  // Temporary debug log
   const historyEntry = {
     date: new Date().toISOString(),
     debit: amount,
@@ -584,11 +586,3 @@ window.generateAdminReport=()=>{
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
