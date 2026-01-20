@@ -234,7 +234,7 @@ th { background:#eee }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getFirestore, collection, doc, setDoc, onSnapshot, addDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const app=initializeApp({
   apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
@@ -417,6 +417,51 @@ bookingType.onchange=()=>{
   if(bookingType.value==="multi") multiDay.style.display="block";
 };
 
+/* ---------- CHARGE ---------- */
+addChargeBtn.onclick=async()=>{
+  if(!chargeName.value||!chargeAmount.value) return alert("Missing fields");
+  const id=cid(chargeName.value);
+  const clientRef=doc(db,"users",currentUser.uid,"clients",id);
+  const existing=clients[id]||{name:chargeName.value,debit:0,credit:0,history:[]};
+  existing.debit+=Number(chargeAmount.value);
+  const entry={
+    date:new Date().toISOString(),
+    debit:Number(chargeAmount.value),
+    remarks:chargeRemarks.value
+  };
+  if(bookingType.value==="single"&&singleDate.value) entry.startDate=entry.endDate=singleDate.value;
+  if(bookingType.value==="multi"&&startDate.value&&endDate.value){
+    entry.startDate=startDate.value;
+    entry.endDate=endDate.value;
+  }
+  existing.history.push(entry);
+  await setDoc(clientRef,existing);
+  chargeName.value=chargeAmount.value=chargeRemarks.value=singleDate.value=startDate.value=endDate.value="";
+  bookingType.value="";
+  singleDay.style.display="none";
+  multiDay.style.display="none";
+};
+
+/* ---------- PAYMENT ---------- */
+addPaymentBtn.onclick=async()=>{
+  if(!paymentSearch.value||!paymentAmount.value) return alert("Missing fields");
+  const id=cid(paymentSearch.value);
+  const clientRef=doc(db,"users",currentUser.uid,"clients",id);
+  const existing=clients[id]||{name:paymentSearch.value,debit:0,credit:0,history:[]};
+  existing.credit+=Number(paymentAmount.value);
+  const entry={
+    date:new Date().toISOString(),
+    credit:Number(paymentAmount.value),
+    paymentType:paymentType.value,
+    remarks:paymentRemarks.value
+  };
+  existing.history.push(entry);
+  await setDoc(clientRef,existing);
+  paymentSearch.value=paymentAmount.value=paymentRemarks.value=paymentBalance.value="";
+  paymentType.value="Cash";
+  paymentMode.value="Full";
+};
+
 /* ---------- EXPENSES ---------- */
 function loadExpenses(){
   onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
@@ -459,7 +504,15 @@ window.generateAdminReport=()=>{
   if(!adminStart.value||!adminEnd.value) return alert("Select dates");
   const s=new Date(adminStart.value), e=new Date(adminEnd.value);
   let income=0, exp=0;
-  let paymentSums = {};
+  let paymentSums = {Cash:0, "Bank Transfer":0, "Credit Card":0, Others:0};
+
+  Object.values(clients).forEach(c=>{
+    (c.history||[]).forEach(h=>{
+      const d=new Date(h.date);
+      if(d>=s&&d<=e&&h.credit){
+        income+=h.credit;
+        if(h.paymentType && paymentSums[h.paymentType] !== undefined){
+          paymentSums[h
 
   Object.values(clients).forEach(c=>{
     (c.history||[]).forEach(h=>{
@@ -494,3 +547,4 @@ window.generateAdminReport=()=>{
 </script>
 </body>
 </html>
+
