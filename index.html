@@ -419,10 +419,10 @@ bookingType.onchange=()=>{
 };
 
 /* ---------- ADD CHARGE ---------- */
-/* ---------- ADD CHARGE ---------- */
 addChargeBtn.onclick = async () => {
   const name = chargeName.value.trim();
   if (!name || !chargeAmount.value) return alert("Missing required fields");
+  if (!bookingType.value) return alert("Please select a booking type");
   const clientId = cid(name);
   const amount = Number(chargeAmount.value);
   const remarks = chargeRemarks.value;
@@ -584,6 +584,7 @@ window.generateAdminReport=()=>{
 </script>
 </body>
 </html>
+
 
 
 
