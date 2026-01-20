@@ -419,18 +419,21 @@ bookingType.onchange=()=>{
 };
 
 /* ---------- ADD CHARGE ---------- */
+/* ---------- ADD CHARGE ---------- */
 addChargeBtn.onclick = async () => {
   const name = chargeName.value.trim();
-  if (!name || !chargeAmount.value) return;
+  if (!name || !chargeAmount.value) return alert("Missing required fields");
   const clientId = cid(name);
   const amount = Number(chargeAmount.value);
   const remarks = chargeRemarks.value;
   let startDate = '', endDate = '';
   if (bookingType.value === 'single') {
     startDate = endDate = singleDate.value;
+    if (!startDate) return alert("Please select a date for single day booking");
   } else if (bookingType.value === 'multi') {
     startDate = document.getElementById('startDate').value;
     endDate = document.getElementById('endDate').value;
+    if (!startDate || !endDate) return alert("Please select start and end dates for multi day booking");
   }
   const historyEntry = {
     date: new Date().toISOString(),
@@ -581,6 +584,7 @@ window.generateAdminReport=()=>{
 </script>
 </body>
 </html>
+
 
 
 
