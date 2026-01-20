@@ -6,38 +6,32 @@
 <title>Client Payment Tracker</title>
 
 <style>
-body { margin: 0; font-family: Arial; background: #f4f6f9 }
-h1 { background: #2e7d32; color: white; padding: 15px; text-align: center; margin: 0 }
-#toolbar { display: flex; gap: 8px; padding: 10px; background: #333; overflow-x: auto }
-#toolbar button { background: #4CAF50; color: white; border: none; padding: 10px 14px; border-radius: 4px; cursor: pointer }
-#toolbar button.active { background: gold; color: black }
-.section { display: none; background: white; margin: 10px; padding: 15px; border-radius: 6px }
-input, select, button, textarea { width: 100%; padding: 8px; margin-top: 6px }
-table { width: 100%; border-collapse: collapse; margin-top: 10px }
-th, td { border: 1px solid #ccc; padding: 6px }
-th { background: #eee }
-.debit-red { color: red; font-weight: bold }
-.unpaid-row { background: #ffd6d6; cursor:pointer }
-.autocomplete { position: relative }
-.autolist { position: absolute; background: white; border: 1px solid #ccc; width: 100%; z-index: 100 }
-.autolist div { padding: 6px; cursor: pointer }
-.autolist div:hover { background: #eee }
-.modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,.5) }
-.modal-content { background: white; width: 95%; max-width: 900px; margin: 5% auto; padding: 15px }
-#logoutBtn { background: #c62828; color: white; margin: 15px }
-
-@media (max-width: 768px) {
-table, thead, tbody, th, td, tr { display: block }
-th { display: none }
-tr { margin-bottom: 10px }
-td { display: flex; justify-content: space-between }
-}
+body { margin:0; font-family:Arial; background:#f4f6f9 }
+h1 { background:#2e7d32; color:#fff; padding:15px; text-align:center; margin:0 }
+#toolbar { display:flex; gap:8px; padding:10px; background:#333; overflow-x:auto }
+#toolbar button { background:#4CAF50; color:#fff; border:none; padding:10px 14px; border-radius:4px; cursor:pointer }
+#toolbar button.active { background:gold; color:black }
+.section { display:none; background:#fff; margin:10px; padding:15px; border-radius:6px }
+input, select, button, textarea { width:100%; padding:8px; margin-top:6px }
+table { width:100%; border-collapse:collapse; margin-top:10px }
+th, td { border:1px solid #ccc; padding:6px }
+th { background:#eee }
+.debit-red { color:red; font-weight:bold }
+.unpaid-row { background:#ffd6d6; cursor:pointer }
+.autocomplete { position:relative }
+.autolist { position:absolute; background:#fff; border:1px solid #ccc; width:100%; z-index:100 }
+.autolist div { padding:6px; cursor:pointer }
+.autolist div:hover { background:#eee }
+.modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5) }
+.modal-content { background:#fff; width:95%; max-width:900px; margin:5% auto; padding:15px }
+#logoutBtn { background:#c62828; color:#fff; margin:15px }
 </style>
 </head>
 
 <body>
 <h1>Client Payment Tracker</h1>
 
+<!-- LOGIN -->
 <div id="authSection" class="section" style="display:block">
 <input id="loginEmail" placeholder="Email">
 <input id="loginPassword" type="password" placeholder="Password">
@@ -45,17 +39,18 @@ td { display: flex; justify-content: space-between }
 <button id="signupBtn">Sign Up</button>
 </div>
 
+<!-- APP -->
 <div id="appSection" style="display:none">
 
 <div id="toolbar">
 <button onclick="showSection('clients')" class="active">Clients</button>
 <button onclick="showSection('charge')">Add Charge</button>
 <button onclick="showSection('payment')">Add Payment</button>
-<button onclick="showSection('expenses')">Expenses</button>
+<button onclick="showSection('expense')">Expenses</button>
 <button onclick="openAdmin()">Admin Report</button>
-<button onclick="generateAdminReport()">Generate Report</button>
 </div>
 
+<!-- CLIENTS -->
 <div id="clients" class="section" style="display:block">
 <input id="clientSearch" placeholder="Search Client">
 <select id="clientFilter">
@@ -69,6 +64,7 @@ td { display: flex; justify-content: space-between }
 </table>
 </div>
 
+<!-- CHARGE -->
 <div id="charge" class="section">
 <div class="autocomplete">
 <input id="chargeName" placeholder="Client Name">
@@ -81,10 +77,7 @@ td { display: flex; justify-content: space-between }
 <option value="multi">Multi Day</option>
 </select>
 
-<div id="singleDay" style="display:none">
-<input id="singleDate" type="date">
-</div>
-
+<div id="singleDay" style="display:none"><input id="singleDate" type="date"></div>
 <div id="multiDay" style="display:none">
 <input id="startDate" type="date">
 <input id="endDate" type="date">
@@ -95,19 +88,11 @@ td { display: flex; justify-content: space-between }
 <button id="addChargeBtn">Save Charge</button>
 </div>
 
+<!-- PAYMENT -->
 <div id="payment" class="section">
 <div class="autocomplete">
 <input id="paymentSearch" placeholder="Client Name">
 <div id="paymentAuto" class="autolist"></div>
-</div>
-
-<div id="paymentCalendarSingle" style="display:none">
-<input id="paymentSingleDate" type="date">
-</div>
-
-<div id="paymentCalendarMulti" style="display:none">
-<input id="paymentStartDate" type="date">
-<input id="paymentEndDate" type="date">
 </div>
 
 <input id="paymentBalance" readonly placeholder="Balance">
@@ -126,14 +111,33 @@ td { display: flex; justify-content: space-between }
 <button id="addPaymentBtn">Save Payment</button>
 </div>
 
-<div id="expense" class="section"></div>
+<!-- EXPENSE -->
+<div id="expense" class="section">
+<input id="expenseDate" type="date">
+<input id="expenseAmount" type="number" placeholder="Amount">
+<input id="expenseDesc" placeholder="Description">
+<button id="addExpenseBtn">Save Expense</button>
 
+<h3>View Expenses</h3>
+<input id="expStart" type="date">
+<input id="expEnd" type="date">
+<button onclick="viewExpenses()">Generate</button>
+<div id="expenseResult"></div>
+</div>
+
+<!-- ADMIN -->
 <div id="admin" class="section">
-<textarea id="adminNotes"></textarea>
-<button id="saveNotesBtn">Save Note</button>
+<textarea id="adminNotes" placeholder="Notes"></textarea>
+<button id="saveNotesBtn">Save / Edit Note</button>
+
+<h3>Admin Report</h3>
+<input id="adminStart" type="date">
+<input id="adminEnd" type="date">
+<button onclick="generateAdminReport()">Generate Report</button>
 <div id="adminResult"></div>
 </div>
 
+<!-- VIEW MODAL -->
 <div id="viewModal" class="modal">
 <div class="modal-content">
 <button onclick="viewModal.style.display='none'">Close</button>
@@ -154,89 +158,64 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebas
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { getFirestore, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-const ADMIN_CODE = "1234";
+const ADMIN_CODE="1234";
 
-const app = initializeApp({
+const app=initializeApp({
   apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
   authDomain:"client-payment-tracker-3572b.firebaseapp.com",
   projectId:"client-payment-tracker-3572b"
 });
 
-const auth = getAuth(app);
-const db = getFirestore(app);
+const auth=getAuth(app);
+const db=getFirestore(app);
 
 let currentUser;
-let clients = {};
-let expenses = [];
-let selectedHistory = null;
+let clients={};
+let expenses=[];
+const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
 
-const cid = n => n.toLowerCase().replace(/\s+/g,'_');
+/* ---------- AUTH ---------- */
+loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
+signupBtn.onclick=()=>createUserWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
+logoutBtn.onclick=()=>signOut(auth);
 
-
-// ---------------- AUTH ----------------
-loginBtn.onclick = async()=>{
-  await signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
-};
-signupBtn.onclick = async()=>{
-  await createUserWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
-};
-logoutBtn.onclick = ()=>signOut(auth);
-
-onAuthStateChanged(auth, u=>{
+onAuthStateChanged(auth,u=>{
   if(u){
     currentUser=u;
     authSection.style.display="none";
     appSection.style.display="block";
     loadClients();
     loadExpenses();
-    adminNotes.value = localStorage.getItem("adminNotes") || "";
-  } else {
+    adminNotes.value=localStorage.getItem("adminNotes")||"";
+  }else{
     authSection.style.display="block";
     appSection.style.display="none";
   }
 });
 
-
-// ---------------- NAV ----------------
-window.showSection = id=>{
+/* ---------- NAV ---------- */
+window.showSection=id=>{
   document.querySelectorAll(".section").forEach(s=>s.style.display="none");
   document.getElementById(id).style.display="block";
-  document.querySelectorAll("#toolbar button").forEach(b=>b.classList.remove("active"));
-  document.querySelectorAll("#toolbar button").forEach(b=>{
-    if(b.getAttribute("onclick")?.includes(id)) b.classList.add("active");
-  });
 };
 
-window.openAdmin = ()=>{
-  if(prompt("Enter Admin Code") === ADMIN_CODE) showSection("admin");
-
-  window.openAdmin = () => {
-    const code = prompt("Enter Admin Code");
-    if (code === ADMIN_CODE) {
-        adminNotes.value = localStorage.getItem("adminNotes") || "";
-        showSection("admin");
-    } else {
-        alert("Access denied");
-    }
+window.openAdmin=()=>{
+  if(prompt("Enter Admin Code")===ADMIN_CODE){
+    adminNotes.value=localStorage.getItem("adminNotes")||"";
+    showSection("admin");
+  }
 };
 
-};
-
-
-// ---------------- CLIENTS ----------------
+/* ---------- CLIENTS ---------- */
 function loadClients(){
   onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
     clients={};
-    snap.forEach(d=>{
-      const data=d.data();
-      data.history=data.history||[];
-      clients[d.id]=data;
-    });
+    snap.forEach(d=>clients[d.id]=d.data());
     renderClients();
   });
 }
 
-window.renderClients = ()=>{
+window.renderClients=()=>{
   clientsBody.innerHTML="";
   Object.values(clients).forEach(c=>{
     const bal=(c.debit||0)-(c.credit||0);
@@ -251,17 +230,15 @@ window.renderClients = ()=>{
   });
 };
 
-
-// ---------------- VIEW MODAL ----------------
-window.viewClient = name=>{
+/* ---------- VIEW MODAL ---------- */
+window.viewClient=name=>{
   const c=clients[cid(name)];
   viewTitle.textContent=name;
   viewSummary.textContent=`Balance: ${(c.debit||0)-(c.credit||0)}`;
   viewBody.innerHTML="";
   (c.history||[]).forEach(h=>{
     viewBody.innerHTML+=`
-    <tr class="unpaid-row"
-      onclick="selectHistory('${name}', ${JSON.stringify(h).replace(/"/g,'&quot;')})">
+    <tr class="unpaid-row">
       <td>${new Date(h.date).toLocaleString()}</td>
       <td>${h.debit||0}</td>
       <td>${h.credit||0}</td>
@@ -271,17 +248,7 @@ window.viewClient = name=>{
   viewModal.style.display="block";
 };
 
-window.selectHistory = (name,h)=>{
-  selectedHistory=h;
-  paymentSearch.value=name;
-  const c=clients[cid(name)];
-  paymentBalance.value=(c.debit||0)-(c.credit||0);
-  paymentRemarks.value=`Payment for balance ${paymentBalance.value}`;
-  showSection("payment");
-};
-
-
-// ---------------- AUTOCOMPLETE ----------------
+/* ---------- AUTOCOMPLETE ---------- */
 chargeName.oninput=()=>{
   chargeAuto.innerHTML="";
   Object.values(clients).map(c=>c.name)
@@ -312,8 +279,7 @@ paymentSearch.oninput=()=>{
   });
 };
 
-
-// ---------------- BOOKING CALENDAR ----------------
+/* ---------- BOOKING ---------- */
 bookingType.onchange=()=>{
   singleDay.style.display="none";
   multiDay.style.display="none";
@@ -321,8 +287,7 @@ bookingType.onchange=()=>{
   if(bookingType.value==="multi") multiDay.style.display="block";
 };
 
-
-// ---------------- EXPENSES (RESTORED) ----------------
+/* ---------- EXPENSES ---------- */
 function loadExpenses(){
   onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
     expenses=[];
@@ -330,43 +295,24 @@ function loadExpenses(){
   });
 }
 
-addExpenseBtn.onclick = async()=>{
-  if(!expenseDate.value || !expenseAmount.value) return alert("Missing fields");
+addExpenseBtn.onclick=async()=>{
+  if(!expenseDate.value||!expenseAmount.value) return alert("Missing fields");
   await addDoc(collection(db,"users",currentUser.uid,"expenses"),{
-    date: expenseDate.value,
-    amount: Number(expenseAmount.value),
-    desc: expenseDesc.value
+    date:expenseDate.value,
+    amount:Number(expenseAmount.value),
+    desc:expenseDesc.value
   });
-  expenseDate.value="";
-  expenseAmount.value="";
-  expenseDesc.value="";
-};
-  window.addExpense = async () => {
-    if (!expenseDate.value || !expenseAmount.value) {
-        alert("Enter date and amount");
-        return;
-    }
-
-    await addDoc(collection(db,"users",currentUser.uid,"expenses"),{
-        date: expenseDate.value,
-        amount: Number(expenseAmount.value),
-        desc: expenseDesc.value
-    });
-
-    expenseDate.value="";
-    expenseAmount.value="";
-    expenseDesc.value="";
+  expenseDate.value=expenseAmount.value=expenseDesc.value="";
 };
 
-
-window.viewExpenses = ()=>{
+window.viewExpenses=()=>{
   if(!expStart.value||!expEnd.value) return;
   const s=new Date(expStart.value), e=new Date(expEnd.value);
   let total=0;
   let html="<table><tr><th>Date</th><th>Amount</th><th>Description</th></tr>";
   expenses.forEach(x=>{
     const d=new Date(x.date);
-    if(d>=s && d<=e){
+    if(d>=s&&d<=e){
       total+=x.amount;
       html+=`<tr><td>${x.date}</td><td>${x.amount}</td><td>${x.desc}</td></tr>`;
     }
@@ -375,69 +321,38 @@ window.viewExpenses = ()=>{
   expenseResult.innerHTML=html;
 };
 
-
-// ---------------- ADMIN ----------------
-saveNotesBtn.onclick = ()=>{
-  localStorage.setItem("adminNotes", adminNotes.value);
-  alert("Note saved. You can edit anytime.");
+/* ---------- ADMIN ---------- */
+saveNotesBtn.onclick=()=>{
+  localStorage.setItem("adminNotes",adminNotes.value);
 };
 
-window.generateAdminReport = () => {
-    if (!adminStart.value || !adminEnd.value) {
-        alert("Select start and end dates");
-        return;
-    }
+window.generateAdminReport=()=>{
+  if(!adminStart.value||!adminEnd.value) return alert("Select dates");
+  const s=new Date(adminStart.value), e=new Date(adminEnd.value);
+  let income=0, cash=0, exp=0;
 
-    const s = new Date(adminStart.value);
-    const e = new Date(adminEnd.value);
-
-    let totalIncome = 0;
-    let totalExpenses = 0;
-    let cashSales = 0;
-
-    Object.values(clients).forEach(c => {
-        (c.history || []).forEach(h => {
-            const d = new Date(h.date);
-            if (d >= s && d <= e && h.credit) {
-                totalIncome += h.credit;
-                if (h.paymentType === "Cash") {
-                    cashSales += h.credit;
-                }
-            }
-        });
+  Object.values(clients).forEach(c=>{
+    (c.history||[]).forEach(h=>{
+      const d=new Date(h.date);
+      if(d>=s&&d<=e&&h.credit){
+        income+=h.credit;
+        if(h.paymentType==="Cash") cash+=h.credit;
+      }
     });
-
-    expenses.forEach(x => {
-        const d = new Date(x.date);
-        if (d >= s && d <= e) {
-            totalExpenses += x.amount;
-        }
-    });
-
-    adminResult.innerHTML = `
-        <h4>Summary</h4>
-        <p>Total Income: ${totalIncome}</p>
-        <p>Total Cash Sales: ${cashSales}</p>
-        <p>Total Expenses: ${totalExpenses}</p>
-        <p><b>Net:</b> ${totalIncome - totalExpenses}</p>
-    `;
-};
-
+  });
 
   expenses.forEach(x=>{
     const d=new Date(x.date);
-    if(d>=s && d<=e) totalExpenses+=x.amount;
+    if(d>=s&&d<=e) exp+=x.amount;
   });
 
   adminResult.innerHTML=`
   <h4>Summary</h4>
-  <p>Total Income: ${totalIncome}</p>
-  <p>Total Cash Sales: ${cashSales}</p>
-  <p>Total Expenses: ${totalExpenses}</p>
-  <p><b>Net:</b> ${totalIncome-totalExpenses}</p>`;
+  <p>Total Income: ${income}</p>
+  <p>Total Cash Sales: ${cash}</p>
+  <p>Total Expenses: ${exp}</p>
+  <p><b>Net:</b> ${income-exp}</p>`;
 };
 </script>
 </body>
 </html>
-
-
