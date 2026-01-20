@@ -238,68 +238,69 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebas
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { getFirestore, collection, onSnapshot, addDoc, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-const app=initializeApp({
-  apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
-  authDomain:"client-payment-tracker-3572b.firebaseapp.com",
-  projectId:"client-payment-tracker-3572b"
+const app = initializeApp({
+  apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
+  authDomain: "client-payment-tracker-3572b.firebaseapp.com",
+  projectId: "client-payment-tracker-3572b"
 });
 
-const auth=getAuth(app);
-const db=getFirestore(app);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-let currentUser, clients={}, expenses=[];
+let currentUser, clients = {}, expenses = [];
 
-const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
+const cid = n => n.toLowerCase().replace(/\s+/g, '_');
 
 /* AUTH */
-loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
-signupBtn.onclick=()=>createUserWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
-logoutBtn.onclick=()=>signOut(auth);
+loginBtn.onclick = () => signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
+signupBtn.onclick = () => createUserWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
+logoutBtn.onclick = () => signOut(auth);
 
-onAuthStateChanged(auth,u=>{
-  if(u){
-    currentUser=u;
-    authSection.style.display="none";
-    appSection.style.display="block";
+onAuthStateChanged(auth, async u => {
+  if (u) {
+    currentUser = u;
+    authSection.style.display = "none";
+    appSection.style.display = "block";
     loadClients();
     loadExpenses();
-    adminNotes.value=localStorage.getItem(`adminNotes_${currentUser.uid}`)||"";
-    adminCode.value=localStorage.getItem(`adminCode_${currentUser.uid}`)||"";
-  }else{
-    authSection.style.display="block";
-    appSection.style.display="none";
-
-    // To save admin code to Firestore
-const adminRef = doc(db, "users", currentUser.uid, "settings", "admin");
-await setDoc(adminRef, { code: adminCode.value, notes: adminNotes.value });
-
-// To load (in onAuthStateChanged)
-const adminSnap = await getDoc(adminRef);
-if (adminSnap.exists()) {
-  const data = adminSnap.data();
-  adminCode.value = data.code || "";
-  adminNotes.value = data.notes || "";
+    
+    // Load admin code and notes from Firestore (per user)
+    const adminRef = doc(db, "users", currentUser.uid, "settings", "admin");
+    const adminSnap = await getDoc(adminRef);
+    if (adminSnap.exists()) {
+      const data = adminSnap.data();
+      adminCode.value = data.code || "";
+      adminNotes.value = data.notes || "";
+    } else {
+      // If no settings exist, initialize empty
+      adminCode.value = "";
+      adminNotes.value = "";
+    }
+  } else {
+    authSection.style.display = "block";
+    appSection.style.display = "none";
+    // No code here that accesses currentUser (fixes the bug)
   }
 });
 
 /* ---------- TOOLBAR ACTIVE FIX ---------- */
-document.querySelectorAll("#toolbar button[data-sec]").forEach(btn=>{
-  btn.onclick=()=>{
-    document.querySelectorAll("#toolbar button").forEach(b=>b.classList.remove("active"));
-    btn.classList.add("active");
+document.querySelectorAll("#toolbar button[data-sec]").forEach(btn => {
+  btn.onclick = () => {
+    document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active";
     showSection(btn.dataset.sec);
   };
 });
 
-window.showSection=id=>{
-  document.querySelectorAll(".section").forEach(s=>s.style.display="none");
-  document.getElementById(id).style.display="block";
+window.showSection = id => {
+  document.querySelectorAll(".section").forEach(s => s.style.display = "none");
+  document.getElementById(id).style.display = "block";
 };
 
-window.openAdmin=()=>{
-  const savedCode = localStorage.getItem(`adminCode_${currentUser.uid}`);
-  if(!savedCode || prompt("Enter Admin Code") === savedCode){
-    document.querySelectorAll("#toolbar button").forEach(b=>b.classList.remove("active"));
+window.openAdmin = () => {
+  const savedCode = localStorage.getItem(`adminCode_${currentUser.uid}`);  // Fallback to localStorage if needed, but we prefer Firestore
+  if (!savedCode || prompt("Enter Admin Code") === savedCode) {
+    document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active"));
     showSection("admin");
   } else {
     alert("Incorrect Admin Code");
@@ -307,20 +308,20 @@ window.openAdmin=()=>{
 };
 
 /* ---------- CLIENTS ---------- */
-function loadClients(){
-  onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
-    clients={};
-    snap.forEach(d=>clients[d.id]=d.data());
+function loadClients() {
+  onSnapshot(collection(db, "users", currentUser.uid, "clients"), snap => {
+    clients = {};
+    snap.forEach(d => clients[d.id] = d.data());
     renderClients();
   });
 }
 
-window.renderClients=()=>{
+window.renderClients = () => {
   const searchTerm = clientSearch.value.toLowerCase();
   const filter = clientFilter.value;
-  clientsBody.innerHTML="";
-  Object.values(clients).forEach(c=>{
-    const bal=(c.debit||0)-(c.credit||0);
+  clientsBody.innerHTML = "";
+  Object.values(clients).forEach(c => {
+    const bal = (c.debit || 0) - (c.credit || 0);
     let show = true;
     if (filter === "outstanding" && bal <= 0) show = false;
     if (filter === "paid" && bal > 0) show = false;
@@ -328,12 +329,12 @@ window.renderClients=()=>{
     if (show) {
       const highlightedName = c.name.replace(new RegExp(`(${searchTerm})`, 'gi'), '<mark>$1</mark>');
       const highlightedBal = bal.toString().replace(new RegExp(`(${searchTerm})`, 'gi'), '<mark>$1</mark>');
-      clientsBody.innerHTML+=`
+      clientsBody.innerHTML += `
       <tr>
         <td>${highlightedName}</td>
-        <td>${c.debit||0}</td>
-        <td>${c.credit||0}</td>
-        <td class="${bal>0?'debit-red':''}">${highlightedBal}</td>
+        <td>${c.debit || 0}</td>
+        <td>${c.credit || 0}</td>
+        <td class="${bal > 0 ? 'debit-red' : ''}">${highlightedBal}</td>
         <td><button onclick="viewClient('${c.name}')">View</button></td>
       </tr>`;
     }
@@ -345,27 +346,27 @@ clientSearch.oninput = renderClients;
 clientFilter.onchange = renderClients;
 
 /* ---------- VIEW MODAL (FIXED HIGHLIGHT) ---------- */
-window.viewClient=name=>{
-  const c=clients[cid(name)];
-  const outstanding=(c.debit||0)-(c.credit||0);
-  let running=0;
+window.viewClient = name => {
+  const c = clients[cid(name)];
+  const outstanding = (c.debit || 0) - (c.credit || 0);
+  let running = 0;
   let totalDebit = 0;
   let totalCredit = 0;
 
-  viewTitle.textContent=name;
-  viewSummary.innerHTML=`Outstanding Balance: ${outstanding}<br>Total Debit: ${c.debit||0}<br>Total Credit: ${c.credit||0}`;
-  viewBody.innerHTML="";
+  viewTitle.textContent = name;
+  viewSummary.innerHTML = `Outstanding Balance: ${outstanding}<br>Total Debit: ${c.debit || 0}<br>Total Credit: ${c.credit || 0}`;
+  viewBody.innerHTML = "";
 
   // Find the last credit index
   let lastCreditIndex = -1;
-  for (let i = (c.history||[]).length - 1; i >= 0; i--) {
+  for (let i = (c.history || []).length - 1; i >= 0; i--) {
     if ((c.history[i].credit || 0) > 0) {
       lastCreditIndex = i;
       break;
     }
   }
 
-  for (let i = 0; i < (c.history||[]).length; i++) {
+  for (let i = 0; i < (c.history || []).length; i++) {
     const h = c.history[i];
     running += (h.debit || 0) - (h.credit || 0);
     const isUnpaidDebit = h.debit && i > lastCreditIndex ? "match-balance" : "";
@@ -379,58 +380,57 @@ window.viewClient=name=>{
       <td>${h.remarks || ""}</td>
     </tr>`;
   }
-  viewModal.style.display="block";
+  viewModal.style.display = "block";
 };
 
 /* ---------- AUTOCOMPLETE ---------- */
-chargeName.oninput=()=>{
-  chargeAuto.innerHTML="";
-  Object.values(clients).map(c=>c.name)
-  .filter(n=>n.toLowerCase().includes(chargeName.value.toLowerCase()))
-  .forEach(n=>{
-    const d=document.createElement("div");
-    d.textContent=n;
-    d.onclick=()=>{ chargeName.value=n; chargeAuto.innerHTML=""; };
-    chargeAuto.appendChild(d);
-  });
+chargeName.oninput = () => {
+  chargeAuto.innerHTML = "";
+  Object.values(clients).map(c => c.name)
+    .filter(n => n.toLowerCase().includes(chargeName.value.toLowerCase()))
+    .forEach(n => {
+      const d = document.createElement("div");
+      d.textContent = n;
+      d.onclick = () => { chargeName.value = n; chargeAuto.innerHTML = ""; };
+      chargeAuto.appendChild(d);
+    });
 };
 
-paymentSearch.oninput=()=>{
-  paymentAuto.innerHTML="";
-  Object.values(clients).map(c=>c.name)
-  .filter(n=>n.toLowerCase().includes(paymentSearch.value.toLowerCase()))
-  .forEach(n=>{
-    const d=document.createElement("div");
-    d.textContent=n;
-    d.onclick=()=>{
-      paymentSearch.value=n;
-      paymentAuto.innerHTML="";
-      const c=clients[cid(n)];
-      paymentBalance.value=(c.debit||0)-(c.credit||0);
-      let remarks = `Payment for balance ${paymentBalance.value}`;
-      // Find the latest charge with dates
-      const history = c.history || [];
-      for (let i = history.length - 1; i >= 0; i--) {
-        if (history[i].debit && history[i].startDate && history[i].endDate) {
-          remarks += ` (Start: ${history[i].startDate}, End: ${history[i].endDate})`;
-          break;
+paymentSearch.oninput = () => {
+  paymentAuto.innerHTML = "";
+  Object.values(clients).map(c => c.name)
+    .filter(n => n.toLowerCase().includes(paymentSearch.value.toLowerCase()))
+    .forEach(n => {
+      const d = document.createElement("div");
+      d.textContent = n;
+      d.onclick = () => {
+        paymentSearch.value = n;
+        paymentAuto.innerHTML = "";
+        const c = clients[cid(n)];
+        paymentBalance.value = (c.debit || 0) - (c.credit || 0);
+        let remarks = `Payment for balance ${paymentBalance.value}`;
+        // Find the latest charge with dates
+        const history = c.history || [];
+        for (let i = history.length - 1; i >= 0; i--) {
+          if (history[i].debit && history[i].startDate && history[i].endDate) {
+            remarks += ` (Start: ${history[i].startDate}, End: ${history[i].endDate})`;
+            break;
+          }
         }
-      }
-      paymentRemarks.value = remarks;
-    };
-    paymentAuto.appendChild(d);
-  });
+        paymentRemarks.value = remarks;
+      };
+      paymentAuto.appendChild(d);
+    });
 };
 
 /* ---------- BOOKING ---------- */
-bookingType.onchange=()=>{
-  singleDay.style.display="none";
-  multiDay.style.display="none";
-  if(bookingType.value==="single") singleDay.style.display="block";
-  if(bookingType.value==="multi") multiDay.style.display="block";
+bookingType.onchange = () => {
+  singleDay.style.display = "none";
+  multiDay.style.display = "none";
+  if (bookingType.value === "single") singleDay.style.display = "block";
+  if (bookingType.value === "multi") multiDay.style.display = "block";
 };
 
-/* ---------- ADD CHARGE ---------- */
 /* ---------- ADD CHARGE ---------- */
 addChargeBtn.onclick = async () => {
   const name = chargeName.value.trim();
@@ -523,81 +523,91 @@ addPaymentBtn.onclick = async () => {
 };
 
 /* ---------- EXPENSES ---------- */
-function loadExpenses(){
-  onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
-    expenses=[];
-    snap.forEach(d=>expenses.push(d.data()));
+function loadExpenses() {
+  onSnapshot(collection(db, "users", currentUser.uid, "expenses"), snap => {
+    expenses = [];
+    snap.forEach(d => expenses.push(d.data()));
   });
 }
 
-addExpenseBtn.onclick=async()=>{
-  if(!expenseDate.value||!expenseAmount.value) return;
-  await addDoc(collection(db,"users",currentUser.uid,"expenses"),{
-    date:expenseDate.value,
-    amount:Number(expenseAmount.value),
-    desc:expenseDesc.value
+addExpenseBtn.onclick = async () => {
+  if (!expenseDate.value || !expenseAmount.value) return;
+  await addDoc(collection(db, "users", currentUser.uid, "expenses"), {
+    date: expenseDate.value,
+    amount: Number(expenseAmount.value),
+    desc: expenseDesc.value
   });
-  expenseDate.value=expenseAmount.value=expenseDesc.value="";
+  expenseDate.value = expenseAmount.value = expenseDesc.value = "";
 };
 
-window.viewExpenses=()=>{
-  if(!expStart.value||!expEnd.value) return;
-  const s=new Date(expStart.value), e=new Date(expEnd.value);
-  let total=0;
-  let html="<table><tr><th>Date</th><th>Amount</th><th>Description</th></tr>";
-  expenses.forEach(x=>{
-    const d=new Date(x.date);
-    if(d>=s&&d<=e){
-      total+=x.amount;
-      html+=`<tr><td>${x.date}</td><td>${x.amount}</td><td>${x.desc}</td></tr>`;
+window.viewExpenses = () => {
+  if (!expStart.value || !expEnd.value) return;
+  const s = new Date(expStart.value), e = new Date(expEnd.value);
+  let total = 0;
+  let html = "<table><tr><th>Date</th><th>Amount</th><th>Description</th></tr>";
+  expenses.forEach(x => {
+    const d = new Date(x.date);
+    if (d >= s && d <= e) {
+      total += x.amount;
+      html += `<tr><td>${x.date}</td><td>${x.amount}</td><td>${x.desc}</td></tr>`;
     }
   });
-  html+=`</table><p><b>Total Expenses:</b> ${total}</p>`;
-  expenseResult.innerHTML=html;
+  html += `</table><p><b>Total Expenses:</b> ${total}</p>`;
+  expenseResult.innerHTML = html;
 };
 
 /* ---------- ADMIN ---------- */
-saveAdminCodeBtn.onclick=()=>localStorage.setItem(`adminCode_${currentUser.uid}`,adminCode.value);
-saveNotesBtn.onclick=()=>localStorage.setItem(`adminNotes_${currentUser.uid}`,adminNotes.value);
+saveAdminCodeBtn.onclick = async () => {
+  const adminRef = doc(db, "users", currentUser.uid, "settings", "admin");
+  await setDoc(adminRef, { code: adminCode.value, notes: adminNotes.value }, { merge: true });
+  alert("Admin code saved!");
+};
 
-window.generateAdminReport=()=>{
-  if(!adminStart.value||!adminEnd.value) return alert("Select dates");
-  const s=new Date(adminStart.value), e=new Date(adminEnd.value);
-  let income=0, exp=0;
+saveNotesBtn.onclick = async () => {
+  const adminRef = doc(db, "users", currentUser.uid, "settings", "admin");
+  await setDoc(adminRef, { code: adminCode.value, notes: adminNotes.value }, { merge: true });
+  alert("Notes saved!");
+};
+
+window.generateAdminReport = () => {
+  if (!adminStart.value || !adminEnd.value) return alert("Select dates");
+  const s = new Date(adminStart.value), e = new Date(adminEnd.value);
+  let income = 0, exp = 0;
   let paymentSums = { "Cash": 0, "Bank Transfer": 0, "Credit Card": 0, "Others": 0 };
 
-  Object.values(clients).forEach(c=>{
-    (c.history||[]).forEach(h=>{
-      const d=new Date(h.date);
-      if(d>=s&&d<=e&&h.credit){
-        income+=h.credit;
-        if(h.paymentType && paymentSums[h.paymentType] !== undefined){
-          paymentSums[h.paymentType]+=h.credit;
+  Object.values(clients).forEach(c => {
+    (c.history || []).forEach(h => {
+      const d = new Date(h.date);
+      if (d >= s && d <= e && h.credit) {
+        income += h.credit;
+        if (h.paymentType && paymentSums[h.paymentType] !== undefined) {
+          paymentSums[h.paymentType] += h.credit;
         }
       }
     });
   });
 
-  expenses.forEach(x=>{
-    const d=new Date(x.date);
-    if(d>=s&&d<=e) exp+=x.amount;
+  expenses.forEach(x => {
+    const d = new Date(x.date);
+    if (d >= s && d <= e) exp += x.amount;
   });
 
   let paymentSummary = "";
-  Object.keys(paymentSums).forEach(type=>{
+  Object.keys(paymentSums).forEach(type => {
     paymentSummary += `<p>Total ${type}: ${paymentSums[type]}</p>`;
   });
 
-  adminResult.innerHTML=`
+  adminResult.innerHTML = `
   <h4>Summary</h4>
   <p>Total Income: ${income}</p>
   ${paymentSummary}
   <p>Total Expenses: ${exp}</p>
-  <p><b>Net:</b> ${income-exp}</p>`;
+  <p><b>Net:</b> ${income - exp}</p>`;
 };
 </script>
 </body>
 </html>
+
 
 
 
