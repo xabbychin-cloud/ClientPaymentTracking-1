@@ -445,15 +445,15 @@ addChargeBtn.onclick = async () => {
     await updateDoc(doc(db, "users", currentUser.uid, "clients", clientId), client);
   }
   // Clear fields
-  chargeName.value = "";
-  chargeAmount.value = "";
-  chargeRemarks.value = "";
-  bookingType.value = "";
-  singleDate.value = "";
-  startDate.value = "";
-  endDate.value = "";
-  singleDay.style.display = "none";
-  multiDay.style.display = "none";
+  chargeName.value = '';
+  bookingType.value = '';
+  singleDate.value = '';
+  document.getElementById('startDate').value = '';
+  document.getElementById('endDate').value = '';
+  chargeAmount.value = '';
+  chargeRemarks.value = '';
+  singleDay.style.display = 'none';
+  multiDay.style.display = 'none';
 };
 
 /* ---------- ADD PAYMENT ---------- */
@@ -472,12 +472,14 @@ addPaymentBtn.onclick = async () => {
   client.history.push({ date: new Date().toISOString(), debit: 0, credit: amount, paymentType: type, paymentMode: mode, remarks });
   await updateDoc(doc(db, "users", currentUser.uid, "clients", clientId), client);
   // Clear fields
-  paymentSearch.value = "";
-  paymentAmount.value = "";
-  paymentBalance.value = "";
-  paymentRemarks.value = "";
+  paymentSearch.value = '';
+  paymentBalance.value = '';
+  paymentAmount.value = '';
+  paymentType.value = 'Cash';
+  paymentMode.value = 'Full';
+  paymentRemarks.value = '';
 };
-
+  
 /* ---------- EXPENSES ---------- */
 function loadExpenses(){
   onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
@@ -555,4 +557,5 @@ window.generateAdminReport=()=>{
 </script>
 </body>
 </html>
+
 
