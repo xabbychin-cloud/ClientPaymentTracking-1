@@ -420,20 +420,39 @@ bookingType.onchange=()=>{
 /* ---------- ADD CHARGE ---------- */
 addChargeBtn.onclick = async () => {
   const name = chargeName.value.trim();
-  const amount = Number(chargeAmount.value);
-  const remarks = chargeRemarks.value.trim();
-  const type = bookingType.value;
-  let startDate = "", endDate = "";
-  if (type === "single") {
-    startDate = endDate = singleDate.value;
-  } else if (type === "multi") {
-    startDate = startDate.value;
-    endDate = endDate.value;
-  }
-  if (!name || !amount) return alert("Missing client name or amount");
+  if (!name || !chargeAmount.value) return;
   const clientId = cid(name);
-  let client = clients[clientId];
-  if (!client) {
+  const amount = Number(chargeAmount.value);
+  const remarks = chargeRemarks.value;
+  let startDate = '', endDate = '';
+  if (bookingType.value === 'single') {
+    startDate = endDate = singleDate.value;
+  } else if (bookingType.value === 'multi') {
+    startDate = document.getElementById('startDate').value;
+    endDate = document.getElementById('endDate').value;
+  }
+  const historyEntry = {
+    date: new Date().toISOString(),
+    debit: amount,
+    remarks,
+    startDate,
+    endDate
+  };
+  const clientRef = doc(db, "users", currentUser.uid, "clients", clientId);
+  const clientSnap = await getDoc(clientRef);
+  if (clientSnap.exists()) {
+    const data = clientSnap.data();
+    const newDebit = (data.debit || 0) + amount;
+    const newHistory = [...(data.history || []), historyEntry];
+    await updateDoc(clientRef, { debit: newDebit, history: newHistory });
+  } else {
+    await setDoc(clientRef, {
+      name,
+      debit: amount,
+      credit: 0,
+      history: [historyEntry]
+    });
+  }
     // Create new client
     client = { name, debit: 0, credit: 0, history: [] };
     await addDoc(collection(db, "users", currentUser.uid, "clients"), client);
@@ -459,18 +478,33 @@ addChargeBtn.onclick = async () => {
 /* ---------- ADD PAYMENT ---------- */
 addPaymentBtn.onclick = async () => {
   const name = paymentSearch.value.trim();
+  if (!name || !paymentAmount.value) return;
+  const clientId = cid(name);
   const amount = Number(paymentAmount.value);
   const type = paymentType.value;
   const mode = paymentMode.value;
-  const remarks = paymentRemarks.value.trim();
-  if (!name || !amount) return alert("Missing client name or amount");
-  const clientId = cid(name);
-  const client = clients[clientId];
-  if (!client) return alert("Client not found");
-  client.credit = (client.credit || 0) + amount;
-  client.history = client.history || [];
-  client.history.push({ date: new Date().toISOString(), debit: 0, credit: amount, paymentType: type, paymentMode: mode, remarks });
-  await updateDoc(doc(db, "users", currentUser.uid, "clients", clientId), client);
+  const remarks = paymentRemarks.value;
+  const historyEntry = {
+    date: new Date().toISOString(),
+    credit: amount,
+    paymentType: type,
+    remarks
+  };
+  const clientRef = doc(db, "users", currentUser.uid, "clients", clientId);
+  const clientSnap = await getDoc(clientRef);
+  if (clientSnap.exists()) {
+    const data = clientSnap.data();
+    const newCredit = (data.credit || 0) + amount;
+    const newHistory = [...(data.history || []), historyEntry];
+    await updateDoc(clientRef, { credit: newCredit, history: newHistory });
+  } else {
+    await setDoc(clientRef, {
+      name,
+      debit: 0,
+      credit: amount,
+      history: [historyEntry]
+    });
+  }
   // Clear fields
   paymentSearch.value = '';
   paymentBalance.value = '';
@@ -557,5 +591,6 @@ window.generateAdminReport=()=>{
 </script>
 </body>
 </html>
+
 
 
