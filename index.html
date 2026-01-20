@@ -8,23 +8,116 @@
 <style>
 body { margin:0; font-family:Arial; background:#f4f6f9 }
 h1 { background:#2e7d32; color:#fff; padding:15px; text-align:center; margin:0 }
-#toolbar { display:flex; gap:8px; padding:10px; background:#333; overflow-x:auto }
-#toolbar button { background:#4CAF50; color:#fff; border:none; padding:10px 14px; border-radius:4px; cursor:pointer }
-#toolbar button.active { background:gold; color:black }
-.section { display:none; background:#fff; margin:10px; padding:15px; border-radius:6px }
-input, select, button, textarea { width:100%; padding:8px; margin-top:6px }
-table { width:100%; border-collapse:collapse; margin-top:10px }
-th, td { border:1px solid #ccc; padding:6px }
+
+#toolbar {
+  display:flex;
+  gap:8px;
+  padding:10px;
+  background:#333;
+  overflow-x:auto;
+}
+#toolbar button {
+  background:#4CAF50;
+  color:#fff;
+  border:none;
+  padding:10px 14px;
+  border-radius:4px;
+  cursor:pointer;
+  white-space:nowrap;
+}
+#toolbar button.active {
+  background:gold;
+  color:black;
+}
+
+.section {
+  display:none;
+  background:#fff;
+  margin:10px;
+  padding:15px;
+  border-radius:6px;
+}
+
+input, select, button, textarea {
+  width:100%;
+  padding:10px;
+  margin-top:8px;
+  font-size:16px;
+}
+
+table {
+  width:100%;
+  border-collapse:collapse;
+  margin-top:10px;
+}
+th, td {
+  border:1px solid #ccc;
+  padding:8px;
+}
 th { background:#eee }
+
 .debit-red { color:red; font-weight:bold }
-.unpaid-row { background:#ffd6d6; cursor:pointer }
+
+/* Highlight ONLY matching outstanding balance */
+.match-balance {
+  background:#ffb3b3 !important;
+  font-weight:bold;
+}
+
 .autocomplete { position:relative }
-.autolist { position:absolute; background:#fff; border:1px solid #ccc; width:100%; z-index:100 }
-.autolist div { padding:6px; cursor:pointer }
+.autolist {
+  position:absolute;
+  background:#fff;
+  border:1px solid #ccc;
+  width:100%;
+  z-index:100;
+}
+.autolist div {
+  padding:8px;
+  cursor:pointer;
+}
 .autolist div:hover { background:#eee }
-.modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,.5) }
-.modal-content { background:#fff; width:95%; max-width:900px; margin:5% auto; padding:15px }
-#logoutBtn { background:#c62828; color:#fff; margin:15px }
+
+.modal {
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.5);
+}
+.modal-content {
+  background:#fff;
+  width:95%;
+  max-width:900px;
+  margin:5% auto;
+  padding:15px;
+  border-radius:6px;
+}
+
+#logoutBtn {
+  background:#c62828;
+  color:#fff;
+  margin:15px;
+}
+
+/* MOBILE FRIENDLY */
+@media (max-width:768px){
+  table, thead, tbody, th, td, tr { display:block }
+  th { display:none }
+  tr {
+    margin-bottom:10px;
+    border:1px solid #ddd;
+    border-radius:6px;
+    padding:8px;
+  }
+  td {
+    display:flex;
+    justify-content:space-between;
+    padding:6px 0;
+  }
+  td::before {
+    font-weight:bold;
+  }
+}
 </style>
 </head>
 
@@ -43,10 +136,10 @@ th { background:#eee }
 <div id="appSection" style="display:none">
 
 <div id="toolbar">
-<button onclick="showSection('clients')" class="active">Clients</button>
-<button onclick="showSection('charge')">Add Charge</button>
-<button onclick="showSection('payment')">Add Payment</button>
-<button onclick="showSection('expense')">Expenses</button>
+<button data-sec="clients" class="active">Clients</button>
+<button data-sec="charge">Add Charge</button>
+<button data-sec="payment">Add Payment</button>
+<button data-sec="expense">Expenses</button>
 <button onclick="openAdmin()">Admin Report</button>
 </div>
 
@@ -169,12 +262,10 @@ const app=initializeApp({
 const auth=getAuth(app);
 const db=getFirestore(app);
 
-let currentUser;
-let clients={};
-let expenses=[];
-const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
+let currentUser, clients={}, expenses=[];
+const cid=n=>n.toLowerCase().replace(/\s+/g,'');
 
-/* ---------- AUTH ---------- */
+/* AUTH */
 loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
 signupBtn.onclick=()=>createUserWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
 logoutBtn.onclick=()=>signOut(auth);
@@ -193,7 +284,15 @@ onAuthStateChanged(auth,u=>{
   }
 });
 
-/* ---------- NAV ---------- */
+/* TOOLBAR ACTIVE FIX */
+document.querySelectorAll("#toolbar button[data-sec]").forEach(btn=>{
+  btn.onclick=()=>{
+    document.querySelectorAll("#toolbar button").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    showSection(btn.dataset.sec);
+  };
+});
+
 window.showSection=id=>{
   document.querySelectorAll(".section").forEach(s=>s.style.display="none");
   document.getElementById(id).style.display="block";
@@ -201,12 +300,12 @@ window.showSection=id=>{
 
 window.openAdmin=()=>{
   if(prompt("Enter Admin Code")===ADMIN_CODE){
-    adminNotes.value=localStorage.getItem("adminNotes")||"";
+    document.querySelectorAll("#toolbar button").forEach(b=>b.classList.remove("active"));
     showSection("admin");
   }
 };
 
-/* ---------- CLIENTS ---------- */
+/* CLIENTS */
 function loadClients(){
   onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
     clients={};
@@ -230,15 +329,21 @@ window.renderClients=()=>{
   });
 };
 
-/* ---------- VIEW MODAL ---------- */
+/* VIEW MODAL – highlight only matching outstanding */
 window.viewClient=name=>{
   const c=clients[cid(name)];
+  let running=0;
+  const outstanding=(c.debit||0)-(c.credit||0);
+
   viewTitle.textContent=name;
-  viewSummary.textContent=`Balance: ${(c.debit||0)-(c.credit||0)}`;
+  viewSummary.textContent=`Outstanding Balance: ${outstanding}`;
   viewBody.innerHTML="";
+
   (c.history||[]).forEach(h=>{
+    running+=(h.debit||0)-(h.credit||0);
+    const match = running===outstanding ? "match-balance" : "";
     viewBody.innerHTML+=`
-    <tr class="unpaid-row">
+    <tr class="${match}">
       <td>${new Date(h.date).toLocaleString()}</td>
       <td>${h.debit||0}</td>
       <td>${h.credit||0}</td>
@@ -248,7 +353,7 @@ window.viewClient=name=>{
   viewModal.style.display="block";
 };
 
-/* ---------- AUTOCOMPLETE ---------- */
+/* AUTOCOMPLETE */
 chargeName.oninput=()=>{
   chargeAuto.innerHTML="";
   Object.values(clients).map(c=>c.name)
@@ -279,7 +384,7 @@ paymentSearch.oninput=()=>{
   });
 };
 
-/* ---------- BOOKING ---------- */
+/* BOOKING */
 bookingType.onchange=()=>{
   singleDay.style.display="none";
   multiDay.style.display="none";
@@ -287,7 +392,7 @@ bookingType.onchange=()=>{
   if(bookingType.value==="multi") multiDay.style.display="block";
 };
 
-/* ---------- EXPENSES ---------- */
+/* EXPENSES */
 function loadExpenses(){
   onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
     expenses=[];
@@ -321,10 +426,8 @@ window.viewExpenses=()=>{
   expenseResult.innerHTML=html;
 };
 
-/* ---------- ADMIN ---------- */
-saveNotesBtn.onclick=()=>{
-  localStorage.setItem("adminNotes",adminNotes.value);
-};
+/* ADMIN */
+saveNotesBtn.onclick=()=>localStorage.setItem("adminNotes",adminNotes.value);
 
 window.generateAdminReport=()=>{
   if(!adminStart.value||!adminEnd.value) return alert("Select dates");
