@@ -341,17 +341,7 @@ clientFilter.onchange = renderClients;
   let totalCredit = 0;
 
   viewTitle.textContent=name;
-  // Find latest booking dates
-  let latestStart = '', latestEnd = '';
-  const history = c.history || [];
-  for (let i = history.length - 1; i >= 0; i--) {
-    if (history[i].debit && history[i].startDate && history[i].endDate) {
-      latestStart = history[i].startDate;
-      latestEnd = history[i].endDate;
-      break;
-    }
-  }
-  viewSummary.innerHTML=`Outstanding Balance: ${outstanding}<br>Total Debit: ${c.debit||0}<br>Total Credit: ${c.credit||0}<br>Latest Booking: ${latestStart ? `${latestStart} to ${latestEnd}` : 'N/A'}`;
+  viewSummary.innerHTML=`Outstanding Balance: ${outstanding}<br>Total Debit: ${c.debit||0}<br>Total Credit: ${c.credit||0}`;
   viewBody.innerHTML="";
 
   // Find the last credit index
@@ -591,6 +581,7 @@ window.generateAdminReport=()=>{
 </script>
 </body>
 </html>
+
 
 
 
