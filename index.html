@@ -234,7 +234,7 @@ th { background:#eee }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, addDoc, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const app=initializeApp({
   apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
@@ -453,16 +453,6 @@ addChargeBtn.onclick = async () => {
       history: [historyEntry]
     });
   }
-    // Create new client
-    client = { name, debit: 0, credit: 0, history: [] };
-    await addDoc(collection(db, "users", currentUser.uid, "clients"), client);
-  } else {
-    // Update existing
-    client.debit = (client.debit || 0) + amount;
-    client.history = client.history || [];
-    client.history.push({ date: new Date().toISOString(), debit: amount, credit: 0, startDate, endDate, remarks });
-    await updateDoc(doc(db, "users", currentUser.uid, "clients", clientId), client);
-  }
   // Clear fields
   chargeName.value = '';
   bookingType.value = '';
@@ -513,7 +503,7 @@ addPaymentBtn.onclick = async () => {
   paymentMode.value = 'Full';
   paymentRemarks.value = '';
 };
-  
+
 /* ---------- EXPENSES ---------- */
 function loadExpenses(){
   onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
@@ -523,7 +513,7 @@ function loadExpenses(){
 }
 
 addExpenseBtn.onclick=async()=>{
-  if(!expenseDate.value||!expenseAmount.value) return alert("Missing fields");
+  if(!expenseDate.value||!expenseAmount.value) return;
   await addDoc(collection(db,"users",currentUser.uid,"expenses"),{
     date:expenseDate.value,
     amount:Number(expenseAmount.value),
@@ -591,6 +581,7 @@ window.generateAdminReport=()=>{
 </script>
 </body>
 </html>
+
 
 
 
