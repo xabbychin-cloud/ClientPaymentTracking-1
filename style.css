@@ -125,4 +125,34 @@ tr.paid {
   }
 }
 
+.modal {
+  display:none;
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.5);
+}
+.modal-content {
+  background:#fff;
+  width:95%;
+  max-width:900px;
+  margin:5% auto;
+  padding:10px; /* Reduced padding for minimalist look */
+  border-radius:6px;
+  max-height:90vh;
+  overflow:auto;
+}
+
+/* ---------- MOBILE FRIENDLY ---------- */
+@media (max-width:768px){
+  .modal-content {
+    width:100%;
+    margin:0;
+    max-height:100vh;
+    border-radius:0;
+  }
+  table, thead, tbody, th, td, tr { display:table; } /* Keep as table on mobile */
+  th, td { display:table-cell; }
+  tr { display:table-row; }
+  table { display:table; }
+}
 
