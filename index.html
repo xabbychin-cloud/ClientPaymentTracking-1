@@ -20,7 +20,7 @@ h1 { background:#2e7d32; color:#fff; padding:15px; text-align:center; margin:0 }
   background:#4CAF50;
   color:#fff;
   border:none;
-  padding:10px 14px;
+  padding:12px 16px;
   border-radius:4px;
   cursor:pointer;
   white-space:nowrap;
@@ -30,13 +30,7 @@ h1 { background:#2e7d32; color:#fff; padding:15px; text-align:center; margin:0 }
   color:black;
 }
 
-.section {
-  display:none;
-  background:#fff;
-  margin:10px;
-  padding:15px;
-  border-radius:6px;
-}
+.section { display:none; background:#fff; margin:10px; padding:15px; border-radius:6px }
 
 input, select, button, textarea {
   width:100%;
@@ -45,22 +39,15 @@ input, select, button, textarea {
   font-size:16px;
 }
 
-table {
-  width:100%;
-  border-collapse:collapse;
-  margin-top:10px;
-}
-th, td {
-  border:1px solid #ccc;
-  padding:8px;
-}
+table { width:100%; border-collapse:collapse; margin-top:10px }
+th, td { border:1px solid #ccc; padding:8px }
 th { background:#eee }
 
 .debit-red { color:red; font-weight:bold }
-.highlight { background:yellow }
 
+/* Highlight ONLY matching outstanding balance */
 .match-balance {
-  background:#ffb3b3 !important;
+  background:#ffcccc;
   font-weight:bold;
 }
 
@@ -72,10 +59,7 @@ th { background:#eee }
   width:100%;
   z-index:100;
 }
-.autolist div {
-  padding:8px;
-  cursor:pointer;
-}
+.autolist div { padding:10px; cursor:pointer }
 .autolist div:hover { background:#eee }
 
 .modal {
@@ -91,6 +75,8 @@ th { background:#eee }
   margin:5% auto;
   padding:15px;
   border-radius:6px;
+  max-height:90vh;
+  overflow:auto;
 }
 
 #logoutBtn {
@@ -99,6 +85,7 @@ th { background:#eee }
   margin:15px;
 }
 
+/* ---------- MOBILE FRIENDLY ---------- */
 @media (max-width:768px){
   table, thead, tbody, th, td, tr { display:block }
   th { display:none }
@@ -259,7 +246,7 @@ const auth=getAuth(app);
 const db=getFirestore(app);
 
 let currentUser, clients={}, expenses=[];
-const cid=n=>n.toLowerCase().replace(/\s+/g,'');
+const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
 
 /* AUTH */
 loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
@@ -280,7 +267,7 @@ onAuthStateChanged(auth,u=>{
   }
 });
 
-/* TOOLBAR */
+/* ---------- TOOLBAR ACTIVE FIX ---------- */
 document.querySelectorAll("#toolbar button[data-sec]").forEach(btn=>{
   btn.onclick=()=>{
     document.querySelectorAll("#toolbar button").forEach(b=>b.classList.remove("active"));
@@ -301,39 +288,22 @@ window.openAdmin=()=>{
   }
 };
 
-/* CLIENTS */
+/* ---------- CLIENTS ---------- */
 function loadClients(){
   onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
     clients={};
-    snap.forEach(d=>{
-      const data=d.data();
-      data.history=data.history||[];
-      clients[d.id]=data;
-    });
+    snap.forEach(d=>clients[d.id]=d.data());
     renderClients();
   });
 }
 
-function highlight(text, term){
-  if(!term) return text;
-  return text.replace(new RegExp(`(${term})`,"gi"),'<span class="highlight">$1</span>');
-}
-
 window.renderClients=()=>{
-  const term=clientSearch.value.toLowerCase();
-  const filter=clientFilter.value;
   clientsBody.innerHTML="";
-
   Object.values(clients).forEach(c=>{
     const bal=(c.debit||0)-(c.credit||0);
-
-    if(term && !c.name.toLowerCase().includes(term)) return;
-    if(filter==="outstanding" && bal<=0) return;
-    if(filter==="paid" && bal!==0) return;
-
     clientsBody.innerHTML+=`
     <tr>
-      <td>${highlight(c.name,term)}</td>
+      <td>${c.name}</td>
       <td>${c.debit||0}</td>
       <td>${c.credit||0}</td>
       <td class="${bal>0?'debit-red':''}">${bal}</td>
@@ -342,14 +312,11 @@ window.renderClients=()=>{
   });
 };
 
-clientSearch.oninput=renderClients;
-clientFilter.onchange=renderClients;
-
-/* VIEW MODAL */
+/* ---------- VIEW MODAL (FIXED HIGHLIGHT) ---------- */
 window.viewClient=name=>{
   const c=clients[cid(name)];
-  let running=0;
   const outstanding=(c.debit||0)-(c.credit||0);
+  let running=0;
 
   viewTitle.textContent=name;
   viewSummary.textContent=`Outstanding Balance: ${outstanding}`;
@@ -369,7 +336,19 @@ window.viewClient=name=>{
   viewModal.style.display="block";
 };
 
-/* AUTOCOMPLETE + PAYMENT AUTO */
+/* ---------- AUTOCOMPLETE ---------- */
+chargeName.oninput=()=>{
+  chargeAuto.innerHTML="";
+  Object.values(clients).map(c=>c.name)
+  .filter(n=>n.toLowerCase().includes(chargeName.value.toLowerCase()))
+  .forEach(n=>{
+    const d=document.createElement("div");
+    d.textContent=n;
+    d.onclick=()=>{ chargeName.value=n; chargeAuto.innerHTML=""; };
+    chargeAuto.appendChild(d);
+  });
+};
+
 paymentSearch.oninput=()=>{
   paymentAuto.innerHTML="";
   Object.values(clients).map(c=>c.name)
@@ -381,22 +360,84 @@ paymentSearch.oninput=()=>{
       paymentSearch.value=n;
       paymentAuto.innerHTML="";
       const c=clients[cid(n)];
-      const bal=(c.debit||0)-(c.credit||0);
-      paymentBalance.value=bal;
-      paymentAmount.value=bal;
-      paymentRemarks.value=`Payment for balance ${bal}`;
+      paymentBalance.value=(c.debit||0)-(c.credit||0);
+      paymentRemarks.value=`Payment for balance ${paymentBalance.value}`;
     };
     paymentAuto.appendChild(d);
   });
 };
 
-paymentMode.onchange=()=>{
-  if(paymentMode.value==="Full"){
-    paymentAmount.value=paymentBalance.value;
-    paymentRemarks.value=`Payment for balance ${paymentBalance.value}`;
-  }else{
-    paymentAmount.value="";
-  }
+/* ---------- BOOKING ---------- */
+bookingType.onchange=()=>{
+  singleDay.style.display="none";
+  multiDay.style.display="none";
+  if(bookingType.value==="single") singleDay.style.display="block";
+  if(bookingType.value==="multi") multiDay.style.display="block";
+};
+
+/* ---------- EXPENSES ---------- */
+function loadExpenses(){
+  onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
+    expenses=[];
+    snap.forEach(d=>expenses.push(d.data()));
+  });
+}
+
+addExpenseBtn.onclick=async()=>{
+  if(!expenseDate.value||!expenseAmount.value) return alert("Missing fields");
+  await addDoc(collection(db,"users",currentUser.uid,"expenses"),{
+    date:expenseDate.value,
+    amount:Number(expenseAmount.value),
+    desc:expenseDesc.value
+  });
+  expenseDate.value=expenseAmount.value=expenseDesc.value="";
+};
+
+window.viewExpenses=()=>{
+  if(!expStart.value||!expEnd.value) return;
+  const s=new Date(expStart.value), e=new Date(expEnd.value);
+  let total=0;
+  let html="<table><tr><th>Date</th><th>Amount</th><th>Description</th></tr>";
+  expenses.forEach(x=>{
+    const d=new Date(x.date);
+    if(d>=s&&d<=e){
+      total+=x.amount;
+      html+=`<tr><td>${x.date}</td><td>${x.amount}</td><td>${x.desc}</td></tr>`;
+    }
+  });
+  html+=`</table><p><b>Total Expenses:</b> ${total}</p>`;
+  expenseResult.innerHTML=html;
+};
+
+/* ---------- ADMIN ---------- */
+saveNotesBtn.onclick=()=>localStorage.setItem("adminNotes",adminNotes.value);
+
+window.generateAdminReport=()=>{
+  if(!adminStart.value||!adminEnd.value) return alert("Select dates");
+  const s=new Date(adminStart.value), e=new Date(adminEnd.value);
+  let income=0, cash=0, exp=0;
+
+  Object.values(clients).forEach(c=>{
+    (c.history||[]).forEach(h=>{
+      const d=new Date(h.date);
+      if(d>=s&&d<=e&&h.credit){
+        income+=h.credit;
+        if(h.paymentType==="Cash") cash+=h.credit;
+      }
+    });
+  });
+
+  expenses.forEach(x=>{
+    const d=new Date(x.date);
+    if(d>=s&&d<=e) exp+=x.amount;
+  });
+
+  adminResult.innerHTML=`
+  <h4>Summary</h4>
+  <p>Total Income: ${income}</p>
+  <p>Total Cash Sales: ${cash}</p>
+  <p>Total Expenses: ${exp}</p>
+  <p><b>Net:</b> ${income-exp}</p>`;
 };
 </script>
 </body>
