@@ -316,23 +316,29 @@ window.renderClients=()=>{
 window.viewClient=name=>{
   const c=clients[cid(name)];
   const outstanding=(c.debit||0)-(c.credit||0);
+
   let running=0;
 
   viewTitle.textContent=name;
-  viewSummary.textContent=`Outstanding Balance: ${outstanding}`;
+  viewSummary.innerHTML=`Outstanding Balance: <span class="debit-red">${outstanding}</span>`;
   viewBody.innerHTML="";
 
   (c.history||[]).forEach(h=>{
-    running+=(h.debit||0)-(h.credit||0);
-    const match = running===outstanding ? "match-balance" : "";
-    viewBody.innerHTML+=`
-    <tr class="${match}">
-      <td>${new Date(h.date).toLocaleString()}</td>
-      <td>${h.debit||0}</td>
-      <td>${h.credit||0}</td>
-      <td>${h.remarks||""}</td>
-    </tr>`;
+    running += (h.debit||0) - (h.credit||0);
+
+    const highlight = running === outstanding ? "match-balance" : "";
+
+    viewBody.innerHTML += `
+      <tr class="${highlight}">
+        <td>${new Date(h.date).toLocaleString()}</td>
+        <td>${h.debit||0}</td>
+        <td>${h.credit||0}</td>
+        <td>${running}</td>
+        <td>${h.remarks||""}</td>
+      </tr>
+    `;
   });
+
   viewModal.style.display="block";
 };
 
@@ -359,9 +365,13 @@ paymentSearch.oninput=()=>{
     d.onclick=()=>{
       paymentSearch.value=n;
       paymentAuto.innerHTML="";
+
       const c=clients[cid(n)];
-      paymentBalance.value=(c.debit||0)-(c.credit||0);
-      paymentRemarks.value=`Payment for balance ${paymentBalance.value}`;
+      const bal=(c.debit||0)-(c.credit||0);
+
+      paymentBalance.value=bal;
+      paymentAmount.value=bal; // helpful default
+      paymentRemarks.value=`Payment against outstanding balance (${bal})`;
     };
     paymentAuto.appendChild(d);
   });
@@ -442,3 +452,4 @@ window.generateAdminReport=()=>{
 </script>
 </body>
 </html>
+
