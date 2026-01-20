@@ -332,7 +332,8 @@ clientSearch.oninput = renderClients;
 clientFilter.onchange = renderClients;
 
 /* ---------- VIEW MODAL (FIXED HIGHLIGHT) ---------- */
-window.viewClient=name=>{
+
+  window.viewClient=name=>{
   const c=clients[cid(name)];
   const outstanding=(c.debit||0)-(c.credit||0);
   let running=0;
@@ -340,7 +341,17 @@ window.viewClient=name=>{
   let totalCredit = 0;
 
   viewTitle.textContent=name;
-  viewSummary.innerHTML=`Outstanding Balance: ${outstanding}<br>Total Debit: ${c.debit||0}<br>Total Credit: ${c.credit||0}`;
+  // Find latest booking dates
+  let latestStart = '', latestEnd = '';
+  const history = c.history || [];
+  for (let i = history.length - 1; i >= 0; i--) {
+    if (history[i].debit && history[i].startDate && history[i].endDate) {
+      latestStart = history[i].startDate;
+      latestEnd = history[i].endDate;
+      break;
+    }
+  }
+  viewSummary.innerHTML=`Outstanding Balance: ${outstanding}<br>Total Debit: ${c.debit||0}<br>Total Credit: ${c.credit||0}<br>Latest Booking: ${latestStart ? `${latestStart} to ${latestEnd}` : 'N/A'}`;
   viewBody.innerHTML="";
 
   // Find the last credit index
@@ -546,15 +557,14 @@ window.generateAdminReport=()=>{
   if(!adminStart.value||!adminEnd.value) return alert("Select dates");
   const s=new Date(adminStart.value), e=new Date(adminEnd.value);
   let income=0, exp=0;
-  let paymentSums = {};
+  let paymentSums = { "Cash": 0, "Bank Transfer": 0, "Credit Card": 0, "Others": 0 };
 
   Object.values(clients).forEach(c=>{
     (c.history||[]).forEach(h=>{
       const d=new Date(h.date);
       if(d>=s&&d<=e&&h.credit){
         income+=h.credit;
-        if(h.paymentType){
-          if(!paymentSums[h.paymentType]) paymentSums[h.paymentType]=0;
+        if(h.paymentType && paymentSums[h.paymentType] !== undefined){
           paymentSums[h.paymentType]+=h.credit;
         }
       }
@@ -581,6 +591,7 @@ window.generateAdminReport=()=>{
 </script>
 </body>
 </html>
+
 
 
 
