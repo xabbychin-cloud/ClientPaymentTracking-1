@@ -151,130 +151,239 @@ td { display: flex; justify-content: space-between }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore, collection, onSnapshot } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-const ADMIN_CODE="1234";
+const ADMIN_CODE = "1234";
 
-const app=initializeApp({
-apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
-authDomain:"client-payment-tracker-3572b.firebaseapp.com",
-projectId:"client-payment-tracker-3572b"
+const app = initializeApp({
+  apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
+  authDomain:"client-payment-tracker-3572b.firebaseapp.com",
+  projectId:"client-payment-tracker-3572b"
 });
 
-const auth=getAuth(app);
-const db=getFirestore(app);
-let currentUser, clients={}, expenses=[];
-const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
+const auth = getAuth(app);
+const db = getFirestore(app);
 
-window.showSection=id=>{
-document.querySelectorAll(".section").forEach(s=>s.style.display="none");
-document.getElementById(id).style.display="block";
-document.querySelectorAll("#toolbar button").forEach(b=>b.classList.remove("active"));
-document.querySelectorAll("#toolbar button").forEach(b=>{
-if(b.getAttribute("onclick")?.includes(id)) b.classList.add("active");
+let currentUser;
+let clients = {};
+let expenses = [];
+let selectedHistory = null;
+
+const cid = n => n.toLowerCase().replace(/\s+/g,'_');
+
+
+// ---------------- AUTH ----------------
+loginBtn.onclick = async()=>{
+  await signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
+};
+signupBtn.onclick = async()=>{
+  await createUserWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
+};
+logoutBtn.onclick = ()=>signOut(auth);
+
+onAuthStateChanged(auth, u=>{
+  if(u){
+    currentUser=u;
+    authSection.style.display="none";
+    appSection.style.display="block";
+    loadClients();
+    loadExpenses();
+    adminNotes.value = localStorage.getItem("adminNotes") || "";
+  } else {
+    authSection.style.display="block";
+    appSection.style.display="none";
+  }
 });
+
+
+// ---------------- NAV ----------------
+window.showSection = id=>{
+  document.querySelectorAll(".section").forEach(s=>s.style.display="none");
+  document.getElementById(id).style.display="block";
+  document.querySelectorAll("#toolbar button").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll("#toolbar button").forEach(b=>{
+    if(b.getAttribute("onclick")?.includes(id)) b.classList.add("active");
+  });
 };
 
-window.openAdmin=()=>{
-if(prompt("Enter Admin Code")===ADMIN_CODE) showSection("admin");
+window.openAdmin = ()=>{
+  if(prompt("Enter Admin Code") === ADMIN_CODE) showSection("admin");
 };
 
+
+// ---------------- CLIENTS ----------------
 function loadClients(){
-onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
-clients={};
-snap.forEach(d=>clients[d.id]=d.data());
-renderClients();
-});
+  onSnapshot(collection(db,"users",currentUser.uid,"clients"),snap=>{
+    clients={};
+    snap.forEach(d=>{
+      const data=d.data();
+      data.history=data.history||[];
+      clients[d.id]=data;
+    });
+    renderClients();
+  });
 }
 
-window.renderClients=()=>{
-clientsBody.innerHTML="";
-Object.values(clients).forEach(c=>{
-const bal=(c.debit||0)-(c.credit||0);
-clientsBody.innerHTML+=`
-<tr>
-<td>${c.name}</td>
-<td>${c.debit||0}</td>
-<td>${c.credit||0}</td>
-<td class="${bal>0?'debit-red':''}">${bal}</td>
-<td><button onclick="viewClient('${c.name}')">View</button></td>
-</tr>`;
-});
+window.renderClients = ()=>{
+  clientsBody.innerHTML="";
+  Object.values(clients).forEach(c=>{
+    const bal=(c.debit||0)-(c.credit||0);
+    clientsBody.innerHTML+=`
+    <tr>
+      <td>${c.name}</td>
+      <td>${c.debit||0}</td>
+      <td>${c.credit||0}</td>
+      <td class="${bal>0?'debit-red':''}">${bal}</td>
+      <td><button onclick="viewClient('${c.name}')">View</button></td>
+    </tr>`;
+  });
 };
 
-let selectedHistory=null;
 
-window.viewClient=name=>{
-const c=clients[cid(name)];
-viewTitle.textContent=name;
-viewSummary.textContent=`Balance: ${(c.debit||0)-(c.credit||0)}`;
-viewBody.innerHTML="";
-(c.history||[]).forEach(h=>{
-viewBody.innerHTML+=`
-<tr class="unpaid-row"
-onclick="selectHistory('${name}', ${JSON.stringify(h).replace(/"/g,'&quot;')})">
-<td>${new Date(h.date).toLocaleString()}</td>
-<td>${h.debit||0}</td>
-<td>${h.credit||0}</td>
-<td>${h.remarks||""}</td>
-</tr>`;
-});
-viewModal.style.display="block";
+// ---------------- VIEW MODAL ----------------
+window.viewClient = name=>{
+  const c=clients[cid(name)];
+  viewTitle.textContent=name;
+  viewSummary.textContent=`Balance: ${(c.debit||0)-(c.credit||0)}`;
+  viewBody.innerHTML="";
+  (c.history||[]).forEach(h=>{
+    viewBody.innerHTML+=`
+    <tr class="unpaid-row"
+      onclick="selectHistory('${name}', ${JSON.stringify(h).replace(/"/g,'&quot;')})">
+      <td>${new Date(h.date).toLocaleString()}</td>
+      <td>${h.debit||0}</td>
+      <td>${h.credit||0}</td>
+      <td>${h.remarks||""}</td>
+    </tr>`;
+  });
+  viewModal.style.display="block";
 };
 
-window.selectHistory=(name,h)=>{
-paymentSearch.value=name;
-const c=clients[cid(name)];
-paymentBalance.value=(c.debit||0)-(c.credit||0);
-paymentRemarks.value=`Payment for balance ${paymentBalance.value}`;
-showSection("payment");
+window.selectHistory = (name,h)=>{
+  selectedHistory=h;
+  paymentSearch.value=name;
+  const c=clients[cid(name)];
+  paymentBalance.value=(c.debit||0)-(c.credit||0);
+  paymentRemarks.value=`Payment for balance ${paymentBalance.value}`;
+  showSection("payment");
 };
 
+
+// ---------------- AUTOCOMPLETE ----------------
 chargeName.oninput=()=>{
-chargeAuto.innerHTML="";
-Object.values(clients).map(c=>c.name)
-.filter(n=>n.toLowerCase().includes(chargeName.value.toLowerCase()))
-.forEach(n=>{
-const d=document.createElement("div");
-d.textContent=n;
-d.onclick=()=>{ chargeName.value=n; chargeAuto.innerHTML=""; };
-chargeAuto.appendChild(d);
-});
-};
-
-bookingType.onchange=()=>{
-singleDay.style.display="none";
-multiDay.style.display="none";
-if(bookingType.value==="single") singleDay.style.display="block";
-if(bookingType.value==="multi") multiDay.style.display="block";
+  chargeAuto.innerHTML="";
+  Object.values(clients).map(c=>c.name)
+  .filter(n=>n.toLowerCase().includes(chargeName.value.toLowerCase()))
+  .forEach(n=>{
+    const d=document.createElement("div");
+    d.textContent=n;
+    d.onclick=()=>{ chargeName.value=n; chargeAuto.innerHTML=""; };
+    chargeAuto.appendChild(d);
+  });
 };
 
 paymentSearch.oninput=()=>{
-paymentAuto.innerHTML="";
-Object.values(clients).map(c=>c.name)
-.filter(n=>n.toLowerCase().includes(paymentSearch.value.toLowerCase()))
-.forEach(n=>{
-const d=document.createElement("div");
-d.textContent=n;
-d.onclick=()=>{
-paymentSearch.value=n;
-paymentAuto.innerHTML="";
-const c=clients[cid(n)];
-paymentBalance.value=(c.debit||0)-(c.credit||0);
-paymentRemarks.value=`Payment for balance ${paymentBalance.value}`;
-};
-paymentAuto.appendChild(d);
-});
+  paymentAuto.innerHTML="";
+  Object.values(clients).map(c=>c.name)
+  .filter(n=>n.toLowerCase().includes(paymentSearch.value.toLowerCase()))
+  .forEach(n=>{
+    const d=document.createElement("div");
+    d.textContent=n;
+    d.onclick=()=>{
+      paymentSearch.value=n;
+      paymentAuto.innerHTML="";
+      const c=clients[cid(n)];
+      paymentBalance.value=(c.debit||0)-(c.credit||0);
+      paymentRemarks.value=`Payment for balance ${paymentBalance.value}`;
+    };
+    paymentAuto.appendChild(d);
+  });
 };
 
-onAuthStateChanged(auth,u=>{
-if(u){ currentUser=u; authSection.style.display="none"; appSection.style.display="block"; loadClients(); }
-else{ authSection.style.display="block"; appSection.style.display="none"; }
-});
 
-loginBtn.onclick=()=>signInWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
-signupBtn.onclick=()=>createUserWithEmailAndPassword(auth,loginEmail.value,loginPassword.value);
-logoutBtn.onclick=()=>signOut(auth);
+// ---------------- BOOKING CALENDAR ----------------
+bookingType.onchange=()=>{
+  singleDay.style.display="none";
+  multiDay.style.display="none";
+  if(bookingType.value==="single") singleDay.style.display="block";
+  if(bookingType.value==="multi") multiDay.style.display="block";
+};
+
+
+// ---------------- EXPENSES (RESTORED) ----------------
+function loadExpenses(){
+  onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
+    expenses=[];
+    snap.forEach(d=>expenses.push(d.data()));
+  });
+}
+
+addExpenseBtn.onclick = async()=>{
+  if(!expenseDate.value || !expenseAmount.value) return alert("Missing fields");
+  await addDoc(collection(db,"users",currentUser.uid,"expenses"),{
+    date: expenseDate.value,
+    amount: Number(expenseAmount.value),
+    desc: expenseDesc.value
+  });
+  expenseDate.value="";
+  expenseAmount.value="";
+  expenseDesc.value="";
+};
+
+window.viewExpenses = ()=>{
+  if(!expStart.value||!expEnd.value) return;
+  const s=new Date(expStart.value), e=new Date(expEnd.value);
+  let total=0;
+  let html="<table><tr><th>Date</th><th>Amount</th><th>Description</th></tr>";
+  expenses.forEach(x=>{
+    const d=new Date(x.date);
+    if(d>=s && d<=e){
+      total+=x.amount;
+      html+=`<tr><td>${x.date}</td><td>${x.amount}</td><td>${x.desc}</td></tr>`;
+    }
+  });
+  html+=`</table><p><b>Total Expenses:</b> ${total}</p>`;
+  expenseResult.innerHTML=html;
+};
+
+
+// ---------------- ADMIN ----------------
+saveNotesBtn.onclick = ()=>{
+  localStorage.setItem("adminNotes", adminNotes.value);
+  alert("Note saved. You can edit anytime.");
+};
+
+window.generateAdminReport = ()=>{
+  if(!adminStart.value||!adminEnd.value) return alert("Select dates");
+  const s=new Date(adminStart.value), e=new Date(adminEnd.value);
+
+  let totalIncome=0, cashSales=0, totalExpenses=0;
+
+  Object.values(clients).forEach(c=>{
+    (c.history||[]).forEach(h=>{
+      const d=new Date(h.date);
+      if(d>=s && d<=e){
+        if(h.credit){
+          totalIncome+=h.credit;
+          if(h.paymentType==="Cash") cashSales+=h.credit;
+        }
+      }
+    });
+  });
+
+  expenses.forEach(x=>{
+    const d=new Date(x.date);
+    if(d>=s && d<=e) totalExpenses+=x.amount;
+  });
+
+  adminResult.innerHTML=`
+  <h4>Summary</h4>
+  <p>Total Income: ${totalIncome}</p>
+  <p>Total Cash Sales: ${cashSales}</p>
+  <p>Total Expenses: ${totalExpenses}</p>
+  <p><b>Net:</b> ${totalIncome-totalExpenses}</p>`;
+};
 </script>
 </body>
 </html>
+
