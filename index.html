@@ -203,6 +203,8 @@ th { background:#eee }
 
 <!-- ADMIN -->
 <div id="admin" class="section">
+<input id="adminCode" placeholder="Admin Code">
+<button id="saveAdminCodeBtn">Save Admin Code</button>
 <textarea id="adminNotes" placeholder="Notes"></textarea>
 <button id="saveNotesBtn">Save / Edit Note</button>
 
@@ -234,8 +236,6 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebas
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
 import { getFirestore, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
-const ADMIN_CODE="1234";
-
 const app=initializeApp({
   apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
   authDomain:"client-payment-tracker-3572b.firebaseapp.com",
@@ -246,6 +246,7 @@ const auth=getAuth(app);
 const db=getFirestore(app);
 
 let currentUser, clients={}, expenses=[];
+
 const cid=n=>n.toLowerCase().replace(/\s+/g,'_');
 
 /* AUTH */
@@ -260,7 +261,8 @@ onAuthStateChanged(auth,u=>{
     appSection.style.display="block";
     loadClients();
     loadExpenses();
-    adminNotes.value=localStorage.getItem("adminNotes")||"";
+    adminNotes.value=localStorage.getItem(`adminNotes_${currentUser.uid}`)||"";
+    adminCode.value=localStorage.getItem(`adminCode_${currentUser.uid}`)||"";
   }else{
     authSection.style.display="block";
     appSection.style.display="none";
@@ -282,9 +284,12 @@ window.showSection=id=>{
 };
 
 window.openAdmin=()=>{
-  if(prompt("Enter Admin Code")===ADMIN_CODE){
+  const savedCode = localStorage.getItem(`adminCode_${currentUser.uid}`);
+  if(!savedCode || prompt("Enter Admin Code") === savedCode){
     document.querySelectorAll("#toolbar button").forEach(b=>b.classList.remove("active"));
     showSection("admin");
+  } else {
+    alert("Incorrect Admin Code");
   }
 };
 
@@ -331,15 +336,18 @@ window.viewClient=name=>{
   const c=clients[cid(name)];
   const outstanding=(c.debit||0)-(c.credit||0);
   let running=0;
+  let totalDebit = 0;
+  let totalCredit = 0;
 
   viewTitle.textContent=name;
-  viewSummary.textContent=`Outstanding Balance: ${outstanding}`;
+  viewSummary.innerHTML=`Outstanding Balance: ${outstanding}<br>Total Debit: ${c.debit||0}<br>Total Credit: ${c.credit||0}`;
   viewBody.innerHTML="";
 
   (c.history||[]).forEach(h=>{
     running+=(h.debit||0)-(h.credit||0);
+    const match = h.debit && h.debit === outstanding ? "match-balance" : "";
     viewBody.innerHTML+=`
-    <tr>
+    <tr class="${match}">
       <td>${new Date(h.date).toLocaleString()}</td>
       <td>${h.startDate||""}</td>
       <td>${h.endDate||""}</td>
@@ -434,19 +442,24 @@ window.viewExpenses=()=>{
 };
 
 /* ---------- ADMIN ---------- */
-saveNotesBtn.onclick=()=>localStorage.setItem("adminNotes",adminNotes.value);
+saveAdminCodeBtn.onclick=()=>localStorage.setItem(`adminCode_${currentUser.uid}`,adminCode.value);
+saveNotesBtn.onclick=()=>localStorage.setItem(`adminNotes_${currentUser.uid}`,adminNotes.value);
 
 window.generateAdminReport=()=>{
   if(!adminStart.value||!adminEnd.value) return alert("Select dates");
   const s=new Date(adminStart.value), e=new Date(adminEnd.value);
-  let income=0, cash=0, exp=0;
+  let income=0, exp=0;
+  let paymentSums = {};
 
   Object.values(clients).forEach(c=>{
     (c.history||[]).forEach(h=>{
       const d=new Date(h.date);
       if(d>=s&&d<=e&&h.credit){
         income+=h.credit;
-        if(h.paymentType==="Cash") cash+=h.credit;
+        if(h.paymentType){
+          if(!paymentSums[h.paymentType]) paymentSums[h.paymentType]=0;
+          paymentSums[h.paymentType]+=h.credit;
+        }
       }
     });
   });
@@ -456,10 +469,15 @@ window.generateAdminReport=()=>{
     if(d>=s&&d<=e) exp+=x.amount;
   });
 
+  let paymentSummary = "";
+  Object.keys(paymentSums).forEach(type=>{
+    paymentSummary += `<p>Total ${type}: ${paymentSums[type]}</p>`;
+  });
+
   adminResult.innerHTML=`
   <h4>Summary</h4>
   <p>Total Income: ${income}</p>
-  <p>Total Cash Sales: ${cash}</p>
+  ${paymentSummary}
   <p>Total Expenses: ${exp}</p>
   <p><b>Net:</b> ${income-exp}</p>`;
 };
