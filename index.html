@@ -234,7 +234,7 @@ th { background:#eee }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore, collection, onSnapshot, addDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, addDoc, doc, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
 
 const app=initializeApp({
   apiKey:"AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
@@ -417,6 +417,67 @@ bookingType.onchange=()=>{
   if(bookingType.value==="multi") multiDay.style.display="block";
 };
 
+/* ---------- ADD CHARGE ---------- */
+addChargeBtn.onclick = async () => {
+  const name = chargeName.value.trim();
+  const amount = Number(chargeAmount.value);
+  const remarks = chargeRemarks.value.trim();
+  const type = bookingType.value;
+  let startDate = "", endDate = "";
+  if (type === "single") {
+    startDate = endDate = singleDate.value;
+  } else if (type === "multi") {
+    startDate = startDate.value;
+    endDate = endDate.value;
+  }
+  if (!name || !amount) return alert("Missing client name or amount");
+  const clientId = cid(name);
+  let client = clients[clientId];
+  if (!client) {
+    // Create new client
+    client = { name, debit: 0, credit: 0, history: [] };
+    await addDoc(collection(db, "users", currentUser.uid, "clients"), client);
+  } else {
+    // Update existing
+    client.debit = (client.debit || 0) + amount;
+    client.history = client.history || [];
+    client.history.push({ date: new Date().toISOString(), debit: amount, credit: 0, startDate, endDate, remarks });
+    await updateDoc(doc(db, "users", currentUser.uid, "clients", clientId), client);
+  }
+  // Clear fields
+  chargeName.value = "";
+  chargeAmount.value = "";
+  chargeRemarks.value = "";
+  bookingType.value = "";
+  singleDate.value = "";
+  startDate.value = "";
+  endDate.value = "";
+  singleDay.style.display = "none";
+  multiDay.style.display = "none";
+};
+
+/* ---------- ADD PAYMENT ---------- */
+addPaymentBtn.onclick = async () => {
+  const name = paymentSearch.value.trim();
+  const amount = Number(paymentAmount.value);
+  const type = paymentType.value;
+  const mode = paymentMode.value;
+  const remarks = paymentRemarks.value.trim();
+  if (!name || !amount) return alert("Missing client name or amount");
+  const clientId = cid(name);
+  const client = clients[clientId];
+  if (!client) return alert("Client not found");
+  client.credit = (client.credit || 0) + amount;
+  client.history = client.history || [];
+  client.history.push({ date: new Date().toISOString(), debit: 0, credit: amount, paymentType: type, paymentMode: mode, remarks });
+  await updateDoc(doc(db, "users", currentUser.uid, "clients", clientId), client);
+  // Clear fields
+  paymentSearch.value = "";
+  paymentAmount.value = "";
+  paymentBalance.value = "";
+  paymentRemarks.value = "";
+};
+
 /* ---------- EXPENSES ---------- */
 function loadExpenses(){
   onSnapshot(collection(db,"users",currentUser.uid,"expenses"),snap=>{
@@ -494,3 +555,4 @@ window.generateAdminReport=()=>{
 </script>
 </body>
 </html>
+
