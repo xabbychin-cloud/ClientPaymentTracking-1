@@ -220,7 +220,7 @@ th { background:#eee }
 <h3 id="viewTitle"></h3>
 <div id="viewSummary"></div>
 <table>
-<thead><tr><th>Date</th><th>Debit</th><th>Credit</th><th>Remarks</th></tr></thead>
+<thead><tr><th>Date</th><th>Start Date</th><th>End Date</th><th>Debit</th><th>Credit</th><th>Remarks</th></tr></thead>
 <tbody id="viewBody"></tbody>
 </table>
 </div>
@@ -297,67 +297,57 @@ function loadClients(){
   });
 }
 
-/* --------- CLIENT FILTER FIX (WORKS NOW) --------- */
+window.renderClients=()=>{
+  const searchTerm = clientSearch.value.toLowerCase();
+  const filter = clientFilter.value;
+  clientsBody.innerHTML="";
+  Object.values(clients).forEach(c=>{
+    const bal=(c.debit||0)-(c.credit||0);
+    let show = true;
+    if (filter === "outstanding" && bal <= 0) show = false;
+    if (filter === "paid" && bal > 0) show = false;
+    if (searchTerm && !c.name.toLowerCase().includes(searchTerm) && !bal.toString().includes(searchTerm)) show = false;
+    if (show) {
+      const highlightedName = c.name.replace(new RegExp(`(${searchTerm})`, 'gi'), '<mark>$1</mark>');
+      const highlightedBal = bal.toString().replace(new RegExp(`(${searchTerm})`, 'gi'), '<mark>$1</mark>');
+      clientsBody.innerHTML+=`
+      <tr>
+        <td>${highlightedName}</td>
+        <td>${c.debit||0}</td>
+        <td>${c.credit||0}</td>
+        <td class="${bal>0?'debit-red':''}">${highlightedBal}</td>
+        <td><button onclick="viewClient('${c.name}')">View</button></td>
+      </tr>`;
+    }
+  });
+};
+
+// Add event listeners for search and filter
 clientSearch.oninput = renderClients;
 clientFilter.onchange = renderClients;
 
-function highlightMatch(text, query){
-  if(!query) return text;
-  const re = new RegExp(`(${query})`, "gi");
-  return text.replace(re, "<span class='debit-red'>$1</span>");
-}
-
-window.renderClients=()=>{
-  const q=clientSearch.value.toLowerCase();
-  const f=clientFilter.value;
-
-  clientsBody.innerHTML="";
-  Object.values(clients).forEach(c=>{
-    const bal=(Number(c.debit)||0)-(Number(c.credit)||0);
-
-    if(q && !c.name.toLowerCase().includes(q)) return;
-    if(f==="outstanding" && bal<=0) return;
-    if(f==="paid" && bal>0) return;
-
-    clientsBody.innerHTML+=`
-    <tr>
-      <td>${highlightMatch(c.name, q)}</td>
-      <td>${c.debit||0}</td>
-      <td>${c.credit||0}</td>
-      <td class="${bal>0?'debit-red':''}">${bal}</td>
-      <td><button onclick="viewClient('${c.name}')">View</button></td>
-    </tr>`;
-  });
-}
-
-/* ---------- VIEW MODAL (Start/End Date + NO HIGHLIGHT) ---------- */
+/* ---------- VIEW MODAL (FIXED HIGHLIGHT) ---------- */
 window.viewClient=name=>{
   const c=clients[cid(name)];
   const outstanding=(c.debit||0)-(c.credit||0);
   let running=0;
 
-  // Determine start and end date
-  const history = c.history || [];
-  const sortedHistory = [...history].sort((a,b)=>new Date(a.date)-new Date(b.date));
-  const startDate = sortedHistory[0]?.date || "";
-  const endDate = sortedHistory[sortedHistory.length-1]?.date || "";
-
   viewTitle.textContent=name;
-  viewSummary.innerHTML=`Outstanding Balance: <span class="debit-red">${outstanding}</span> | Start: ${startDate} | End: ${endDate}`;
+  viewSummary.textContent=`Outstanding Balance: ${outstanding}`;
   viewBody.innerHTML="";
 
-  sortedHistory.forEach(h=>{
+  (c.history||[]).forEach(h=>{
     running+=(h.debit||0)-(h.credit||0);
-
     viewBody.innerHTML+=`
     <tr>
       <td>${new Date(h.date).toLocaleString()}</td>
+      <td>${h.startDate||""}</td>
+      <td>${h.endDate||""}</td>
       <td>${h.debit||0}</td>
       <td>${h.credit||0}</td>
       <td>${h.remarks||""}</td>
     </tr>`;
   });
-
   viewModal.style.display="block";
 };
 
@@ -384,14 +374,18 @@ paymentSearch.oninput=()=>{
     d.onclick=()=>{
       paymentSearch.value=n;
       paymentAuto.innerHTML="";
-
       const c=clients[cid(n)];
-      const bal=(c.debit||0)-(c.credit||0);
-
-      // AUTOMATE balance, amount, and remarks
-      paymentBalance.value = bal;
-      paymentAmount.value = bal;
-      paymentRemarks.value = `Payment for outstanding balance (${bal})`;
+      paymentBalance.value=(c.debit||0)-(c.credit||0);
+      let remarks = `Payment for balance ${paymentBalance.value}`;
+      // Find the latest charge with dates
+      const history = c.history || [];
+      for (let i = history.length - 1; i >= 0; i--) {
+        if (history[i].debit && history[i].startDate && history[i].endDate) {
+          remarks += ` (Start: ${history[i].startDate}, End: ${history[i].endDate})`;
+          break;
+        }
+      }
+      paymentRemarks.value = remarks;
     };
     paymentAuto.appendChild(d);
   });
@@ -470,8 +464,5 @@ window.generateAdminReport=()=>{
   <p><b>Net:</b> ${income-exp}</p>`;
 };
 </script>
-  
 </body>
 </html>
-
-
