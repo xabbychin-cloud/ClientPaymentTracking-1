@@ -171,3 +171,19 @@ tr.paid {
 .outstanding-item:hover {
   background: #f0f0f0;
 }
+
+/* Remove or comment out the old background highlight */
+.match-balance {
+  /* background:#ffcccc; font-weight:bold; */  /* Commented out */
+}
+
+/* Add new classes for font colors */
+.unpaid-debit {
+  color: blue;
+  font-weight: bold;
+}
+
+.payment-credit {
+  color: green;
+  font-style: italic;
+}
