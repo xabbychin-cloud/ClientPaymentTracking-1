@@ -420,11 +420,10 @@ window.viewClient = name => {
   let running = 0;
 
   viewTitle.textContent = name;
-  const outstandingClass = outstanding > 0 ? 'debit-red' : '';
-  viewSummary.innerHTML = `Outstanding Balance: <span class="${outstandingClass}">${outstanding}</span><br>Total Debit: ${c.debit || 0}<br>Total Credit: ${c.credit || 0}`;
+  viewSummary.innerHTML = `Outstanding Balance: ${outstanding}<br>Total Debit: ${c.debit || 0}<br>Total Credit: ${c.credit || 0}`;
   viewBody.innerHTML = "";
 
-  // Find the last credit index (same as populateOutstanding)
+  // Find the last credit index
   let lastCreditIndex = -1;
   for (let i = (c.history || []).length - 1; i >= 0; i--) {
     if ((c.history[i].credit || 0) > 0) {
@@ -436,21 +435,14 @@ window.viewClient = name => {
   for (let i = 0; i < (c.history || []).length; i++) {
     const h = c.history[i];
     running += (h.debit || 0) - (h.credit || 0);
-    let debitClass = "";
-    let creditClass = "";
-    if (h.debit && i > lastCreditIndex) {
-      debitClass = "unpaid-debit";  // Blue for highlighted (unpaid) debits
-    }
-    if (h.credit) {
-      creditClass = "payment-credit";  // Green for payments
-    }
+    const isUnpaidDebit = h.debit && i > lastCreditIndex ? "match-balance" : "";
     viewBody.innerHTML += `
-    <tr>
+    <tr class="${isUnpaidDebit}">
       <td>${new Date(h.date).toLocaleString()}</td>
       <td>${h.startDate || ""}</td>
       <td>${h.endDate || ""}</td>
-      <td class="${debitClass}">${h.debit || 0}</td>
-      <td class="${creditClass}">${h.credit || 0}</td>
+      <td style="font-weight: bold;">${h.debit || 0}</td>
+      <td style="font-style: italic;">${h.credit || 0}</td>
       <td>${h.branch || ""}</td>
       <td>${h.remarks || ""}</td>
     </tr>`;
@@ -483,14 +475,13 @@ paymentSearch.oninput = () => {
         paymentAuto.innerHTML = "";
         const c = clients[cid(n)];
         paymentBalance.value = (c.debit || 0) - (c.credit || 0);
-        paymentRemarks.value = '';  // Ensure remarks start empty
         populateOutstanding(c);
       };
       paymentAuto.appendChild(d);
     });
 };
-  
-function populateOutstanding(client) {
+
+  function populateOutstanding(client) {
   outstandingList.innerHTML = "";
   const history = client.history || [];
   
@@ -536,7 +527,7 @@ function populateOutstanding(client) {
   }
 }
 
-  
+
 /* ---------- BOOKING ---------- */
 bookingType.onchange = () => {
   singleDay.style.display = "none";
@@ -751,33 +742,4 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
