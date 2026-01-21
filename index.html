@@ -475,25 +475,31 @@ paymentSearch.oninput = () => {
         paymentAuto.innerHTML = "";
         const c = clients[cid(n)];
         paymentBalance.value = (c.debit || 0) - (c.credit || 0);
-        populateOutstanding(c);  // Show list of unpaid charges only
+        populateOutstanding(c);
       };
       paymentAuto.appendChild(d);
     });
 };
 
-
 function populateOutstanding(client) {
   outstandingList.innerHTML = "";
   const history = client.history || [];
-  let running = 0;  // Running balance: positive means outstanding debit
-  const outstandingItems = [];
-
-  // Collect only unpaid debits based on running balance
+  
+  // Find the last credit index (same logic as viewClient)
+  let lastCreditIndex = -1;
+  for (let i = history.length - 1; i >= 0; i--) {
+    if ((history[i].credit || 0) > 0) {
+      lastCreditIndex = i;
+      break;
+    }
+  }
+  
+  // Collect only highlighted (unpaid) debits: debits where index > lastCreditIndex
+  const highlightedItems = [];
   for (let i = 0; i < history.length; i++) {
     const h = history[i];
-    running += (h.debit || 0) - (h.credit || 0);
-    if (h.debit && running > 0) {
-      outstandingItems.push({
+    if (h.debit && i > lastCreditIndex) {
+      highlightedItems.push({
         index: i,
         debit: h.debit,
         remarks: h.remarks || "",
@@ -503,10 +509,10 @@ function populateOutstanding(client) {
       });
     }
   }
-
-  if (outstandingItems.length > 0) {
+  
+  if (highlightedItems.length > 0) {
     outstandingList.style.display = "block";
-    outstandingItems.forEach(item => {
+    highlightedItems.forEach(item => {
       const div = document.createElement("div");
       div.className = "outstanding-item";
       div.innerHTML = `<strong>Amount: ${item.debit}</strong><br>Remarks: ${item.remarks}<br>Start: ${item.startDate}, End: ${item.endDate}`;
@@ -519,7 +525,7 @@ function populateOutstanding(client) {
   } else {
     outstandingList.style.display = "none";
   }
-};
+}
 
   
 /* ---------- BOOKING ---------- */
@@ -736,6 +742,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
