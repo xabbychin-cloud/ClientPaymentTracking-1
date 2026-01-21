@@ -202,9 +202,10 @@ th { background:#eee }
 </div>
 
 <!-- ADMIN -->
+<!-- ADMIN -->
 <div id="admin" class="section">
-<input id="adminCode" placeholder="Admin Code">
-<button id="saveAdminCodeBtn">Save Admin Code</button>
+<input id="adminCode" type="password" placeholder="Admin Code">
+<button id="toggleNotesBtn">Hide Notes</button>
 <textarea id="adminNotes" placeholder="Notes"></textarea>
 <button id="saveNotesBtn">Save / Edit Note</button>
 
@@ -221,7 +222,7 @@ th { background:#eee }
 <button onclick="viewModal.style.display='none'">Close</button>
 <h3 id="viewTitle"></h3>
 <div id="viewSummary"></div>
-<div style="overflow-x: auto;"> <!-- Add horizontal scroll for table if needed -->
+<div style="overflow: auto; max-height: 70vh;"> <!-- Added overflow auto and max-height for better scrolling -->
 <table>
 <thead><tr><th>Date</th><th>Start Date</th><th>End Date</th><th>Debit</th><th>Credit</th><th>Remarks</th></tr></thead>
 <tbody id="viewBody"></tbody>
@@ -281,6 +282,20 @@ onAuthStateChanged(auth, async u => {
     appSection.style.display = "none";
     // No code here that accesses currentUser (fixes the bug)
   }
+
+  // Initialize notes as visible on load
+adminNotes.style.display = 'block';
+toggleNotesBtn.textContent = 'Hide Notes';
+
+toggleNotesBtn.onclick = () => {
+  if (adminNotes.style.display === 'none') {
+    adminNotes.style.display = 'block';
+    toggleNotesBtn.textContent = 'Hide Notes';
+  } else {
+    adminNotes.style.display = 'none';
+    toggleNotesBtn.textContent = 'View Notes';
+  }
+};
 });
 
 /* ---------- TOOLBAR ACTIVE FIX ---------- */
@@ -556,13 +571,6 @@ window.viewExpenses = () => {
   expenseResult.innerHTML = html;
 };
 
-/* ---------- ADMIN ---------- */
-saveAdminCodeBtn.onclick = async () => {
-  const adminRef = doc(db, "users", currentUser.uid, "settings", "admin");
-  await setDoc(adminRef, { code: adminCode.value, notes: adminNotes.value }, { merge: true });
-  alert("Admin code saved!");
-};
-
 saveNotesBtn.onclick = async () => {
   const adminRef = doc(db, "users", currentUser.uid, "settings", "admin");
   await setDoc(adminRef, { code: adminCode.value, notes: adminNotes.value }, { merge: true });
@@ -607,6 +615,7 @@ window.generateAdminReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
