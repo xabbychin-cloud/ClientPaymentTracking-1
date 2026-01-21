@@ -339,7 +339,6 @@ toggleNotesBtn.onclick = () => {
     toggleNotesBtn.textContent = 'View Notes';
   }
 };
-});
 
 /* ---------- TOOLBAR ACTIVE FIX ---------- */
 document.querySelectorAll("#toolbar button[data-sec]").forEach(btn => {
@@ -348,7 +347,6 @@ document.querySelectorAll("#toolbar button[data-sec]").forEach(btn => {
     btn.classList.add("active");  // Fixed: Added closing )
     showSection(btn.dataset.sec);
   };
-});
 
 window.showSection = id => {
   document.querySelectorAll(".section").forEach(s => s.style.display = "none");
@@ -416,9 +414,6 @@ clientFilter.onchange = renderClients;
 window.viewClient = name => {
   const c = clients[cid(name)];
   const outstanding = (c.debit || 0) - (c.credit || 0);
-  let running = 0;
-  let totalDebit = 0;
-  let totalCredit = 0;
 
   viewTitle.textContent = name;
   viewSummary.innerHTML = `Outstanding Balance: ${outstanding}<br>Total Debit: ${c.debit || 0}<br>Total Credit: ${c.credit || 0}`;
@@ -645,7 +640,7 @@ window.generateAdminReport = () => {
       if (d >= s && d <= e && h.credit) {
         income += h.credit;
         if (h.paymentType && paymentSums[h.paymentType] !== undefined) {
-          paymentSums[h.paymentType] += h.credit;
+          paymentSums[h.paymentType] !== undefined;
         }
       }
     });
@@ -703,6 +698,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
