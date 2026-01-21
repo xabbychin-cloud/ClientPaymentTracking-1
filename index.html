@@ -113,6 +113,7 @@ th { background:#eee }
 <input id="loginPassword" type="password" placeholder="Password">
 <button id="loginBtn">Login</button>
 <button id="signupBtn">Sign Up</button>
+<div id="authError" style="color:red; margin-top:10px;"></div>  <!-- Added for error display -->
 </div>
 
 <!-- APP -->
@@ -267,7 +268,7 @@ th { background:#eee }
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
-import { getFirestore, collection, onSnapshot, addDoc, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";
+import { getFirestore, collection, onSnapshot, addDoc, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-firestore.js";  
 
 const app = initializeApp({
   apiKey: "AIzaSyCrtGcFZVwP6dlsc_Bljr_yN-nu6hxihVg",
@@ -696,6 +697,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
