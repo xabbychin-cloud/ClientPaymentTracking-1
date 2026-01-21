@@ -344,9 +344,10 @@ toggleNotesBtn.onclick = () => {
 document.querySelectorAll("#toolbar button[data-sec]").forEach(btn => {
   btn.onclick = () => {
     document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active"));
-    btn.classList.add("active");  // Fixed: Added closing )
+    btn.classList.add("active");
     showSection(btn.dataset.sec);
   };
+});
 
 window.showSection = id => {
   document.querySelectorAll(".section").forEach(s => s.style.display = "none");
@@ -355,7 +356,7 @@ window.showSection = id => {
 
 window.openAdmin = () => {
   adminCodeModal.style.display = 'block';
-  adminCodeInput.focus();  // Auto-focus the input
+  adminCodeInput.focus();
 };
 
 submitAdminCodeBtn.onclick = () => {
@@ -365,10 +366,10 @@ submitAdminCodeBtn.onclick = () => {
     document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active"));
     showSection("admin");
     adminCodeModal.style.display = 'none';
-    adminCodeInput.value = '';  // Clear the input
+    adminCodeInput.value = '';
   } else {
     alert("Incorrect Admin Code");
-    adminCodeInput.value = '';  // Clear on failure
+    adminCodeInput.value = '';
   }
 };
 
@@ -414,6 +415,7 @@ clientFilter.onchange = renderClients;
 window.viewClient = name => {
   const c = clients[cid(name)];
   const outstanding = (c.debit || 0) - (c.credit || 0);
+  let running = 0;  // Declare running variable
 
   viewTitle.textContent = name;
   viewSummary.innerHTML = `Outstanding Balance: ${outstanding}<br>Total Debit: ${c.debit || 0}<br>Total Credit: ${c.credit || 0}`;
@@ -439,7 +441,7 @@ window.viewClient = name => {
       <td>${h.endDate || ""}</td>
       <td style="font-weight: bold;">${h.debit || 0}</td>
       <td style="font-style: italic;">${h.credit || 0}</td>
-      <td>${h.branch || ""}</td>  <!-- New: Display branch -->
+      <td>${h.branch || ""}</td>
       <td>${h.remarks || ""}</td>
     </tr>`;
   }
@@ -640,11 +642,8 @@ window.generateAdminReport = () => {
       if (d >= s && d <= e && h.credit) {
         income += h.credit;
         if (h.paymentType && paymentSums[h.paymentType] !== undefined) {
-          paymentSums[h.paymentType] !== undefined;
-        }
-      }
-    });
-  });
+  paymentSums[h.paymentType] += h.credit;
+}
 
   expenses.forEach(x => {
     const d = new Date(x.date);
@@ -698,6 +697,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
