@@ -417,23 +417,32 @@ clientFilter.onchange = renderClients;
 window.viewClient = name => {
   const c = clients[cid(name)];
   const outstanding = (c.debit || 0) - (c.credit || 0);
-  let running = 0;  // Running balance: positive means outstanding debit
+  let running = 0;
 
   viewTitle.textContent = name;
   const outstandingClass = outstanding > 0 ? 'debit-red' : '';
   viewSummary.innerHTML = `Outstanding Balance: <span class="${outstandingClass}">${outstanding}</span><br>Total Debit: ${c.debit || 0}<br>Total Credit: ${c.credit || 0}`;
   viewBody.innerHTML = "";
 
+  // Find the last credit index (same as populateOutstanding)
+  let lastCreditIndex = -1;
+  for (let i = (c.history || []).length - 1; i >= 0; i--) {
+    if ((c.history[i].credit || 0) > 0) {
+      lastCreditIndex = i;
+      break;
+    }
+  }
+
   for (let i = 0; i < (c.history || []).length; i++) {
     const h = c.history[i];
     running += (h.debit || 0) - (h.credit || 0);
     let debitClass = "";
     let creditClass = "";
-    if (h.debit && running > 0) {
-      debitClass = "unpaid-debit";  // Blue for unpaid debits (applied to debit cell)
+    if (h.debit && i > lastCreditIndex) {
+      debitClass = "unpaid-debit";  // Blue for highlighted (unpaid) debits
     }
     if (h.credit) {
-      creditClass = "payment-credit";  // Green for payments (applied to credit cell)
+      creditClass = "payment-credit";  // Green for payments
     }
     viewBody.innerHTML += `
     <tr>
@@ -475,6 +484,7 @@ paymentSearch.oninput = () => {
         paymentAuto.innerHTML = "";
         const c = clients[cid(n)];
         paymentBalance.value = (c.debit || 0) - (c.credit || 0);
+        paymentRemarks.value = '';  // Ensure remarks start empty
         populateOutstanding(c);
       };
       paymentAuto.appendChild(d);
@@ -742,6 +752,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
