@@ -156,3 +156,18 @@ tr.paid {
   table { display:table; }
 }
 
+.outstanding-list {
+  margin-top: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+  border: 1px solid #ccc;
+  padding: 10px;
+}
+.outstanding-item {
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+  cursor: pointer;
+}
+.outstanding-item:hover {
+  background: #f0f0f0;
+}
