@@ -235,7 +235,7 @@ th { background:#eee }
 <button onclick="generateAdminReport()">Generate Report</button>
 <div id="adminResult"></div>
 </div>
-  
+
 <!-- VIEW MODAL -->
 <div id="viewModal" class="modal">
 <div class="modal-content">
@@ -251,10 +251,7 @@ th { background:#eee }
 </div>
 </div>
 
-<button id="logoutBtn">Logout</button>
-</div>
-
-  <!-- ADMIN CODE MODAL -->
+<!-- ADMIN CODE MODAL -->
 <div id="adminCodeModal" class="modal">
 <div class="modal-content" style="width: 300px; margin: 20% auto;">
 <h3>Enter Admin Code</h3>
@@ -262,6 +259,9 @@ th { background:#eee }
 <button id="submitAdminCodeBtn" style="width: 100%;">Submit</button>
 <button onclick="adminCodeModal.style.display='none'" style="width: 100%; margin-top: 10px;">Cancel</button>
 </div>
+</div>
+
+<button id="logoutBtn">Logout</button>
 </div>
 
 <script type="module">
@@ -411,11 +411,11 @@ window.renderClients = () => {
 clientSearch.oninput = renderClients;
 clientFilter.onchange = renderClients;
 
-/* ---------- VIEW MODAL (FIXED HIGHLIGHT) ---------- */
+/* ---------- VIEW MODAL ---------- */
 window.viewClient = name => {
   const c = clients[cid(name)];
   const outstanding = (c.debit || 0) - (c.credit || 0);
-  let running = 0;  // Declare running variable
+  let running = 0;
 
   viewTitle.textContent = name;
   viewSummary.innerHTML = `Outstanding Balance: ${outstanding}<br>Total Debit: ${c.debit || 0}<br>Total Credit: ${c.credit || 0}`;
@@ -474,7 +474,6 @@ paymentSearch.oninput = () => {
         const c = clients[cid(n)];
         paymentBalance.value = (c.debit || 0) - (c.credit || 0);
         let remarks = `Payment for balance ${paymentBalance.value}`;
-        // Find the latest charge with dates
         const history = c.history || [];
         for (let i = history.length - 1; i >= 0; i--) {
           if (history[i].debit && history[i].startDate && history[i].endDate) {
@@ -697,6 +696,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
