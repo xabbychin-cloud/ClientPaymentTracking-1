@@ -192,6 +192,7 @@ th { background:#eee }
 <option value="Branch 2">Branch 2</option>
 </select>
 <input id="paymentRemarks" placeholder="Remarks">
+<div id="outstandingList" class="outstanding-list" style="display:none;"></div>
 <button id="addPaymentBtn">Save Payment</button>
 </div>
 
@@ -474,19 +475,52 @@ paymentSearch.oninput = () => {
         paymentAuto.innerHTML = "";
         const c = clients[cid(n)];
         paymentBalance.value = (c.debit || 0) - (c.credit || 0);
-        let remarks = `Payment for balance ${paymentBalance.value}`;
-        const history = c.history || [];
-        for (let i = history.length - 1; i >= 0; i--) {
-          if (history[i].debit && history[i].startDate && history[i].endDate) {
-            remarks += ` (Start: ${history[i].startDate}, End: ${history[i].endDate})`;
-            break;
-          }
-        }
-        paymentRemarks.value = remarks;
+        populateOutstanding(c);
       };
       paymentAuto.appendChild(d);
     });
+
+  function populateOutstanding(client) {
+  outstandingList.innerHTML = "";
+  const history = client.history || [];
+  let runningBalance = 0;
+  const outstandingItems = [];
+
+  // Calculate running balance to find unpaid debits
+  for (let i = 0; i < history.length; i++) {
+    const h = history[i];
+    runningBalance += (h.debit || 0) - (h.credit || 0);
+    if (h.debit && runningBalance > 0) {
+      outstandingItems.push({
+        index: i,
+        debit: h.debit,
+        remarks: h.remarks || "",
+        startDate: h.startDate || "",
+        endDate: h.endDate || "",
+        date: h.date
+      });
+    }
+  }
+
+  if (outstandingItems.length > 0) {
+    outstandingList.style.display = "block";
+    outstandingItems.forEach(item => {
+      const div = document.createElement("div");
+      div.className = "outstanding-item";
+      div.innerHTML = `<strong>Amount: ${item.debit}</strong><br>Remarks: ${item.remarks}<br>Start: ${item.startDate}, End: ${item.endDate}`;
+      div.onclick = () => {
+        paymentRemarks.value = `Payment for: ${item.remarks} (Amount: ${item.debit}, Start: ${item.startDate}, End: ${item.endDate})`;
+        // Optionally, you could store the selected item index for further logic, e.g., selectedChargeIndex = item.index;
+      };
+      outstandingList.appendChild(div);
+    });
+  } else {
+    outstandingList.style.display = "none";
+  }
+}
 };
+
+  
 
 /* ---------- BOOKING ---------- */
 bookingType.onchange = () => {
@@ -588,6 +622,8 @@ addPaymentBtn.onclick = async () => {
   paymentMode.value = 'Full';
   paymentBranch.value = '';
   paymentRemarks.value = '';
+  outstandingList.style.display = 'none';  // Hide the list
+  outstandingList.innerHTML = '';  // Clear the list
 };
 
 /* ---------- EXPENSES ---------- */
@@ -700,6 +736,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
