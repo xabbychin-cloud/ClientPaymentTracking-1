@@ -417,25 +417,16 @@ clientFilter.onchange = renderClients;
 window.viewClient = name => {
   const c = clients[cid(name)];
   const outstanding = (c.debit || 0) - (c.credit || 0);
-  let running = 0;
+  let running = 0;  // Running balance: positive means outstanding debit
 
   viewTitle.textContent = name;
   viewSummary.innerHTML = `Outstanding Balance: ${outstanding}<br>Total Debit: ${c.debit || 0}<br>Total Credit: ${c.credit || 0}`;
   viewBody.innerHTML = "";
 
-  // Find the last credit index
-  let lastCreditIndex = -1;
-  for (let i = (c.history || []).length - 1; i >= 0; i--) {
-    if ((c.history[i].credit || 0) > 0) {
-      lastCreditIndex = i;
-      break;
-    }
-  }
-
   for (let i = 0; i < (c.history || []).length; i++) {
     const h = c.history[i];
     running += (h.debit || 0) - (h.credit || 0);
-    const isUnpaidDebit = h.debit && i > lastCreditIndex ? "match-balance" : "";
+    const isUnpaidDebit = h.debit && running > 0 ? "match-balance" : "";
     viewBody.innerHTML += `
     <tr class="${isUnpaidDebit}">
       <td>${new Date(h.date).toLocaleString()}</td>
@@ -481,25 +472,18 @@ paymentSearch.oninput = () => {
     });
 };
 
-  function populateOutstanding(client) {
+ function populateOutstanding(client) {
   outstandingList.innerHTML = "";
   const history = client.history || [];
-  
-  // Find the last credit index (same logic as viewClient)
-  let lastCreditIndex = -1;
-  for (let i = history.length - 1; i >= 0; i--) {
-    if ((history[i].credit || 0) > 0) {
-      lastCreditIndex = i;
-      break;
-    }
-  }
-  
-  // Collect only highlighted (unpaid) debits: debits where index > lastCreditIndex
-  const highlightedItems = [];
+  let running = 0;  // Running balance: positive means outstanding debit
+  const outstandingItems = [];
+
+  // Collect only unpaid debits based on running balance
   for (let i = 0; i < history.length; i++) {
     const h = history[i];
-    if (h.debit && i > lastCreditIndex) {
-      highlightedItems.push({
+    running += (h.debit || 0) - (h.credit || 0);
+    if (h.debit && running > 0) {
+      outstandingItems.push({
         index: i,
         debit: h.debit,
         remarks: h.remarks || "",
@@ -509,10 +493,10 @@ paymentSearch.oninput = () => {
       });
     }
   }
-  
-  if (highlightedItems.length > 0) {
+
+  if (outstandingItems.length > 0) {
     outstandingList.style.display = "block";
-    highlightedItems.forEach(item => {
+    outstandingItems.forEach(item => {
       const div = document.createElement("div");
       div.className = "outstanding-item";
       div.innerHTML = `<strong>Amount: ${item.debit}</strong><br>Remarks: ${item.remarks}<br>Start: ${item.startDate}, End: ${item.endDate}`;
@@ -525,7 +509,7 @@ paymentSearch.oninput = () => {
   } else {
     outstandingList.style.display = "none";
   }
-}
+};
   
 
 /* ---------- BOOKING ---------- */
@@ -742,6 +726,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
