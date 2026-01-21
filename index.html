@@ -642,8 +642,11 @@ window.generateAdminReport = () => {
       if (d >= s && d <= e && h.credit) {
         income += h.credit;
         if (h.paymentType && paymentSums[h.paymentType] !== undefined) {
-  paymentSums[h.paymentType] += h.credit;
-}
+          paymentSums[h.paymentType] += h.credit;
+        }
+      }
+    });
+  });
 
   expenses.forEach(x => {
     const d = new Date(x.date);
@@ -697,6 +700,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
