@@ -484,22 +484,15 @@ paymentSearch.oninput = () => {
 function populateOutstanding(client) {
   outstandingList.innerHTML = "";
   const history = client.history || [];
-  
-  // Find the last credit index (same logic as viewClient)
-  let lastCreditIndex = -1;
-  for (let i = history.length - 1; i >= 0; i--) {
-    if ((history[i].credit || 0) > 0) {
-      lastCreditIndex = i;
-      break;
-    }
-  }
-  
-  // Collect only highlighted (unpaid) debits: debits where index > lastCreditIndex
-  const highlightedItems = [];
+  let running = 0;  // Running balance: positive means outstanding debit
+  const outstandingItems = [];
+
+  // Collect only unpaid debits based on running balance
   for (let i = 0; i < history.length; i++) {
     const h = history[i];
-    if (h.debit && i > lastCreditIndex) {
-      highlightedItems.push({
+    running += (h.debit || 0) - (h.credit || 0);
+    if (h.debit && running > 0) {
+      outstandingItems.push({
         index: i,
         debit: h.debit,
         remarks: h.remarks || "",
@@ -509,10 +502,10 @@ function populateOutstanding(client) {
       });
     }
   }
-  
-  if (highlightedItems.length > 0) {
+
+  if (outstandingItems.length > 0) {
     outstandingList.style.display = "block";
-    highlightedItems.forEach(item => {
+    outstandingItems.forEach(item => {
       const div = document.createElement("div");
       div.className = "outstanding-item";
       div.innerHTML = `<strong>Amount: ${item.debit}</strong><br>Remarks: ${item.remarks}<br>Start: ${item.startDate}, End: ${item.endDate}`;
@@ -525,7 +518,7 @@ function populateOutstanding(client) {
   } else {
     outstandingList.style.display = "none";
   }
-}
+};
 
   
 /* ---------- BOOKING ---------- */
@@ -742,6 +735,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
