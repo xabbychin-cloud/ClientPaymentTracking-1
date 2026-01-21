@@ -299,8 +299,24 @@ let currentUser, clients = {}, expenses = [];
 const cid = n => n.toLowerCase().replace(/\s+/g, '_');
 
 /* AUTH */
-loginBtn.onclick = () => signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
-signupBtn.onclick = () => createUserWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
+loginBtn.onclick = async () => {
+  try {
+    await signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
+    alert("Login successful!");
+  } catch (error) {
+    alert(`Login failed: ${error.message}`);
+  }
+};
+
+signupBtn.onclick = async () => {
+  try {
+    await createUserWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
+    alert("Signup successful! You can now log in.");
+  } catch (error) {
+    alert(`Signup failed: ${error.message}`);
+  }
+};
+
 logoutBtn.onclick = () => signOut(auth);
 
 onAuthStateChanged(auth, async u => {
@@ -316,18 +332,15 @@ onAuthStateChanged(auth, async u => {
     const adminSnap = await getDoc(adminRef);
     if (adminSnap.exists()) {
       const data = adminSnap.data();
-      adminCode.value = data.code || "";
       adminNotes.value = data.notes || "";
     } else {
-      // If no settings exist, initialize empty
-      adminCode.value = "";
       adminNotes.value = "";
     }
   } else {
     authSection.style.display = "block";
     appSection.style.display = "none";
-    // No code here that accesses currentUser (fixes the bug)
   }
+});
 
   // Initialize notes as visible on load
 adminNotes.style.display = 'block';
@@ -728,6 +741,7 @@ window.generateAdminReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
