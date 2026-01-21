@@ -426,26 +426,28 @@ window.viewClient = name => {
   for (let i = 0; i < (c.history || []).length; i++) {
     const h = c.history[i];
     running += (h.debit || 0) - (h.credit || 0);
-    let rowClass = "";
+    let debitClass = "";
+    let creditClass = "";
     if (h.debit && running > 0) {
-      rowClass = "unpaid-debit";  // Blue for unpaid debits
-    } else if (h.credit) {
-      rowClass = "payment-credit";  // Green for payments
+      debitClass = "unpaid-debit";  // Blue for unpaid debits (applied to debit cell)
+    }
+    if (h.credit) {
+      creditClass = "payment-credit";  // Green for payments (applied to credit cell)
     }
     viewBody.innerHTML += `
-    <tr class="${rowClass}">
+    <tr>
       <td>${new Date(h.date).toLocaleString()}</td>
       <td>${h.startDate || ""}</td>
       <td>${h.endDate || ""}</td>
-      <td>${h.debit || 0}</td>
-      <td>${h.credit || 0}</td>
+      <td class="${debitClass}">${h.debit || 0}</td>
+      <td class="${creditClass}">${h.credit || 0}</td>
       <td>${h.branch || ""}</td>
       <td>${h.remarks || ""}</td>
     </tr>`;
   }
   viewModal.style.display = "block";
 };
-
+  
 /* ---------- AUTOCOMPLETE ---------- */
 chargeName.oninput = () => {
   chargeAuto.innerHTML = "";
@@ -477,7 +479,7 @@ paymentSearch.oninput = () => {
     });
 };
 
- function populateOutstanding(client) {
+function populateOutstanding(client) {
   outstandingList.innerHTML = "";
   const history = client.history || [];
   let running = 0;  // Running balance: positive means outstanding debit
@@ -515,6 +517,7 @@ paymentSearch.oninput = () => {
     outstandingList.style.display = "none";
   }
 };
+
   
 /* ---------- BOOKING ---------- */
 bookingType.onchange = () => {
@@ -730,6 +733,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
