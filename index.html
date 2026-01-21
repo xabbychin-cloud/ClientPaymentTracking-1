@@ -233,6 +233,16 @@ th { background:#eee }
 <button id="logoutBtn">Logout</button>
 </div>
 
+  <!-- ADMIN CODE MODAL -->
+<div id="adminCodeModal" class="modal">
+<div class="modal-content" style="width: 300px; margin: 20% auto;">
+<h3>Enter Admin Code</h3>
+<input id="adminCodeInput" type="password" placeholder="Admin Code" style="width: 100%; margin-bottom: 10px;">
+<button id="submitAdminCodeBtn" style="width: 100%;">Submit</button>
+<button onclick="adminCodeModal.style.display='none'" style="width: 100%; margin-top: 10px;">Cancel</button>
+</div>
+</div>
+
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.0.1/firebase-auth.js";
@@ -312,12 +322,21 @@ window.showSection = id => {
 };
 
 window.openAdmin = () => {
-  const savedCode = localStorage.getItem(`adminCode_${currentUser.uid}`);  // Fallback to localStorage if needed, but we prefer Firestore
-  if (!savedCode || prompt("Enter Admin Code") === savedCode) {
+  adminCodeModal.style.display = 'block';
+  adminCodeInput.focus();  // Auto-focus the input
+};
+
+submitAdminCodeBtn.onclick = () => {
+  const enteredCode = adminCodeInput.value;
+  const savedCode = localStorage.getItem(`adminCode_${currentUser.uid}`);
+  if (enteredCode === savedCode) {
     document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active"));
     showSection("admin");
+    adminCodeModal.style.display = 'none';
+    adminCodeInput.value = '';  // Clear the input
   } else {
     alert("Incorrect Admin Code");
+    adminCodeInput.value = '';  // Clear on failure
   }
 };
 
@@ -614,6 +633,7 @@ window.generateAdminReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
