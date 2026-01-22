@@ -511,35 +511,35 @@ paymentSearch.oninput = () => {
 function populateOutstanding(client) {
   outstandingList.innerHTML = "";
   const history = client.history || [];
-  let running = 0;
-  const totalBalance = (client.debit || 0) - (client.credit || 0);
-  let matchingUnpaidDebit = null;
+  let running = 0;  // Running balance: positive means outstanding debit
 
+  // Find the last unpaid debit (same as viewClient)
+  let lastUnpaidDebitIndex = -1;
   for (let i = 0; i < history.length; i++) {
     const h = history[i];
     running += (h.debit || 0) - (h.credit || 0);
-    if (h.debit && running > 0 && h.debit === totalBalance) {
-      matchingUnpaidDebit = { index: i, item: h };
-      break; // Assuming only one matches, or take the first
+    if (h.debit && running > 0) {
+      lastUnpaidDebitIndex = i;
     }
   }
 
-  if (matchingUnpaidDebit) {
+  // Show only the last unpaid debit in the list
+  if (lastUnpaidDebitIndex !== -1) {
+    const item = history[lastUnpaidDebitIndex];
     outstandingList.style.display = "block";
-    const { index, item } = matchingUnpaidDebit;
     const div = document.createElement("div");
     div.className = "outstanding-item";
     div.innerHTML = `<strong>Amount: ${item.debit}</strong><br>Remarks: ${item.remarks || ""}<br>Start: ${item.startDate || ""}, End: ${item.endDate || ""}`;
     div.onclick = () => {
       paymentRemarks.value = `Payment for: ${item.remarks || ""} (Amount: ${item.debit}, Start: ${item.startDate || ""}, End: ${item.endDate || ""})`;
-      // Optionally, set paymentAmount.value = item.debit;
+      // Optionally, store the selected item index for further logic, e.g., selectedChargeIndex = lastUnpaidDebitIndex;
     };
     outstandingList.appendChild(div);
   } else {
     outstandingList.style.display = "none";
   }
-}
-  
+};
+
 /* ---------- BOOKING ---------- */
 bookingType.onchange = () => {
   singleDay.style.display = "none";
@@ -766,9 +766,6 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
-
-
-
 
 
 
