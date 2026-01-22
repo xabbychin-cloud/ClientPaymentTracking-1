@@ -118,6 +118,9 @@ th { background:#eee }
 
 <!-- APP -->
 <div id="appSection" style="display:none">
+<h1>Client Payment Tracker</h1>
+<!-- NEW: User Greeting -->
+<div id="userGreeting" style="text-align: center; font-size: 18px; margin-bottom: 10px; color: #2e7d32;"></div>
 
 <div id="toolbar">
 <button data-sec="clients" class="active">Clients</button>
@@ -327,9 +330,16 @@ onAuthStateChanged(auth, async u => {
     } else {
       adminNotes.value = "";
     }
+    
+    // NEW: Update user greeting
+    const displayName = currentUser.displayName || currentUser.email.split('@')[0];  // Use display name or part of email
+    userGreeting.textContent = `Hi ${displayName}! (user:${currentUser.email})`;
+    userGreeting.style.display = "block";
   } else {
     authSection.style.display = "block";
     appSection.style.display = "none";
+    // NEW: Hide greeting on logout
+    userGreeting.style.display = "none";
   }
 });
 
@@ -757,6 +767,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
