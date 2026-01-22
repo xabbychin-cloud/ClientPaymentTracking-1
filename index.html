@@ -510,33 +510,41 @@ paymentSearch.oninput = () => {
 
 function populateOutstanding(client) {
   outstandingList.innerHTML = "";
-  const outstanding = (client.debit || 0) - (client.credit || 0);
   const history = client.history || [];
   let running = 0;
-  let lastUnpaidDebit = null;
-  let matchingDebit = null;
+  let unpaidDebits = [];
+  const totalBalance = (client.debit || 0) - (client.credit || 0);
 
   for (let i = 0; i < history.length; i++) {
     const h = history[i];
     running += (h.debit || 0) - (h.credit || 0);
     if (h.debit && running > 0) {
-      lastUnpaidDebit = h;
-      if (h.debit == outstanding) {
-        matchingDebit = h;
-      }
+      unpaidDebits.push({ index: i, item: h });
     }
   }
 
-  const itemToShow = matchingDebit || lastUnpaidDebit;
-  if (itemToShow) {
+  if (unpaidDebits.length > 0) {
     outstandingList.style.display = "block";
-    const div = document.createElement("div");
-    div.className = "outstanding-item";
-    div.innerHTML = `<strong>Amount: ${itemToShow.debit}</strong><br>Remarks: ${itemToShow.remarks || ""}<br>Start: ${itemToShow.startDate || ""}, End: ${itemToShow.endDate || ""}`;
-    div.onclick = () => {
-      paymentRemarks.value = `Payment for: ${itemToShow.remarks || ""} (Amount: ${itemToShow.debit}, Start: ${itemToShow.startDate || ""}, End: ${itemToShow.endDate || ""})`;
+    unpaidDebits.forEach(({ index, item }) => {
+      const div = document.createElement("div");
+      div.className = "outstanding-item";
+      div.innerHTML = `<strong>Amount: ${item.debit}</strong><br>Remarks: ${item.remarks || ""}<br>Start: ${item.startDate || ""}, End: ${item.endDate || ""}`;
+      div.onclick = () => {
+        paymentRemarks.value = `Payment for: ${item.remarks || ""} (Amount: ${item.debit}, Start: ${item.startDate || ""}, End: ${item.endDate || ""})`;
+        // Optionally, set paymentAmount.value = item.debit;
+      };
+      outstandingList.appendChild(div);
+    });
+
+    // Add option for full outstanding balance
+    const fullDiv = document.createElement("div");
+    fullDiv.className = "outstanding-item";
+    fullDiv.innerHTML = `<strong>Full Outstanding Balance: ${totalBalance}</strong>`;
+    fullDiv.onclick = () => {
+      paymentRemarks.value = `Payment for full outstanding balance (Amount: ${totalBalance})`;
+      // Optionally, set paymentAmount.value = totalBalance;
     };
-    outstandingList.appendChild(div);
+    outstandingList.appendChild(fullDiv);
   } else {
     outstandingList.style.display = "none";
   }
@@ -768,6 +776,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
