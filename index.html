@@ -511,34 +511,33 @@ paymentSearch.oninput = () => {
 function populateOutstanding(client) {
   outstandingList.innerHTML = "";
   const history = client.history || [];
-  let running = 0;  // Running balance: positive means outstanding debit
+  let running = 0;
+  let unpaidDebits = [];
 
-  // Find the last unpaid debit (same as viewClient)
-  let lastUnpaidDebitIndex = -1;
   for (let i = 0; i < history.length; i++) {
     const h = history[i];
     running += (h.debit || 0) - (h.credit || 0);
     if (h.debit && running > 0) {
-      lastUnpaidDebitIndex = i;
+      unpaidDebits.push({ index: i, item: h });
     }
   }
 
-  // Show only the last unpaid debit in the list
-  if (lastUnpaidDebitIndex !== -1) {
-    const item = history[lastUnpaidDebitIndex];
+  if (unpaidDebits.length > 0) {
     outstandingList.style.display = "block";
-    const div = document.createElement("div");
-    div.className = "outstanding-item";
-    div.innerHTML = `<strong>Amount: ${item.debit}</strong><br>Remarks: ${item.remarks || ""}<br>Start: ${item.startDate || ""}, End: ${item.endDate || ""}`;
-    div.onclick = () => {
-      paymentRemarks.value = `Payment for: ${item.remarks || ""} (Amount: ${item.debit}, Start: ${item.startDate || ""}, End: ${item.endDate || ""})`;
-      // Optionally, store the selected item index for further logic, e.g., selectedChargeIndex = lastUnpaidDebitIndex;
-    };
-    outstandingList.appendChild(div);
+    unpaidDebits.forEach(({ index, item }) => {
+      const div = document.createElement("div");
+      div.className = "outstanding-item";
+      div.innerHTML = `<strong>Amount: ${item.debit}</strong><br>Remarks: ${item.remarks || ""}<br>Start: ${item.startDate || ""}, End: ${item.endDate || ""}`;
+      div.onclick = () => {
+        paymentRemarks.value = `Payment for: ${item.remarks || ""} (Amount: ${item.debit}, Start: ${item.startDate || ""}, End: ${item.endDate || ""})`;
+        // Optionally, store the selected item index for further logic, e.g., selectedChargeIndex = index;
+      };
+      outstandingList.appendChild(div);
+    });
   } else {
     outstandingList.style.display = "none";
   }
-};
+}
 
 /* ---------- BOOKING ---------- */
 bookingType.onchange = () => {
@@ -766,6 +765,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
