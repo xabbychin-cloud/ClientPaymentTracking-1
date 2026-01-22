@@ -512,44 +512,34 @@ function populateOutstanding(client) {
   outstandingList.innerHTML = "";
   const history = client.history || [];
   let running = 0;
-  let unpaidDebits = [];
   const totalBalance = (client.debit || 0) - (client.credit || 0);
+  let matchingUnpaidDebit = null;
 
   for (let i = 0; i < history.length; i++) {
     const h = history[i];
     running += (h.debit || 0) - (h.credit || 0);
-    if (h.debit && running > 0) {
-      unpaidDebits.push({ index: i, item: h });
+    if (h.debit && running > 0 && h.debit === totalBalance) {
+      matchingUnpaidDebit = { index: i, item: h };
+      break; // Assuming only one matches, or take the first
     }
   }
 
-  if (unpaidDebits.length > 0) {
+  if (matchingUnpaidDebit) {
     outstandingList.style.display = "block";
-    unpaidDebits.forEach(({ index, item }) => {
-      const div = document.createElement("div");
-      div.className = "outstanding-item";
-      div.innerHTML = `<strong>Amount: ${item.debit}</strong><br>Remarks: ${item.remarks || ""}<br>Start: ${item.startDate || ""}, End: ${item.endDate || ""}`;
-      div.onclick = () => {
-        paymentRemarks.value = `Payment for: ${item.remarks || ""} (Amount: ${item.debit}, Start: ${item.startDate || ""}, End: ${item.endDate || ""})`;
-        // Optionally, set paymentAmount.value = item.debit;
-      };
-      outstandingList.appendChild(div);
-    });
-
-    // Add option for full outstanding balance
-    const fullDiv = document.createElement("div");
-    fullDiv.className = "outstanding-item";
-    fullDiv.innerHTML = `<strong>Full Outstanding Balance: ${totalBalance}</strong>`;
-    fullDiv.onclick = () => {
-      paymentRemarks.value = `Payment for full outstanding balance (Amount: ${totalBalance})`;
-      // Optionally, set paymentAmount.value = totalBalance;
+    const { index, item } = matchingUnpaidDebit;
+    const div = document.createElement("div");
+    div.className = "outstanding-item";
+    div.innerHTML = `<strong>Amount: ${item.debit}</strong><br>Remarks: ${item.remarks || ""}<br>Start: ${item.startDate || ""}, End: ${item.endDate || ""}`;
+    div.onclick = () => {
+      paymentRemarks.value = `Payment for: ${item.remarks || ""} (Amount: ${item.debit}, Start: ${item.startDate || ""}, End: ${item.endDate || ""})`;
+      // Optionally, set paymentAmount.value = item.debit;
     };
-    outstandingList.appendChild(fullDiv);
+    outstandingList.appendChild(div);
   } else {
     outstandingList.style.display = "none";
   }
 }
-
+  
 /* ---------- BOOKING ---------- */
 bookingType.onchange = () => {
   singleDay.style.display = "none";
@@ -776,6 +766,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
