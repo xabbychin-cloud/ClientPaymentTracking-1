@@ -739,9 +739,21 @@ window.generateDailySalesReport = () => {
   }
   salesResult.innerHTML = html;
 };
+
+  // Function to set the admin code via a prompt
+window.setAdminCode = () => {
+  const newCode = prompt('Enter a new admin code:');
+  if (newCode && newCode.trim()) {
+    localStorage.setItem(`adminCode_${currentUser.uid}`, newCode.trim());
+    alert('Admin code set successfully!');
+  } else {
+    alert('Invalid code. Please try again.');
+  }
+};
 </script>
 </body>
 </html>
+
 
 
 
