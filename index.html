@@ -227,13 +227,14 @@ th { background:#eee }
 
 <!-- ADMIN -->
 <div id="admin" class="section">
-<button onclick="setAdminCode()">Set Admin Code</button>
 <button id="toggleNotesBtn">Hide Notes</button>
 <textarea id="adminNotes" placeholder="Notes"></textarea>
 <button id="saveNotesBtn">Save / Edit Note</button>
 
-<!-- NEW: Set Admin Code Button -->
-<button onclick="setAdminCode()">Set Admin Code</button>
+<!-- NEW: Change Admin Code Section -->
+<h4>Change Admin Code</h4>
+<input id="newAdminCode" type="password" placeholder="Enter new admin code">
+<button id="changeAdminCodeBtn">Change Code</button>
 
 <h3>Admin Report</h3>
 <input id="adminStart" type="date">
@@ -367,8 +368,9 @@ window.openAdmin = () => {
 
 submitAdminCodeBtn.onclick = () => {
   const enteredCode = adminCodeInput.value;
-  const savedCode = localStorage.getItem(`adminCode_${currentUser.uid}`);
-  if (enteredCode === savedCode) {
+  const userSpecificCode = localStorage.getItem(`adminCode_${currentUser.uid}`);
+  const defaultCode = "admin123";  // Shared default for all users
+  if (enteredCode === userSpecificCode || (enteredCode === defaultCode && !userSpecificCode)) {
     document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active"));
     showSection("admin");
     adminCodeModal.style.display = 'none';
@@ -673,6 +675,18 @@ saveNotesBtn.onclick = async () => {
   alert("Notes saved!");
 };
 
+  // NEW: Function to change admin code for current user
+changeAdminCodeBtn.onclick = () => {
+  const newCode = newAdminCode.value.trim();
+  if (newCode) {
+    localStorage.setItem(`adminCode_${currentUser.uid}`, newCode);
+    alert("Admin code changed successfully!");
+    newAdminCode.value = '';  // Clear the input
+  } else {
+    alert("Please enter a valid code.");
+  }
+};
+
 window.generateAdminReport = () => {
   if (!adminStart.value || !adminEnd.value) return alert("Select dates");
   const s = new Date(adminStart.value), e = new Date(adminEnd.value);
@@ -740,20 +754,10 @@ window.generateDailySalesReport = () => {
   }
   salesResult.innerHTML = html;
 };
-
-  // Function to set the admin code via a prompt
-window.setAdminCode = () => {
-  const newCode = prompt('Enter a new admin code:');
-  if (newCode && newCode.trim()) {
-    localStorage.setItem(`adminCode_${currentUser.uid}`, newCode.trim());
-    alert('Admin code set successfully!');
-  } else {
-    alert('Invalid code. Please try again.');
-  }
-};
 </script>
 </body>
 </html>
+
 
 
 
