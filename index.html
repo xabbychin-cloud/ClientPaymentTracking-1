@@ -678,8 +678,10 @@ addPaymentBtn.onclick = async () => {
   paymentMode.value = 'Full';
   paymentBranch.value = '';
   paymentRemarks.value = '';
-  outstandingList.style.display = 'none';  // Hide the list
-  outstandingList.innerHTML = '';  // Clear the list
+  outstandingList.style.display = 'none';
+  outstandingList.innerHTML = '';
+  remarksAuto.innerHTML = '';  // Clear remarks dropdown
+  remarksAuto.style.display = 'none';  // Hide it
 };
 
 /* ---------- EXPENSES ---------- */
@@ -806,5 +808,6 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
