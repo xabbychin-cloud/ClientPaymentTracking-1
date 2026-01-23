@@ -639,6 +639,7 @@ addChargeBtn.onclick = async () => {
 };
 
 /* ---------- ADD PAYMENT ---------- */
+/* ---------- ADD PAYMENT ---------- */
 addPaymentBtn.onclick = async () => {
   const name = paymentSearch.value.trim();
   if (!name || !paymentAmount.value) return;
@@ -670,6 +671,11 @@ addPaymentBtn.onclick = async () => {
       history: [historyEntry]
     });
   }
+  // Fetch updated client data and re-populate remarks and outstanding
+  const updatedClientSnap = await getDoc(clientRef);
+  const updatedClient = updatedClientSnap.data();
+  populateRemarksAuto(updatedClient);
+  populateOutstanding(updatedClient);
   // Clear fields
   paymentSearch.value = '';
   paymentBalance.value = '';
@@ -808,6 +814,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
