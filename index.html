@@ -429,6 +429,7 @@ clientSearch.oninput = renderClients;
 clientFilter.onchange = renderClients;
 
 /* ---------- VIEW MODAL ---------- */
+/* ---------- VIEW MODAL ---------- */
 window.viewClient = name => {
   const c = clients[cid(name)];
   const outstanding = (c.debit || 0) - (c.credit || 0);
@@ -455,16 +456,21 @@ window.viewClient = name => {
   for (let i = 0; i < sortedHistory.length; i++) {
     const h = sortedHistory[i];
     running += (h.debit || 0) - (h.credit || 0);
+    let rowClass = "";
     let debitClass = "";
     let creditClass = "";
     if (unpaidIndices.includes(i)) {
-      debitClass = "unpaid-debit";
+      rowClass = "highlight-row";  // Highlight the entire row for outstanding debits
+      debitClass = "debit-bold";
     }
     if (h.credit) {
-      creditClass = "payment-credit";
+      creditClass = "credit-italic";
+    }
+    if (h.debit && !unpaidIndices.includes(i)) {
+      debitClass = "debit-bold";  // Apply bold to all debit rows
     }
     viewBody.innerHTML += `
-    <tr>
+    <tr class="${rowClass}">
       <td>${new Date(h.date).toLocaleString()}</td>
       <td>${h.startDate || ""}</td>
       <td>${h.endDate || ""}</td>
@@ -825,6 +831,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
