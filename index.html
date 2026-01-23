@@ -101,18 +101,6 @@ th { background:#eee }
     padding:6px 0;
   }
 }
-
-/* Updated for visible highlighting */
-.unpaid-debit {
-  color: blue;
-  font-weight: bold;
-  background-color: lightblue;  /* Added for highlighting */
-}
-
-.payment-credit {
-  color: green;
-  font-style: italic;
-}
 </style>
 </head>
 
@@ -125,12 +113,12 @@ th { background:#eee }
 <input id="loginPassword" type="password" placeholder="Password">
 <button id="loginBtn">Login</button>
 <button id="signupBtn">Sign Up</button>
-<div id="authError" style="color:red; margin-top:10px;"></div>
+<div id="authError" style="color:red; margin-top:10px;"></div>  <!-- Added for error display -->
 </div>
 
 <!-- APP -->
 <div id="appSection" style="display:none">
-<!-- User Greeting -->
+<!-- NEW: User Greeting -->
 <div id="userGreeting" style="text-align: center; font-size: 18px; margin-bottom: 10px; color: #2e7d32;"></div>
 
 <div id="toolbar">
@@ -245,6 +233,7 @@ th { background:#eee }
 <textarea id="adminNotes" placeholder="Notes"></textarea>
 <button id="saveNotesBtn">Save / Edit Note</button>
 
+<!-- NEW: Change Admin Code Section -->
 <h4>Change Admin Code</h4>
 <input id="newAdminCode" type="password" placeholder="Enter new admin code">
 <button id="changeAdminCodeBtn">Change Code</button>
@@ -331,27 +320,29 @@ onAuthStateChanged(auth, async u => {
     loadClients();
     loadExpenses();
     
+    // Load admin notes from Firestore (per user)
     const adminRef = doc(db, "users", currentUser.uid, "settings", "admin");
     const adminSnap = await getDoc(adminRef);
     if (adminSnap.exists()) {
       const data = adminSnap.data();
       adminNotes.value = data.notes || "";
-      window.currentAdminCode = data.code || null;
     } else {
       adminNotes.value = "";
-      window.currentAdminCode = null;
     }
     
-    const displayName = currentUser.displayName || currentUser.email.split('@')[0];
+    // NEW: Update user greeting
+    const displayName = currentUser.displayName || currentUser.email.split('@')[0];  // Use display name or part of email
     userGreeting.textContent = `Hi ${displayName}! (user:${currentUser.email})`;
     userGreeting.style.display = "block";
   } else {
     authSection.style.display = "block";
     appSection.style.display = "none";
+    // NEW: Hide greeting on logout
     userGreeting.style.display = "none";
   }
 });
 
+// Initialize notes as visible on load
 adminNotes.style.display = 'block';
 toggleNotesBtn.textContent = 'Hide Notes';
 
@@ -365,7 +356,7 @@ toggleNotesBtn.onclick = () => {
   }
 };
 
-/* TOOLBAR */
+/* ---------- TOOLBAR ACTIVE FIX ---------- */
 document.querySelectorAll("#toolbar button[data-sec]").forEach(btn => {
   btn.onclick = () => {
     document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active"));
@@ -386,9 +377,9 @@ window.openAdmin = () => {
 
 submitAdminCodeBtn.onclick = () => {
   const enteredCode = adminCodeInput.value;
-  const userCode = window.currentAdminCode;
-  const defaultCode = "admin123";
-  if (enteredCode === userCode || (enteredCode === defaultCode && !userCode)) {
+  const userSpecificCode = localStorage.getItem(`adminCode_${currentUser.uid}`);
+  const defaultCode = "admin123";  // Shared default for all users
+  if (enteredCode === userSpecificCode || (enteredCode === defaultCode && !userSpecificCode)) {
     document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active"));
     showSection("admin");
     adminCodeModal.style.display = 'none';
@@ -399,7 +390,7 @@ submitAdminCodeBtn.onclick = () => {
   }
 };
 
-/* CLIENTS */
+/* ---------- CLIENTS ---------- */
 function loadClients() {
   onSnapshot(collection(db, "users", currentUser.uid, "clients"), snap => {
     clients = {};
@@ -433,43 +424,43 @@ window.renderClients = () => {
   });
 };
 
+// Add event listeners for search and filter
 clientSearch.oninput = renderClients;
 clientFilter.onchange = renderClients;
 
-/* VIEW MODAL */
+/* ---------- VIEW MODAL ---------- */
 window.viewClient = name => {
   const c = clients[cid(name)];
   const outstanding = (c.debit || 0) - (c.credit || 0);
-  let running = 0;
+  let running = 0;  // Running balance: positive means outstanding debit
 
   viewTitle.textContent = name;
   const outstandingClass = outstanding > 0 ? 'debit-red' : '';
   viewSummary.innerHTML = `Outstanding Balance: <span class="${outstandingClass}">${outstanding}</span><br>Total Debit: ${c.debit || 0}<br>Total Credit: ${c.credit || 0}`;
   viewBody.innerHTML = "";
 
-  const sortedHistory = (c.history || []).sort((a, b) => new Date(a.date) - new Date(b.date));
-
-  const unpaidIndices = [];
-  running = 0;
-  for (let i = 0; i < sortedHistory.length; i++) {
-    const h = sortedHistory[i];
+  // Find the index of the last unpaid debit (most recent where running > 0)
+  let lastUnpaidDebitIndex = -1;
+  for (let i = 0; i < (c.history || []).length; i++) {
+    const h = c.history[i];
     running += (h.debit || 0) - (h.credit || 0);
     if (h.debit && running > 0) {
-      unpaidIndices.push(i);
+      lastUnpaidDebitIndex = i;  // Update to the latest unpaid debit
     }
   }
 
+  // Reset running for the display loop
   running = 0;
-  for (let i = 0; i < sortedHistory.length; i++) {
-    const h = sortedHistory[i];
+  for (let i = 0; i < (c.history || []).length; i++) {
+    const h = c.history[i];
     running += (h.debit || 0) - (h.credit || 0);
     let debitClass = "";
     let creditClass = "";
-    if (unpaidIndices.includes(i)) {
-      debitClass = "unpaid-debit";
+    if (i === lastUnpaidDebitIndex) {
+      debitClass = "unpaid-debit";  // Blue only for the last unpaid debit
     }
     if (h.credit) {
-      creditClass = "payment-credit";
+      creditClass = "payment-credit";  // Green for payments
     }
     viewBody.innerHTML += `
     <tr>
@@ -485,7 +476,7 @@ window.viewClient = name => {
   viewModal.style.display = "block";
 };
 
-/* AUTOCOMPLETE */
+/* ---------- AUTOCOMPLETE ---------- */
 chargeName.oninput = () => {
   chargeAuto.innerHTML = "";
   Object.values(clients).map(c => c.name)
@@ -510,70 +501,42 @@ paymentSearch.oninput = () => {
         paymentAuto.innerHTML = "";
         const c = clients[cid(n)];
         paymentBalance.value = (c.debit || 0) - (c.credit || 0);
-        const unpaidSummary = getUnpaidDebitSummary(c);
-        paymentRemarks.value = unpaidSummary ? `Outstanding balance details: ${unpaidSummary}` : '';
-        if (paymentMode.value === 'Full') {
-          paymentAmount.value = paymentBalance.value;
-          outstandingList.style.display = 'none';
-        } else {
-          populateOutstanding(c);
-        }
+        paymentRemarks.value = '';  // Ensure remarks start empty
+        populateOutstanding(c);
       };
       paymentAuto.appendChild(d);
     });
 };
 
-function getUnpaidDebitSummary(client) {
-  const sortedHistory = (client.history || []).sort((a, b) => new Date(a.date) - new Date(b.date));
-  let running = 0;
-  const summaries = [];
-  sortedHistory.forEach((h) => {
-    running += (h.debit || 0) - (h.credit || 0);
-    if (h.debit && running > 0) {
-      summaries.push(`${h.remarks || 'No remarks'} (Amount: ${h.debit})`);
-    }
-  });
-  return summaries.length > 0 ? summaries.join(', ') : null;
-}
-
 function populateOutstanding(client) {
   outstandingList.innerHTML = "";
-  const sortedHistory = (client.history || []).sort((a, b) => new Date(a.date) - new Date(b.date));
-  let running = 0;
+  const history = client.history || [];
+  let running = 0;  // Running balance: positive means outstanding debit
 
-  sortedHistory.forEach((h, i) => {
+  // Find the last unpaid debit (same as viewClient)
+  let lastUnpaidDebitIndex = -1;
+  for (let i = 0; i < history.length; i++) {
+    const h = history[i];
     running += (h.debit || 0) - (h.credit || 0);
     if (h.debit && running > 0) {
-      const div = document.createElement("div");
-      div.className = "outstanding-item";
-      div.innerHTML = `<strong>Amount: ${h.debit}</strong><br>Remarks: ${h.remarks || ""}<br>Start: ${h.startDate || ""}, End: ${h.endDate || ""}`;
-      div.onclick = () => {
-        paymentRemarks.value = `Payment for: ${h.remarks || ""} (Amount: ${h.debit}, Start: ${h.startDate || ""}, End: ${h.endDate || ""})`;
-        if (paymentMode.value === 'Partial') {
-          paymentAmount.value = h.debit;
-        }
-      };
-      outstandingList.appendChild(div);
+      lastUnpaidDebitIndex = i;
     }
-  });
-
-  if (outstandingList.children.length === 0) {
-    outstandingList.style.display = 'none';
   }
-}
 
-paymentMode.onchange = () => {
-  const balance = Number(paymentBalance.value) || 0;
-  if (paymentMode.value === 'Full') {
-    paymentAmount.value = balance;
-    outstandingList.style.display = 'none';
+  // Show only the last unpaid debit in the list
+  if (lastUnpaidDebitIndex !== -1) {
+    const item = history[lastUnpaidDebitIndex];
+    outstandingList.style.display = "block";
+    const div = document.createElement("div");
+    div.className = "outstanding-item";
+    div.innerHTML = `<strong>Amount: ${item.debit}</strong><br>Remarks: ${item.remarks || ""}<br>Start: ${item.startDate || ""}, End: ${item.endDate || ""}`;
+    div.onclick = () => {
+      paymentRemarks.value = `Payment for: ${item.remarks || ""} (Amount: ${item.debit}, Start: ${item.startDate || ""}, End: ${item.endDate || ""})`;
+      // Optionally, store the selected item index for further logic, e.g., selectedChargeIndex = lastUnpaidDebitIndex;
+    };
+    outstandingList.appendChild(div);
   } else {
-    paymentAmount.value = '';
-    outstandingList.style.display = 'block';
-    if (paymentSearch.value.trim()) {
-      const c = clients[cid(paymentSearch.value)];
-      if (c) populateOutstanding(c);
-    }
+    outstandingList.style.display = "none";
   }
 };
 
@@ -602,6 +565,7 @@ addChargeBtn.onclick = async () => {
     endDate = document.getElementById('endDate').value;
     if (!startDate || !endDate) return alert("Please select start and end dates for multi day booking");
   }
+  console.log('Start Date:', startDate, 'End Date:', endDate);  // Temporary debug log
   const historyEntry = {
     date: new Date().toISOString(),
     debit: amount,
@@ -624,6 +588,7 @@ addChargeBtn.onclick = async () => {
       history: [historyEntry]
     });
   }
+  // Clear fields
   chargeName.value = '';
   bookingType.value = '';
   singleDate.value = '';
@@ -667,6 +632,7 @@ addPaymentBtn.onclick = async () => {
       history: [historyEntry]
     });
   }
+  // Clear fields
   paymentSearch.value = '';
   paymentBalance.value = '';
   paymentAmount.value = '';
@@ -674,25 +640,9 @@ addPaymentBtn.onclick = async () => {
   paymentMode.value = 'Full';
   paymentBranch.value = '';
   paymentRemarks.value = '';
-  outstandingList.style.display = 'none';
-  outstandingList.innerHTML = '';
+  outstandingList.style.display = 'none';  // Hide the list
+  outstandingList.innerHTML = '';  // Clear the list
 };
-
-paymentMode.onchange = () => {
-  const balance = Number(paymentBalance.value) || 0;
-  if (paymentMode.value === 'Full') {
-    paymentAmount.value = balance;
-    outstandingList.style.display = 'none';
-  } else {
-    paymentAmount.value = '';
-    outstandingList.style.display = 'block';
-    if (paymentSearch.value.trim()) {
-      const c = clients[cid(paymentSearch.value)];
-      if (c) populateOutstanding(c);
-    }
-  }
-};
-
 
 /* ---------- EXPENSES ---------- */
 function loadExpenses() {
@@ -735,20 +685,16 @@ saveNotesBtn.onclick = async () => {
 };
 
   // NEW: Function to change admin code for current user
-changeAdminCodeBtn.onclick = async () => {
+changeAdminCodeBtn.onclick = () => {
   const newCode = newAdminCode.value.trim();
   if (newCode) {
-    const adminRef = doc(db, "users", currentUser.uid, "settings", "admin");
-    await setDoc(adminRef, { code: newCode }, { merge: true });
-    window.currentAdminCode = newCode;  // Update in-memory for immediate use
+    localStorage.setItem(`adminCode_${currentUser.uid}`, newCode);
     alert("Admin code changed successfully!");
-    newAdminCode.value = '';
+    newAdminCode.value = '';  // Clear the input
   } else {
     alert("Please enter a valid code.");
   }
 };
-// Remove localStorage references (no longer needed)
-// Delete: localStorage.getItem/setItem lines in submitAdminCodeBtn and changeAdminCodeBtn
 
 window.generateAdminReport = () => {
   if (!adminStart.value || !adminEnd.value) return alert("Select dates");
@@ -820,5 +766,3 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
-
-
