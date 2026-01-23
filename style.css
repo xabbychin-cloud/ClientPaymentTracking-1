@@ -188,4 +188,17 @@ tr.paid {
   font-style: italic;
 }
 
+.highlight-row {
+  background-color: #ffcccc;  /* Light red background to highlight outstanding rows */
+}
+
+.debit-bold {
+  font-weight: bold;
+  color: black;
+}
+
+.credit-italic {
+  font-style: italic;
+  color: green;
+}
 
