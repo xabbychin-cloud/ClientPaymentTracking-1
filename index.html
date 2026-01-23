@@ -440,22 +440,25 @@ window.viewClient = name => {
   viewSummary.innerHTML = `Outstanding Balance: <span class="${outstandingClass}">${outstanding}</span><br>Total Debit: ${c.debit || 0}<br>Total Credit: ${c.credit || 0}`;
   viewBody.innerHTML = "";
 
-  let lastUnpaidDebitIndex = -1;
+  // Loop to determine which debits are unpaid (running > 0)
+  const unpaidIndices = [];
+  running = 0;
   for (let i = 0; i < (c.history || []).length; i++) {
     const h = c.history[i];
     running += (h.debit || 0) - (h.credit || 0);
     if (h.debit && running > 0) {
-      lastUnpaidDebitIndex = i;
+      unpaidIndices.push(i);  // Collect all unpaid debit indices
     }
   }
 
+  // Reset running for display
   running = 0;
   for (let i = 0; i < (c.history || []).length; i++) {
     const h = c.history[i];
     running += (h.debit || 0) - (h.credit || 0);
     let debitClass = "";
     let creditClass = "";
-    if (i === lastUnpaidDebitIndex) {
+    if (unpaidIndices.includes(i)) {  // Highlight all unpaid debits
       debitClass = "unpaid-debit";
     }
     if (h.credit) {
@@ -500,13 +503,16 @@ paymentSearch.oninput = () => {
         paymentAuto.innerHTML = "";
         const c = clients[cid(n)];
         paymentBalance.value = (c.debit || 0) - (c.credit || 0);
-        paymentRemarks.value = '';
+        // Apply mode logic after selection
         if (paymentMode.value === 'Full') {
           paymentAmount.value = paymentBalance.value;
-          paymentRemarks.value = `Full payment for outstanding balance of ${paymentBalance.value}`;
+          const unpaidDetails = getUnpaidDebitDetails(c);
+          paymentRemarks.value = unpaidDetails ? `Full payment covering: ${unpaidDetails}` : `Full payment for outstanding balance of ${paymentBalance.value}`;
           outstandingList.style.display = 'none';
         } else {
           populateOutstanding(c);
+          const unpaidDetails = getUnpaidDebitDetails(c);
+          paymentRemarks.value = unpaidDetails ? `Partial payment options: ${unpaidDetails}. Select a specific debit to update.` : '';
         }
       };
       paymentAuto.appendChild(d);
@@ -644,7 +650,16 @@ paymentMode.onchange = () => {
   const balance = Number(paymentBalance.value) || 0;
   if (paymentMode.value === 'Full') {
     paymentAmount.value = balance;
-    paymentRemarks.value = `Full payment for outstanding balance of ${balance}`;
+    // Auto-set detailed remarks for all unpaid debits
+    if (paymentSearch.value.trim()) {
+      const c = clients[cid(paymentSearch.value)];
+      if (c) {
+        const unpaidDetails = getUnpaidDebitDetails(c);
+        paymentRemarks.value = unpaidDetails ? `Full payment covering: ${unpaidDetails}` : `Full payment for outstanding balance of ${balance}`;
+      }
+    } else {
+      paymentRemarks.value = `Full payment for outstanding balance of ${balance}`;
+    }
     outstandingList.style.display = 'none';
   } else {
     paymentAmount.value = '';
@@ -652,10 +667,30 @@ paymentMode.onchange = () => {
     outstandingList.style.display = 'block';
     if (paymentSearch.value.trim()) {
       const c = clients[cid(paymentSearch.value)];
-      if (c) populateOutstanding(c);
+      if (c) {
+        populateOutstanding(c);
+        // Auto-set default remarks listing all unpaid debits for partial
+        const unpaidDetails = getUnpaidDebitDetails(c);
+        if (unpaidDetails) {
+          paymentRemarks.value = `Partial payment options: ${unpaidDetails}. Select a specific debit to update.`;
+        }
+      }
     }
   }
 };
+  
+  function getUnpaidDebitDetails(client) {
+  const history = client.history || [];
+  let running = 0;
+  const details = [];
+  history.forEach((h, i) => {
+    running += (h.debit || 0) - (h.credit || 0);
+    if (h.debit && running > 0) {
+      details.push(`${h.remarks || 'No remarks'} (Amount: ${h.debit}, Start: ${h.startDate || 'N/A'}, End: ${h.endDate || 'N/A'})`);
+    }
+  });
+  return details.length > 0 ? details.join(', ') : null;
+}
 
 /* ---------- EXPENSES ---------- */
 function loadExpenses() {
@@ -783,6 +818,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
