@@ -320,27 +320,25 @@ onAuthStateChanged(auth, async u => {
     loadClients();
     loadExpenses();
     
-    // Load admin notes from Firestore (per user)
+    // Load admin notes and code from Firestore (per user)
     const adminRef = doc(db, "users", currentUser.uid, "settings", "admin");
     const adminSnap = await getDoc(adminRef);
     if (adminSnap.exists()) {
       const data = adminSnap.data();
       adminNotes.value = data.notes || "";
-      // Store loaded code in a variable for checking (don't put in localStorage anymore)
       window.currentAdminCode = data.code || null;  // null means use default
     } else {
       adminNotes.value = "";
       window.currentAdminCode = null;
     }
     
-    // NEW: Update user greeting
-    const displayName = currentUser.displayName || currentUser.email.split('@')[0];  // Use display name or part of email
+    // Update user greeting
+    const displayName = currentUser.displayName || currentUser.email.split('@')[0];
     userGreeting.textContent = `Hi ${displayName}! (user:${currentUser.email})`;
     userGreeting.style.display = "block";
   } else {
     authSection.style.display = "block";
     appSection.style.display = "none";
-    // NEW: Hide greeting on logout
     userGreeting.style.display = "none";
   }
 });
@@ -383,7 +381,10 @@ submitAdminCodeBtn.onclick = () => {
   const userCode = window.currentAdminCode;
   const defaultCode = "admin123";
   if (enteredCode === userCode || (enteredCode === defaultCode && !userCode)) {
-    // ... (existing code to show admin section)
+    document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active"));
+    showSection("admin");
+    adminCodeModal.style.display = 'none';
+    adminCodeInput.value = '';
   } else {
     alert("Incorrect Admin Code");
     adminCodeInput.value = '';
@@ -432,24 +433,22 @@ clientFilter.onchange = renderClients;
 window.viewClient = name => {
   const c = clients[cid(name)];
   const outstanding = (c.debit || 0) - (c.credit || 0);
-  let running = 0;  // Running balance: positive means outstanding debit
+  let running = 0;
 
   viewTitle.textContent = name;
   const outstandingClass = outstanding > 0 ? 'debit-red' : '';
   viewSummary.innerHTML = `Outstanding Balance: <span class="${outstandingClass}">${outstanding}</span><br>Total Debit: ${c.debit || 0}<br>Total Credit: ${c.credit || 0}`;
   viewBody.innerHTML = "";
 
-  // Find the index of the last unpaid debit (most recent where running > 0)
   let lastUnpaidDebitIndex = -1;
   for (let i = 0; i < (c.history || []).length; i++) {
     const h = c.history[i];
     running += (h.debit || 0) - (h.credit || 0);
     if (h.debit && running > 0) {
-      lastUnpaidDebitIndex = i;  // Update to the latest unpaid debit
+      lastUnpaidDebitIndex = i;
     }
   }
 
-  // Reset running for the display loop
   running = 0;
   for (let i = 0; i < (c.history || []).length; i++) {
     const h = c.history[i];
@@ -457,10 +456,10 @@ window.viewClient = name => {
     let debitClass = "";
     let creditClass = "";
     if (i === lastUnpaidDebitIndex) {
-      debitClass = "unpaid-debit";  // Blue only for the last unpaid debit
+      debitClass = "unpaid-debit";
     }
     if (h.credit) {
-      creditClass = "payment-credit";  // Green for payments
+      creditClass = "payment-credit";
     }
     viewBody.innerHTML += `
     <tr>
@@ -489,54 +488,52 @@ chargeName.oninput = () => {
     });
 };
 
-// In paymentSearch.oninput, when selecting a client, ensure mode logic applies
 paymentSearch.oninput = () => {
-  // ... (existing code)
-  .forEach(n => {
-    const d = document.createElement("div");
-    d.textContent = n;
-    d.onclick = () => {
-      paymentSearch.value = n;
-      paymentAuto.innerHTML = "";
-      const c = clients[cid(n)];
-      paymentBalance.value = (c.debit || 0) - (c.credit || 0);
-      paymentRemarks.value = '';  // Clear remarks
-      // Apply mode logic after selection
-      if (paymentMode.value === 'Full') {
-        paymentAmount.value = paymentBalance.value;
-        paymentRemarks.value = `Full payment for outstanding balance of ${paymentBalance.value}`;
-        outstandingList.style.display = 'none';
-      } else {
-        populateOutstanding(c);  // Populate for partial
-      }
-    };
-    paymentAuto.appendChild(d);
-  });
+  paymentAuto.innerHTML = "";
+  Object.values(clients).map(c => c.name)
+    .filter(n => n.toLowerCase().includes(paymentSearch.value.toLowerCase()))
+    .forEach(n => {
+      const d = document.createElement("div");
+      d.textContent = n;
+      d.onclick = () => {
+        paymentSearch.value = n;
+        paymentAuto.innerHTML = "";
+        const c = clients[cid(n)];
+        paymentBalance.value = (c.debit || 0) - (c.credit || 0);
+        paymentRemarks.value = '';
+        if (paymentMode.value === 'Full') {
+          paymentAmount.value = paymentBalance.value;
+          paymentRemarks.value = `Full payment for outstanding balance of ${paymentBalance.value}`;
+          outstandingList.style.display = 'none';
+        } else {
+          populateOutstanding(c);
+        }
+      };
+      paymentAuto.appendChild(d);
+    });
 };
 
-// Update populateOutstanding to show ALL unpaid debits (not just the last)
 function populateOutstanding(client) {
   outstandingList.innerHTML = "";
   const history = client.history || [];
-  let running = 0;  // Running balance
+  let running = 0;
 
   history.forEach((h, i) => {
     running += (h.debit || 0) - (h.credit || 0);
-    if (h.debit && running > 0) {  // This debit is still unpaid
+    if (h.debit && running > 0) {
       const div = document.createElement("div");
       div.className = "outstanding-item";
       div.innerHTML = `<strong>Amount: ${h.debit}</strong><br>Remarks: ${h.remarks || ""}<br>Start: ${h.startDate || ""}, End: ${h.endDate || ""}`;
       div.onclick = () => {
         paymentRemarks.value = `Payment for: ${h.remarks || ""} (Amount: ${h.debit}, Start: ${h.startDate || ""}, End: ${h.endDate || ""})`;
         if (paymentMode.value === 'Partial') {
-          paymentAmount.value = h.debit;  // Auto-set amount for partial
+          paymentAmount.value = h.debit;
         }
       };
       outstandingList.appendChild(div);
     }
   });
 
-  // If no unpaid debits, hide the list
   if (outstandingList.children.length === 0) {
     outstandingList.style.display = 'none';
   }
@@ -567,7 +564,6 @@ addChargeBtn.onclick = async () => {
     endDate = document.getElementById('endDate').value;
     if (!startDate || !endDate) return alert("Please select start and end dates for multi day booking");
   }
-  console.log('Start Date:', startDate, 'End Date:', endDate);  // Temporary debug log
   const historyEntry = {
     date: new Date().toISOString(),
     debit: amount,
@@ -590,7 +586,6 @@ addChargeBtn.onclick = async () => {
       history: [historyEntry]
     });
   }
-  // Clear fields
   chargeName.value = '';
   bookingType.value = '';
   singleDate.value = '';
@@ -634,7 +629,6 @@ addPaymentBtn.onclick = async () => {
       history: [historyEntry]
     });
   }
-  // Clear fields
   paymentSearch.value = '';
   paymentBalance.value = '';
   paymentAmount.value = '';
@@ -642,27 +636,26 @@ addPaymentBtn.onclick = async () => {
   paymentMode.value = 'Full';
   paymentBranch.value = '';
   paymentRemarks.value = '';
-  outstandingList.style.display = 'none';  // Hide the list
-  outstandingList.innerHTML = '';  // Clear the list
+  outstandingList.style.display = 'none';
+  outstandingList.innerHTML = '';
 };
-  paymentMode.onchange = () => {
+
+paymentMode.onchange = () => {
   const balance = Number(paymentBalance.value) || 0;
   if (paymentMode.value === 'Full') {
-    paymentAmount.value = balance;  // Auto-set to full balance
+    paymentAmount.value = balance;
     paymentRemarks.value = `Full payment for outstanding balance of ${balance}`;
-    outstandingList.style.display = 'none';  // Hide list for full payment
+    outstandingList.style.display = 'none';
   } else {
-    paymentAmount.value = '';  // Clear for user input
-    paymentRemarks.value = '';  // Clear for selection-based remarks
-    outstandingList.style.display = 'block';  // Show list for partial
-    // Re-populate if a client is selected (in case mode changes after selection)
+    paymentAmount.value = '';
+    paymentRemarks.value = '';
+    outstandingList.style.display = 'block';
     if (paymentSearch.value.trim()) {
       const c = clients[cid(paymentSearch.value)];
       if (c) populateOutstanding(c);
     }
   }
 };
-
 
 /* ---------- EXPENSES ---------- */
 function loadExpenses() {
@@ -790,6 +783,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
