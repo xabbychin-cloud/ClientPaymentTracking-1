@@ -503,16 +503,18 @@ paymentSearch.oninput = () => {
         paymentAuto.innerHTML = "";
         const c = clients[cid(n)];
         paymentBalance.value = (c.debit || 0) - (c.credit || 0);
-        // Apply mode logic after selection
+        paymentRemarks.value = '';  // Clear initially
+        // Auto-set remarks to summary of all unpaid debits (outstanding balance)
+        const unpaidSummary = getUnpaidDebitSummary(c);
+        if (unpaidSummary) {
+          paymentRemarks.value = `Outstanding balance details: ${unpaidSummary}`;
+        }
+        // Apply mode logic
         if (paymentMode.value === 'Full') {
           paymentAmount.value = paymentBalance.value;
-          const unpaidDetails = getUnpaidDebitDetails(c);
-          paymentRemarks.value = unpaidDetails ? `Full payment covering: ${unpaidDetails}` : `Full payment for outstanding balance of ${paymentBalance.value}`;
           outstandingList.style.display = 'none';
         } else {
-          populateOutstanding(c);
-          const unpaidDetails = getUnpaidDebitDetails(c);
-          paymentRemarks.value = unpaidDetails ? `Partial payment options: ${unpaidDetails}. Select a specific debit to update.` : '';
+          populateOutstanding(c);  // Populate for partial, with clickable items
         }
       };
       paymentAuto.appendChild(d);
@@ -531,9 +533,10 @@ function populateOutstanding(client) {
       div.className = "outstanding-item";
       div.innerHTML = `<strong>Amount: ${h.debit}</strong><br>Remarks: ${h.remarks || ""}<br>Start: ${h.startDate || ""}, End: ${h.endDate || ""}`;
       div.onclick = () => {
+        // Update remarks to the specific debit's details when clicked
         paymentRemarks.value = `Payment for: ${h.remarks || ""} (Amount: ${h.debit}, Start: ${h.startDate || ""}, End: ${h.endDate || ""})`;
         if (paymentMode.value === 'Partial') {
-          paymentAmount.value = h.debit;
+          paymentAmount.value = h.debit;  // Auto-set amount for partial
         }
       };
       outstandingList.appendChild(div);
@@ -650,46 +653,30 @@ paymentMode.onchange = () => {
   const balance = Number(paymentBalance.value) || 0;
   if (paymentMode.value === 'Full') {
     paymentAmount.value = balance;
-    // Auto-set detailed remarks for all unpaid debits
-    if (paymentSearch.value.trim()) {
-      const c = clients[cid(paymentSearch.value)];
-      if (c) {
-        const unpaidDetails = getUnpaidDebitDetails(c);
-        paymentRemarks.value = unpaidDetails ? `Full payment covering: ${unpaidDetails}` : `Full payment for outstanding balance of ${balance}`;
-      }
-    } else {
-      paymentRemarks.value = `Full payment for outstanding balance of ${balance}`;
-    }
     outstandingList.style.display = 'none';
+    // Remarks already set to summary on selection, no need to change
   } else {
     paymentAmount.value = '';
-    paymentRemarks.value = '';
     outstandingList.style.display = 'block';
+    // Re-populate if client is selected
     if (paymentSearch.value.trim()) {
       const c = clients[cid(paymentSearch.value)];
-      if (c) {
-        populateOutstanding(c);
-        // Auto-set default remarks listing all unpaid debits for partial
-        const unpaidDetails = getUnpaidDebitDetails(c);
-        if (unpaidDetails) {
-          paymentRemarks.value = `Partial payment options: ${unpaidDetails}. Select a specific debit to update.`;
-        }
-      }
+      if (c) populateOutstanding(c);
     }
   }
 };
   
-  function getUnpaidDebitDetails(client) {
+  function getUnpaidDebitSummary(client) {
   const history = client.history || [];
   let running = 0;
-  const details = [];
-  history.forEach((h, i) => {
+  const summaries = [];
+  history.forEach((h) => {
     running += (h.debit || 0) - (h.credit || 0);
     if (h.debit && running > 0) {
-      details.push(`${h.remarks || 'No remarks'} (Amount: ${h.debit}, Start: ${h.startDate || 'N/A'}, End: ${h.endDate || 'N/A'})`);
+      summaries.push(`${h.remarks || 'No remarks'} (Amount: ${h.debit})`);
     }
   });
-  return details.length > 0 ? details.join(', ') : null;
+  return summaries.length > 0 ? summaries.join(', ') : null;
 }
 
 /* ---------- EXPENSES ---------- */
@@ -818,6 +805,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
