@@ -101,6 +101,18 @@ th { background:#eee }
     padding:6px 0;
   }
 }
+
+/* Updated for visible highlighting */
+.unpaid-debit {
+  color: blue;
+  font-weight: bold;
+  background-color: lightblue;  /* Added for highlighting */
+}
+
+.payment-credit {
+  color: green;
+  font-style: italic;
+}
 </style>
 </head>
 
@@ -113,12 +125,12 @@ th { background:#eee }
 <input id="loginPassword" type="password" placeholder="Password">
 <button id="loginBtn">Login</button>
 <button id="signupBtn">Sign Up</button>
-<div id="authError" style="color:red; margin-top:10px;"></div>  <!-- Added for error display -->
+<div id="authError" style="color:red; margin-top:10px;"></div>
 </div>
 
 <!-- APP -->
 <div id="appSection" style="display:none">
-<!-- NEW: User Greeting -->
+<!-- User Greeting -->
 <div id="userGreeting" style="text-align: center; font-size: 18px; margin-bottom: 10px; color: #2e7d32;"></div>
 
 <div id="toolbar">
@@ -233,7 +245,6 @@ th { background:#eee }
 <textarea id="adminNotes" placeholder="Notes"></textarea>
 <button id="saveNotesBtn">Save / Edit Note</button>
 
-<!-- NEW: Change Admin Code Section -->
 <h4>Change Admin Code</h4>
 <input id="newAdminCode" type="password" placeholder="Enter new admin code">
 <button id="changeAdminCodeBtn">Change Code</button>
@@ -320,19 +331,17 @@ onAuthStateChanged(auth, async u => {
     loadClients();
     loadExpenses();
     
-    // Load admin notes and code from Firestore (per user)
     const adminRef = doc(db, "users", currentUser.uid, "settings", "admin");
     const adminSnap = await getDoc(adminRef);
     if (adminSnap.exists()) {
       const data = adminSnap.data();
       adminNotes.value = data.notes || "";
-      window.currentAdminCode = data.code || null;  // null means use default
+      window.currentAdminCode = data.code || null;
     } else {
       adminNotes.value = "";
       window.currentAdminCode = null;
     }
     
-    // Update user greeting
     const displayName = currentUser.displayName || currentUser.email.split('@')[0];
     userGreeting.textContent = `Hi ${displayName}! (user:${currentUser.email})`;
     userGreeting.style.display = "block";
@@ -343,7 +352,6 @@ onAuthStateChanged(auth, async u => {
   }
 });
 
-// Initialize notes as visible on load
 adminNotes.style.display = 'block';
 toggleNotesBtn.textContent = 'Hide Notes';
 
@@ -357,7 +365,7 @@ toggleNotesBtn.onclick = () => {
   }
 };
 
-/* ---------- TOOLBAR ACTIVE FIX ---------- */
+/* TOOLBAR */
 document.querySelectorAll("#toolbar button[data-sec]").forEach(btn => {
   btn.onclick = () => {
     document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active"));
@@ -391,7 +399,7 @@ submitAdminCodeBtn.onclick = () => {
   }
 };
 
-/* ---------- CLIENTS ---------- */
+/* CLIENTS */
 function loadClients() {
   onSnapshot(collection(db, "users", currentUser.uid, "clients"), snap => {
     clients = {};
@@ -425,11 +433,10 @@ window.renderClients = () => {
   });
 };
 
-// Add event listeners for search and filter
 clientSearch.oninput = renderClients;
 clientFilter.onchange = renderClients;
 
-/* ---------- VIEW MODAL ---------- */
+/* VIEW MODAL */
 window.viewClient = name => {
   const c = clients[cid(name)];
   const outstanding = (c.debit || 0) - (c.credit || 0);
@@ -440,10 +447,8 @@ window.viewClient = name => {
   viewSummary.innerHTML = `Outstanding Balance: <span class="${outstandingClass}">${outstanding}</span><br>Total Debit: ${c.debit || 0}<br>Total Credit: ${c.credit || 0}`;
   viewBody.innerHTML = "";
 
-  // Sort history by date to ensure chronological order
   const sortedHistory = (c.history || []).sort((a, b) => new Date(a.date) - new Date(b.date));
 
-  // Collect all unpaid debit indices
   const unpaidIndices = [];
   running = 0;
   for (let i = 0; i < sortedHistory.length; i++) {
@@ -454,7 +459,6 @@ window.viewClient = name => {
     }
   }
 
-  // Display with highlighting
   running = 0;
   for (let i = 0; i < sortedHistory.length; i++) {
     const h = sortedHistory[i];
@@ -462,7 +466,7 @@ window.viewClient = name => {
     let debitClass = "";
     let creditClass = "";
     if (unpaidIndices.includes(i)) {
-      debitClass = "unpaid-debit";  // Now visible with CSS
+      debitClass = "unpaid-debit";
     }
     if (h.credit) {
       creditClass = "payment-credit";
@@ -805,20 +809,3 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
