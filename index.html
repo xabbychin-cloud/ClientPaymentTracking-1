@@ -512,7 +512,6 @@ paymentSearch.oninput = () => {
         paymentBalance.value = (c.debit || 0) - (c.credit || 0);
         const unpaidSummary = getUnpaidDebitSummary(c);
         paymentRemarks.value = unpaidSummary ? `Outstanding balance details: ${unpaidSummary}` : '';
-        // Apply mode logic
         if (paymentMode.value === 'Full') {
           paymentAmount.value = paymentBalance.value;
           outstandingList.style.display = 'none';
@@ -524,9 +523,21 @@ paymentSearch.oninput = () => {
     });
 };
 
+function getUnpaidDebitSummary(client) {
+  const sortedHistory = (client.history || []).sort((a, b) => new Date(a.date) - new Date(b.date));
+  let running = 0;
+  const summaries = [];
+  sortedHistory.forEach((h) => {
+    running += (h.debit || 0) - (h.credit || 0);
+    if (h.debit && running > 0) {
+      summaries.push(`${h.remarks || 'No remarks'} (Amount: ${h.debit})`);
+    }
+  });
+  return summaries.length > 0 ? summaries.join(', ') : null;
+}
+
 function populateOutstanding(client) {
   outstandingList.innerHTML = "";
-  // Sort history by date
   const sortedHistory = (client.history || []).sort((a, b) => new Date(a.date) - new Date(b.date));
   let running = 0;
 
@@ -550,6 +561,21 @@ function populateOutstanding(client) {
     outstandingList.style.display = 'none';
   }
 }
+
+paymentMode.onchange = () => {
+  const balance = Number(paymentBalance.value) || 0;
+  if (paymentMode.value === 'Full') {
+    paymentAmount.value = balance;
+    outstandingList.style.display = 'none';
+  } else {
+    paymentAmount.value = '';
+    outstandingList.style.display = 'block';
+    if (paymentSearch.value.trim()) {
+      const c = clients[cid(paymentSearch.value)];
+      if (c) populateOutstanding(c);
+    }
+  }
+};
 
 /* ---------- BOOKING ---------- */
 bookingType.onchange = () => {
@@ -666,20 +692,6 @@ paymentMode.onchange = () => {
     }
   }
 };
-  
- function getUnpaidDebitSummary(client) {
-  // Sort history by date
-  const sortedHistory = (client.history || []).sort((a, b) => new Date(a.date) - new Date(b.date));
-  let running = 0;
-  const summaries = [];
-  sortedHistory.forEach((h) => {
-    running += (h.debit || 0) - (h.credit || 0);
-    if (h.debit && running > 0) {
-      summaries.push(`${h.remarks || 'No remarks'} (Amount: ${h.debit})`);
-    }
-  });
-  return summaries.length > 0 ? summaries.join(', ') : null;
-}
 
 
 /* ---------- EXPENSES ---------- */
@@ -808,4 +820,5 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
