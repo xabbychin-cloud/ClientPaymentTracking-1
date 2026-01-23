@@ -440,26 +440,26 @@ window.viewClient = name => {
   viewSummary.innerHTML = `Outstanding Balance: <span class="${outstandingClass}">${outstanding}</span><br>Total Debit: ${c.debit || 0}<br>Total Credit: ${c.credit || 0}`;
   viewBody.innerHTML = "";
 
-  // Loop to determine which debits are unpaid (running > 0)
+  // Collect all unpaid debit indices
   const unpaidIndices = [];
   running = 0;
   for (let i = 0; i < (c.history || []).length; i++) {
     const h = c.history[i];
     running += (h.debit || 0) - (h.credit || 0);
     if (h.debit && running > 0) {
-      unpaidIndices.push(i);  // Collect all unpaid debit indices
+      unpaidIndices.push(i);
     }
   }
 
-  // Reset running for display
+  // Display with highlighting
   running = 0;
   for (let i = 0; i < (c.history || []).length; i++) {
     const h = c.history[i];
     running += (h.debit || 0) - (h.credit || 0);
     let debitClass = "";
     let creditClass = "";
-    if (unpaidIndices.includes(i)) {  // Highlight all unpaid debits
-      debitClass = "unpaid-debit";
+    if (unpaidIndices.includes(i)) {
+      debitClass = "unpaid-debit";  // Blue for all unpaid debits
     }
     if (h.credit) {
       creditClass = "payment-credit";
@@ -503,18 +503,15 @@ paymentSearch.oninput = () => {
         paymentAuto.innerHTML = "";
         const c = clients[cid(n)];
         paymentBalance.value = (c.debit || 0) - (c.credit || 0);
-        paymentRemarks.value = '';  // Clear initially
-        // Auto-set remarks to summary of all unpaid debits (outstanding balance)
+        // Auto-set remarks to summary of all unpaid debits
         const unpaidSummary = getUnpaidDebitSummary(c);
-        if (unpaidSummary) {
-          paymentRemarks.value = `Outstanding balance details: ${unpaidSummary}`;
-        }
+        paymentRemarks.value = unpaidSummary ? `Outstanding balance details: ${unpaidSummary}` : '';
         // Apply mode logic
         if (paymentMode.value === 'Full') {
           paymentAmount.value = paymentBalance.value;
           outstandingList.style.display = 'none';
         } else {
-          populateOutstanding(c);  // Populate for partial, with clickable items
+          populateOutstanding(c);
         }
       };
       paymentAuto.appendChild(d);
@@ -533,10 +530,9 @@ function populateOutstanding(client) {
       div.className = "outstanding-item";
       div.innerHTML = `<strong>Amount: ${h.debit}</strong><br>Remarks: ${h.remarks || ""}<br>Start: ${h.startDate || ""}, End: ${h.endDate || ""}`;
       div.onclick = () => {
-        // Update remarks to the specific debit's details when clicked
         paymentRemarks.value = `Payment for: ${h.remarks || ""} (Amount: ${h.debit}, Start: ${h.startDate || ""}, End: ${h.endDate || ""})`;
         if (paymentMode.value === 'Partial') {
-          paymentAmount.value = h.debit;  // Auto-set amount for partial
+          paymentAmount.value = h.debit;
         }
       };
       outstandingList.appendChild(div);
@@ -654,11 +650,9 @@ paymentMode.onchange = () => {
   if (paymentMode.value === 'Full') {
     paymentAmount.value = balance;
     outstandingList.style.display = 'none';
-    // Remarks already set to summary on selection, no need to change
   } else {
     paymentAmount.value = '';
     outstandingList.style.display = 'block';
-    // Re-populate if client is selected
     if (paymentSearch.value.trim()) {
       const c = clients[cid(paymentSearch.value)];
       if (c) populateOutstanding(c);
@@ -666,7 +660,7 @@ paymentMode.onchange = () => {
   }
 };
   
-  function getUnpaidDebitSummary(client) {
+ function getUnpaidDebitSummary(client) {
   const history = client.history || [];
   let running = 0;
   const summaries = [];
@@ -678,6 +672,7 @@ paymentMode.onchange = () => {
   });
   return summaries.length > 0 ? summaries.join(', ') : null;
 }
+
 
 /* ---------- EXPENSES ---------- */
 function loadExpenses() {
@@ -805,6 +800,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
