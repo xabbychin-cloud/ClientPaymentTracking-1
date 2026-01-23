@@ -194,6 +194,7 @@ th { background:#eee }
 <option value="Branch 2">Branch 2</option>
 </select>
 <input id="paymentRemarks" placeholder="Remarks">
+<div id="remarksAuto" class="autolist"></div>
 <div id="outstandingList" class="outstanding-list" style="display:none;"></div>
 <button id="addPaymentBtn">Save Payment</button>
 </div>
@@ -320,24 +321,23 @@ onAuthStateChanged(auth, async u => {
     loadClients();
     loadExpenses();
     
-    // Load admin notes from Firestore (per user)
     const adminRef = doc(db, "users", currentUser.uid, "settings", "admin");
     const adminSnap = await getDoc(adminRef);
     if (adminSnap.exists()) {
       const data = adminSnap.data();
       adminNotes.value = data.notes || "";
+      window.currentAdminCode = data.code || null;
     } else {
       adminNotes.value = "";
+      window.currentAdminCode = null;
     }
     
-    // NEW: Update user greeting
-    const displayName = currentUser.displayName || currentUser.email.split('@')[0];  // Use display name or part of email
+    const displayName = currentUser.displayName || currentUser.email.split('@')[0];
     userGreeting.textContent = `Hi ${displayName}! (user:${currentUser.email})`;
     userGreeting.style.display = "block";
   } else {
     authSection.style.display = "block";
     appSection.style.display = "none";
-    // NEW: Hide greeting on logout
     userGreeting.style.display = "none";
   }
 });
@@ -377,9 +377,9 @@ window.openAdmin = () => {
 
 submitAdminCodeBtn.onclick = () => {
   const enteredCode = adminCodeInput.value;
-  const userSpecificCode = localStorage.getItem(`adminCode_${currentUser.uid}`);
-  const defaultCode = "admin123";  // Shared default for all users
-  if (enteredCode === userSpecificCode || (enteredCode === defaultCode && !userSpecificCode)) {
+  const userCode = window.currentAdminCode;
+  const defaultCode = "admin123";
+  if (enteredCode === userCode || (enteredCode === defaultCode && !userCode)) {
     document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active"));
     showSection("admin");
     adminCodeModal.style.display = 'none';
@@ -502,13 +502,42 @@ paymentSearch.oninput = () => {
         paymentAuto.innerHTML = "";
         const c = clients[cid(n)];
         paymentBalance.value = (c.debit || 0) - (c.credit || 0);
-        const unpaidSummary = getUnpaidDebitSummary(c);
-        paymentRemarks.value = unpaidSummary ? `Outstanding balance details: ${unpaidSummary}` : '';
+        paymentRemarks.value = '';
+        populateRemarksAuto(c);  // Populate clickable remarks dropdown
         populateOutstanding(c);
       };
       paymentAuto.appendChild(d);
     });
 };
+
+  function populateRemarksAuto(client) {
+  remarksAuto.innerHTML = "";
+  const sortedHistory = (client.history || []).sort((a, b) => new Date(a.date) - new Date(b.date));
+  let running = 0;
+
+  sortedHistory.forEach((h) => {
+    running += (h.debit || 0) - (h.credit || 0);
+    if (h.debit && running > 0) {
+      const div = document.createElement("div");
+      div.className = "outstanding-item";
+      div.innerHTML = `<strong>Remarks: ${h.remarks || ""}</strong><br>Amount: ${h.debit}<br>Start: ${h.startDate || ""}, End: ${h.endDate || ""}`;
+      div.onclick = () => {
+        paymentRemarks.value = `Payment for: ${h.remarks || ""} (Amount: ${h.debit}, Start: ${h.startDate || ""}, End: ${h.endDate || ""})`;
+        remarksAuto.innerHTML = "";  // Hide dropdown after selection
+        if (paymentMode.value === 'Partial') {
+          paymentAmount.value = h.debit;
+        }
+      };
+      remarksAuto.appendChild(div);
+    }
+  });
+
+  if (remarksAuto.children.length === 0) {
+    remarksAuto.style.display = 'none';
+  } else {
+    remarksAuto.style.display = 'block';
+  }
+}
 
   function getUnpaidDebitSummary(client) {
   const sortedHistory = (client.history || []).sort((a, b) => new Date(a.date) - new Date(b.date));
@@ -697,9 +726,11 @@ saveNotesBtn.onclick = async () => {
 changeAdminCodeBtn.onclick = () => {
   const newCode = newAdminCode.value.trim();
   if (newCode) {
-    localStorage.setItem(`adminCode_${currentUser.uid}`, newCode);
+    const adminRef = doc(db, "users", currentUser.uid, "settings", "admin");
+    setDoc(adminRef, { code: newCode }, { merge: true });
+    window.currentAdminCode = newCode;
     alert("Admin code changed successfully!");
-    newAdminCode.value = '';  // Clear the input
+    newAdminCode.value = '';
   } else {
     alert("Please enter a valid code.");
   }
@@ -716,7 +747,7 @@ window.generateAdminReport = () => {
       const d = new Date(h.date);
       if (d >= s && d <= e && h.credit) {
         income += h.credit;
-        if (h.paymentType && paymentSums[h.paymentType] !== undefined) {  // Fixed: added 'undefined'
+        if (h.paymentType && paymentSums[h.paymentType] !== undefined) {
           paymentSums[h.paymentType] += h.credit;
         }
       }
@@ -775,4 +806,5 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
