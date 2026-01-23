@@ -485,7 +485,7 @@ window.viewClient = name => {
   viewModal.style.display = "block";
 };
 
-/* ---------- AUTOCOMPLETE ---------- */
+/* AUTOCOMPLETE */
 chargeName.oninput = () => {
   chargeAuto.innerHTML = "";
   Object.values(clients).map(c => c.name)
@@ -510,7 +510,6 @@ paymentSearch.oninput = () => {
         paymentAuto.innerHTML = "";
         const c = clients[cid(n)];
         paymentBalance.value = (c.debit || 0) - (c.credit || 0);
-        // Auto-set remarks to summary of all unpaid debits
         const unpaidSummary = getUnpaidDebitSummary(c);
         paymentRemarks.value = unpaidSummary ? `Outstanding balance details: ${unpaidSummary}` : '';
         // Apply mode logic
@@ -809,3 +808,4 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
