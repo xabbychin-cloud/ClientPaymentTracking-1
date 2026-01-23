@@ -177,15 +177,15 @@ tr.paid {
   /* background:#ffcccc; font-weight:bold; */  /* Commented out */
 }
 
-/* Add new classes for font colors and highlighting */
 .unpaid-debit {
   color: blue;
   font-weight: bold;
-  background-color: lightblue;  /* Added for visible highlighting */
+  background-color: lightblue;  /* For visible highlighting in view modal */
 }
 
 .payment-credit {
   color: green;
   font-style: italic;
 }
+
 
