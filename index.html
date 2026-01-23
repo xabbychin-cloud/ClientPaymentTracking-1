@@ -510,25 +510,36 @@ paymentSearch.oninput = () => {
     });
 };
 
-  function populateRemarksAuto(client) {
+    function populateRemarksAuto(client) {
   remarksAuto.innerHTML = "";
   const sortedHistory = (client.history || []).sort((a, b) => new Date(a.date) - new Date(b.date));
-  let running = 0;
-
+  
   sortedHistory.forEach((h) => {
-    running += (h.debit || 0) - (h.credit || 0);
-    if (h.debit && running > 0) {
-      const div = document.createElement("div");
-      div.className = "outstanding-item";
-      div.innerHTML = `<strong>Remarks: ${h.remarks || ""}</strong><br>Amount: ${h.debit}<br>Start: ${h.startDate || ""}, End: ${h.endDate || ""}`;
-      div.onclick = () => {
-        paymentRemarks.value = `Payment for: ${h.remarks || ""} (Amount: ${h.debit}, Start: ${h.startDate || ""}, End: ${h.endDate || ""})`;
-        remarksAuto.innerHTML = "";  // Hide dropdown after selection
-        if (paymentMode.value === 'Partial') {
-          paymentAmount.value = h.debit;
-        }
-      };
-      remarksAuto.appendChild(div);
+    if (h.debit) {
+      // Check if there is a matching payment later in the history
+      const matchingPayment = sortedHistory.find(later => 
+        new Date(later.date) > new Date(h.date) && 
+        later.credit && 
+        later.remarks && 
+        later.remarks.includes(h.remarks || "") && 
+        later.remarks.includes(h.debit.toString()) && 
+        later.remarks.includes(h.startDate || "") && 
+        later.remarks.includes(h.endDate || "")
+      );
+      
+      if (!matchingPayment) {
+        const div = document.createElement("div");
+        div.className = "outstanding-item";
+        div.innerHTML = `<strong>Remarks: ${h.remarks || ""}</strong><br>Amount: ${h.debit}<br>Start: ${h.startDate || ""}, End: ${h.endDate || ""}`;
+        div.onclick = () => {
+          paymentRemarks.value = `Payment for: ${h.remarks || ""} (Amount: ${h.debit}, Start: ${h.startDate || ""}, End: ${h.endDate || ""})`;
+          remarksAuto.innerHTML = "";  // Hide dropdown after selection
+          if (paymentMode.value === 'Partial') {
+            paymentAmount.value = h.debit;
+          }
+        };
+        remarksAuto.appendChild(div);
+      }
     }
   });
 
@@ -814,6 +825,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
