@@ -440,11 +440,14 @@ window.viewClient = name => {
   viewSummary.innerHTML = `Outstanding Balance: <span class="${outstandingClass}">${outstanding}</span><br>Total Debit: ${c.debit || 0}<br>Total Credit: ${c.credit || 0}`;
   viewBody.innerHTML = "";
 
+  // Sort history by date to ensure chronological order
+  const sortedHistory = (c.history || []).sort((a, b) => new Date(a.date) - new Date(b.date));
+
   // Collect all unpaid debit indices
   const unpaidIndices = [];
   running = 0;
-  for (let i = 0; i < (c.history || []).length; i++) {
-    const h = c.history[i];
+  for (let i = 0; i < sortedHistory.length; i++) {
+    const h = sortedHistory[i];
     running += (h.debit || 0) - (h.credit || 0);
     if (h.debit && running > 0) {
       unpaidIndices.push(i);
@@ -453,13 +456,13 @@ window.viewClient = name => {
 
   // Display with highlighting
   running = 0;
-  for (let i = 0; i < (c.history || []).length; i++) {
-    const h = c.history[i];
+  for (let i = 0; i < sortedHistory.length; i++) {
+    const h = sortedHistory[i];
     running += (h.debit || 0) - (h.credit || 0);
     let debitClass = "";
     let creditClass = "";
     if (unpaidIndices.includes(i)) {
-      debitClass = "unpaid-debit";  // Blue for all unpaid debits
+      debitClass = "unpaid-debit";  // Now visible with CSS
     }
     if (h.credit) {
       creditClass = "payment-credit";
@@ -520,10 +523,11 @@ paymentSearch.oninput = () => {
 
 function populateOutstanding(client) {
   outstandingList.innerHTML = "";
-  const history = client.history || [];
+  // Sort history by date
+  const sortedHistory = (client.history || []).sort((a, b) => new Date(a.date) - new Date(b.date));
   let running = 0;
 
-  history.forEach((h, i) => {
+  sortedHistory.forEach((h, i) => {
     running += (h.debit || 0) - (h.credit || 0);
     if (h.debit && running > 0) {
       const div = document.createElement("div");
@@ -661,10 +665,11 @@ paymentMode.onchange = () => {
 };
   
  function getUnpaidDebitSummary(client) {
-  const history = client.history || [];
+  // Sort history by date
+  const sortedHistory = (client.history || []).sort((a, b) => new Date(a.date) - new Date(b.date));
   let running = 0;
   const summaries = [];
-  history.forEach((h) => {
+  sortedHistory.forEach((h) => {
     running += (h.debit || 0) - (h.credit || 0);
     if (h.debit && running > 0) {
       summaries.push(`${h.remarks || 'No remarks'} (Amount: ${h.debit})`);
@@ -800,6 +805,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
