@@ -431,7 +431,6 @@ clientSearch.oninput = renderClients;
 clientFilter.onchange = renderClients;
 
 /* ---------- VIEW MODAL ---------- */
-/* ---------- VIEW MODAL ---------- */
 window.viewClient = name => {
   const c = clients[cid(name)];
   const outstanding = (c.debit || 0) - (c.credit || 0);
@@ -471,15 +470,30 @@ window.viewClient = name => {
     if (h.debit && !unpaidIndices.includes(i)) {
       debitClass = "debit-bold";  // Apply bold to all debit rows
     }
+
+    // Enhanced Debit display for charges: show net, original, and discount
+    let debitDisplay = h.debit || 0;
+    if (h.debit) {
+      const originalAmount = (h.debit || 0) + (h.discount || 0);
+      const discountAmount = h.discount || 0;
+      debitDisplay = `Net: ${h.debit} (Original: ${originalAmount} - Discount: ${discountAmount})`;
+    }
+
+    // Enhanced Remarks: include discount remarks if present
+    let remarksDisplay = h.remarks || "";
+    if (h.discountRemarks) {
+      remarksDisplay += ` (Discount: ${h.discountRemarks})`;
+    }
+
     viewBody.innerHTML += `
     <tr class="${rowClass}">
       <td>${new Date(h.date).toLocaleString()}</td>
       <td>${h.startDate || ""}</td>
       <td>${h.endDate || ""}</td>
-      <td class="${debitClass}">${h.debit || 0}</td>
+      <td class="${debitClass}">${debitDisplay}</td>
       <td class="${creditClass}">${h.credit || 0}</td>
       <td>${h.branch || ""}</td>
-      <td>${h.remarks || ""}</td>
+      <td>${remarksDisplay}</td>
     </tr>`;
   }
   viewModal.style.display = "block";
