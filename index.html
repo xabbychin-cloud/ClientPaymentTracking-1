@@ -825,16 +825,26 @@ window.generateDailySalesReport = () => {
   const s = new Date(salesStart.value), e = new Date(salesEnd.value);
   const selectedBranch = salesBranch.value;
   let totalSales = 0;
-  let branchSales = {};
+  let paymentTypeSales = { "Cash": 0, "Bank Transfer": 0, "Credit Card": 0, "Others": 0 };
+  let branchSales = { "Main": 0, "Branch 1": 0, "Branch 2": 0 };
 
   Object.values(clients).forEach(c => {
     (c.history || []).forEach(h => {
       const d = new Date(h.date);
       if (d >= s && d <= e && h.credit) {
         const branch = h.branch || "Unknown";
+        const paymentType = h.paymentType || "Others";
+        // If a branch is selected, only include matching branch; otherwise, include all
         if (!selectedBranch || branch === selectedBranch) {
           totalSales += h.credit;
-          branchSales[branch] = (branchSales[branch] || 0) + h.credit;
+          if (paymentTypeSales[paymentType] !== undefined) {
+            paymentTypeSales[paymentType] += h.credit;
+          } else {
+            paymentTypeSales["Others"] += h.credit;  // Fallback for unrecognized types
+          }
+          if (branchSales[branch] !== undefined) {
+            branchSales[branch] += h.credit;
+          }
         }
       }
     });
@@ -842,18 +852,28 @@ window.generateDailySalesReport = () => {
 
   let html = `<h4>Sales Report (${salesStart.value} to ${salesEnd.value})</h4>`;
   if (selectedBranch) {
-    html += `<p>Total Sales for ${selectedBranch}: ${branchSales[selectedBranch] || 0}</p>`;
-  } else {
-    html += `<p>Total Sales: ${totalSales}</p>`;
-    Object.keys(branchSales).forEach(branch => {
-      html += `<p>${branch}: ${branchSales[branch]}</p>`;
-    });
+    html += `<p><strong>Filtered by Branch: ${selectedBranch}</strong></p>`;
   }
+
+  // Summary by Payment Type
+  html += `<h5>Summary by Payment Type</h5>`;
+  Object.keys(paymentTypeSales).forEach(type => {
+    html += `<p>${type}: ${paymentTypeSales[type]}</p>`;
+  });
+  html += `<p><strong>Total Sales: ${totalSales}</strong></p>`;
+
+  // Breakdown by Branch
+  html += `<h5>Breakdown by Branch</h5>`;
+  Object.keys(branchSales).forEach(branch => {
+    html += `<p>${branch}: ${branchSales[branch]}</p>`;
+  });
+
   salesResult.innerHTML = html;
 };
 </script>
 </body>
 </html>
+
 
 
 
