@@ -164,6 +164,8 @@ th { background:#eee }
 </div>
 
 <input id="chargeAmount" type="number" placeholder="Amount">
+<input id="chargeDiscount" type="number" placeholder="Discount Amount" value="0">
+<input id="discountRemarks" placeholder="Discount Remarks">
 <input id="chargeRemarks" placeholder="Remarks">
 <button id="addChargeBtn">Save Charge</button>
 </div>
@@ -609,7 +611,11 @@ addChargeBtn.onclick = async () => {
   if (!name || !chargeAmount.value) return alert("Missing required fields");
   if (!bookingType.value) return alert("Please select a booking type");
   const clientId = cid(name);
-  const amount = Number(chargeAmount.value);
+  const originalAmount = Number(chargeAmount.value);
+  const discount = Number(chargeDiscount.value) || 0;
+  const amount = originalAmount - discount;  // Subtract discount from amount
+  if (amount < 0) return alert("Discount cannot exceed the charge amount");
+  const discountRemarksValue = discountRemarks.value;
   const remarks = chargeRemarks.value;
   let startDate = '', endDate = '';
   if (bookingType.value === 'single') {
@@ -624,6 +630,8 @@ addChargeBtn.onclick = async () => {
   const historyEntry = {
     date: new Date().toISOString(),
     debit: amount,
+    discount: discount,
+    discountRemarks: discountRemarksValue,
     remarks,
     startDate,
     endDate
@@ -650,12 +658,13 @@ addChargeBtn.onclick = async () => {
   document.getElementById('startDate').value = '';
   document.getElementById('endDate').value = '';
   chargeAmount.value = '';
+  chargeDiscount.value = '';
+  discountRemarks.value = '';
   chargeRemarks.value = '';
   singleDay.style.display = 'none';
   multiDay.style.display = 'none';
 };
 
-/* ---------- ADD PAYMENT ---------- */
 /* ---------- ADD PAYMENT ---------- */
 addPaymentBtn.onclick = async () => {
   const name = paymentSearch.value.trim();
@@ -831,6 +840,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
