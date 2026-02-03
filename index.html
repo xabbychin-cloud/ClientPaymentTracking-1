@@ -300,7 +300,7 @@ th { background:#eee }
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail, updatePassword, reauthenticateWithCredential, EmailAuthProvider } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, onSnapshot, addDoc, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 const app = initializeApp({
@@ -442,6 +442,19 @@ window.showSection = id => {
 window.openAdmin = () => {
   adminCodeModal.style.display = 'block';
   adminCodeInput.focus();
+  
+  <!-- NEW: Change Password Modal -->
+<div id="changePasswordModal" class="modal">
+<div class="modal-content" style="width: 300px; margin: 20% auto;">
+<h3>Change Password</h3>
+<input id="currentPassword" type="password" placeholder="Current Password" style="width: 100%; margin-bottom: 10px;">
+<input id="newPassword" type="password" placeholder="New Password" style="width: 100%; margin-bottom: 10px;">
+<input id="confirmNewPassword" type="password" placeholder="Confirm New Password" style="width: 100%; margin-bottom: 10px;">
+<button id="changePasswordBtn" style="width: 100%;">Change Password</button>
+<button onclick="changePasswordModal.style.display='none'" style="width: 100%; margin-top: 10px;">Cancel</button>
+<div id="changePasswordError" style="color:red; margin-top:10px;"></div>
+</div>
+</div>
 };
 
 submitAdminCodeBtn.onclick = () => {
@@ -951,6 +964,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
