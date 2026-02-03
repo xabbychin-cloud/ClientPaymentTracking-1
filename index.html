@@ -269,33 +269,6 @@ th { background:#eee }
 </div>
 </div>
 
-forgotAdminCodeBtn.onclick = () => {
-  forgotAdminCodeModal.style.display = 'block';
-  captchaAnswer.focus();
-  forgotError.textContent = '';
-};
-
-resetAdminCodeBtn.onclick = async () => {
-  const answer = captchaAnswer.value.trim();
-  const correctAnswer = "4"; // Matches the question "What is 2 + 2?"
-  if (answer !== correctAnswer) {
-    forgotError.textContent = "Incorrect captcha answer. Try again.";
-    return;
-  }
-  const newCode = newForgotAdminCode.value.trim();
-  if (!newCode) {
-    forgotError.textContent = "Please enter a new admin code.";
-    return;
-  }
-  const adminRef = doc(db, "users", currentUser.uid, "settings", "admin");
-  await setDoc(adminRef, { code: newCode }, { merge: true });
-  window.currentAdminCode = newCode;
-  alert("Admin code reset successfully!");
-  forgotAdminCodeModal.style.display = 'none';
-  captchaAnswer.value = '';
-  newForgotAdminCode.value = '';
-};
-
 <!-- VIEW MODAL -->
 <div id="viewModal" class="modal">
 <div class="modal-content">
@@ -960,6 +933,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
