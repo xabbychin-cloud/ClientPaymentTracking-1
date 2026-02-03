@@ -295,6 +295,8 @@ th { background:#eee }
 </div>
 </div>
 
+<button id="changePasswordBtnTop">Change Password</button>
+<button id="logoutBtn">Logout</button>
 <button id="logoutBtn">Logout</button>
 </div>
 
@@ -961,9 +963,50 @@ window.generateDailySalesReport = () => {
 
   salesResult.innerHTML = html;
 };
+
+  // NEW: Change Password Functionality
+changePasswordBtnTop.onclick = () => {
+  changePasswordModal.style.display = 'block';
+  currentPassword.focus();
+};
+
+changePasswordBtn.onclick = async () => {
+  const currentPwd = currentPassword.value;
+  const newPwd = newPassword.value;
+  const confirmPwd = confirmNewPassword.value;
+
+  if (!currentPwd || !newPwd || !confirmPwd) {
+    changePasswordError.textContent = "All fields are required.";
+    return;
+  }
+  if (newPwd !== confirmPwd) {
+    changePasswordError.textContent = "New passwords do not match.";
+    return;
+  }
+  if (newPwd.length < 6) {
+    changePasswordError.textContent = "New password must be at least 6 characters.";
+    return;
+  }
+
+  try {
+    // Reauthenticate the user
+    const credential = EmailAuthProvider.credential(currentUser.email, currentPwd);
+    await reauthenticateWithCredential(currentUser, credential);
+
+    // Update the password
+    await updatePassword(currentUser, newPwd);
+    alert("Password changed successfully!");
+    changePasswordModal.style.display = 'none';
+    currentPassword.value = newPassword.value = confirmNewPassword.value = '';
+    changePasswordError.textContent = '';
+  } catch (error) {
+    changePasswordError.textContent = `Error: ${error.message}`;
+  }
+};
 </script>
 </body>
 </html>
+
 
 
 
