@@ -113,6 +113,11 @@ th { background:#eee }
 <input id="loginPassword" type="password" placeholder="Password">
 <button id="loginBtn">Login</button>
 <button id="signupBtn">Sign Up</button>
+<button id="forgotPasswordBtn">Forgot Password?</button>
+<div id="forgotPasswordSection" style="display:none; margin-top:10px;">
+<input id="forgotEmail" placeholder="Enter your email address">
+<button id="sendResetBtn">Send Reset Email</button>
+</div>
 <div id="authError" style="color:red; margin-top:10px;"></div>  <!-- Added for error display -->
 </div>
 
@@ -279,6 +284,7 @@ th { background:#eee }
 </div>
 
 <script type="module">
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import { getFirestore, collection, onSnapshot, addDoc, doc, getDoc, setDoc, updateDoc } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
@@ -296,13 +302,12 @@ let currentUser, clients = {}, expenses = [];
 
 const cid = n => n.toLowerCase().replace(/\s+/g, '_');
 
-/* AUTH */
 loginBtn.onclick = async () => {
   try {
     await signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
     alert("Login successful!");
   } catch (error) {
-    alert(`Login failed: ${error.message}`);
+    authError.textContent = `Login failed: ${error.message}`;
   }
 };
 
@@ -311,12 +316,41 @@ signupBtn.onclick = async () => {
     await createUserWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
     alert("Signup successful! You can now log in.");
   } catch (error) {
-    alert(`Signup failed: ${error.message}`);
+    authError.textContent = `Signup failed: ${error.message}`;
+  }
+};
+
+forgotPasswordBtn.onclick = () => {
+  forgotPasswordSection.style.display = 'block';
+  forgotEmail.focus();
+};
+
+sendResetBtn.onclick = async () => {
+  const email = forgotEmail.value.trim();
+  if (!email) {
+    authError.textContent = "Please enter your email address.";
+    return;
+  }
+  // Simple text captcha
+  const captchaQuestion = "What is 5 + 3?";
+  const correctAnswer = "8";
+  const userAnswer = prompt(`${captchaQuestion} (Enter the number)`);
+  if (userAnswer !== correctAnswer) {
+    authError.textContent = "Incorrect captcha. Please try again.";
+    return;
+  }
+  try {
+    await sendPasswordResetEmail(auth, email);
+    alert("Password reset email sent! Check your inbox.");
+    authError.textContent = "";
+    forgotPasswordSection.style.display = 'none';
+    forgotEmail.value = '';
+  } catch (error) {
+    authError.textContent = `Error: ${error.message}`;
   }
 };
 
 logoutBtn.onclick = () => signOut(auth);
-
 onAuthStateChanged(auth, async u => {
   if (u) {
     currentUser = u;
@@ -886,6 +920,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
