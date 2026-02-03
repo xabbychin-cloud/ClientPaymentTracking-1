@@ -270,6 +270,19 @@ th { background:#eee }
 </div>
 </div>
 
+<!-- NEW: Change Password Modal -->
+<div id="changePasswordModal" class="modal">
+<div class="modal-content" style="width: 300px; margin: 20% auto;">
+<h3>Change Password</h3>
+<input id="currentPassword" type="password" placeholder="Current Password" style="width: 100%; margin-bottom: 10px;">
+<input id="newPassword" type="password" placeholder="New Password" style="width: 100%; margin-bottom: 10px;">
+<input id="confirmNewPassword" type="password" placeholder="Confirm New Password" style="width: 100%; margin-bottom: 10px;">
+<button id="changePasswordBtn" style="width: 100%;">Change Password</button>
+<button onclick="changePasswordModal.style.display='none'" style="width: 100%; margin-top: 10px;">Cancel</button>
+<div id="changePasswordError" style="color:red; margin-top:10px;"></div>
+</div>
+</div>
+
 <!-- VIEW MODAL -->
 <div id="viewModal" class="modal">
 <div class="modal-content">
@@ -445,20 +458,6 @@ window.openAdmin = () => {
   adminCodeModal.style.display = 'block';
   adminCodeInput.focus();
   
-  <!-- NEW: Change Password Modal -->
-<div id="changePasswordModal" class="modal">
-<div class="modal-content" style="width: 300px; margin: 20% auto;">
-<h3>Change Password</h3>
-<input id="currentPassword" type="password" placeholder="Current Password" style="width: 100%; margin-bottom: 10px;">
-<input id="newPassword" type="password" placeholder="New Password" style="width: 100%; margin-bottom: 10px;">
-<input id="confirmNewPassword" type="password" placeholder="Confirm New Password" style="width: 100%; margin-bottom: 10px;">
-<button id="changePasswordBtn" style="width: 100%;">Change Password</button>
-<button onclick="changePasswordModal.style.display='none'" style="width: 100%; margin-top: 10px;">Cancel</button>
-<div id="changePasswordError" style="color:red; margin-top:10px;"></div>
-</div>
-</div>
-};
-
 submitAdminCodeBtn.onclick = () => {
   const enteredCode = adminCodeInput.value;
   const userCode = window.currentAdminCode;
@@ -1006,6 +1005,7 @@ changePasswordBtn.onclick = async () => {
 </script>
 </body>
 </html>
+
 
 
 
