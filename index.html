@@ -760,14 +760,18 @@ addExpenseBtn.onclick = async () => {
 window.viewExpenses = () => {
   if (!expStart.value || !expEnd.value) return;
   const s = new Date(expStart.value), e = new Date(expEnd.value);
+  // Filter expenses within date range
+  const filteredExpenses = expenses.filter(x => {
+    const d = new Date(x.date);
+    return d >= s && d <= e;
+  });
+  // Sort by date ascending
+  filteredExpenses.sort((a, b) => new Date(a.date) - new Date(b.date));
   let total = 0;
   let html = "<table><tr><th>Date</th><th>Amount</th><th>Description</th></tr>";
-  expenses.forEach(x => {
-    const d = new Date(x.date);
-    if (d >= s && d <= e) {
-      total += x.amount;
-      html += `<tr><td>${x.date}</td><td>${x.amount}</td><td>${x.desc}</td></tr>`;
-    }
+  filteredExpenses.forEach(x => {
+    total += x.amount;
+    html += `<tr><td>${x.date}</td><td>${x.amount}</td><td>${x.desc}</td></tr>`;
   });
   html += `</table><p><b>Total Expenses:</b> ${total}</p>`;
   expenseResult.innerHTML = html;
@@ -882,6 +886,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
