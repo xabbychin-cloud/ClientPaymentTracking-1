@@ -265,13 +265,6 @@ th { background:#eee }
 <button id="resetAdminCodeBtn" style="width: 100%;">Reset Code</button>
 <button onclick="forgotAdminCodeModal.style.display='none'" style="width: 100%; margin-top: 10px;">Cancel</button>
 <div id="forgotError" style="color:red; margin-top:10px;"></div>
-
-// NEW: Handle Forgot Admin Code from Modal
-forgotAdminCodeBtnModal.onclick = () => {
-  adminCodeModal.style.display = 'none';  // Close the admin code modal
-  forgotAdminCodeModal.style.display = 'block';  // Open the forgot modal
-  captchaAnswer.focus();
-};
 </div>
 </div>
 
@@ -1011,6 +1004,7 @@ changePasswordBtn.onclick = async () => {
 </script>
 </body>
 </html>
+
 
 
 
