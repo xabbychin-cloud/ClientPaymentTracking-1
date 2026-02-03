@@ -247,6 +247,7 @@ th { background:#eee }
 <h4>Change Admin Code</h4>
 <input id="newAdminCode" type="password" placeholder="Enter new admin code">
 <button id="changeAdminCodeBtn">Change Code</button>
+<button id="forgotAdminCodeBtn">Forgot Admin Code?</button>
 
 <h3>Admin Report</h3>
 <input id="adminStart" type="date">
@@ -254,6 +255,46 @@ th { background:#eee }
 <button onclick="generateAdminReport()">Generate Report</button>
 <div id="adminResult"></div>
 </div>
+
+<!-- NEW: Forgot Admin Code Modal -->
+<div id="forgotAdminCodeModal" class="modal">
+<div class="modal-content" style="width: 300px; margin: 20% auto;">
+<h3>Forgot Admin Code</h3>
+<p id="captchaQuestion">What is 2 + 2? (Enter the number)</p>
+<input id="captchaAnswer" placeholder="Answer" style="width: 100%; margin-bottom: 10px;">
+<input id="newForgotAdminCode" type="password" placeholder="New Admin Code" style="width: 100%; margin-bottom: 10px;">
+<button id="resetAdminCodeBtn" style="width: 100%;">Reset Code</button>
+<button onclick="forgotAdminCodeModal.style.display='none'" style="width: 100%; margin-top: 10px;">Cancel</button>
+<div id="forgotError" style="color:red; margin-top:10px;"></div>
+</div>
+</div>
+
+forgotAdminCodeBtn.onclick = () => {
+  forgotAdminCodeModal.style.display = 'block';
+  captchaAnswer.focus();
+  forgotError.textContent = '';
+};
+
+resetAdminCodeBtn.onclick = async () => {
+  const answer = captchaAnswer.value.trim();
+  const correctAnswer = "4"; // Matches the question "What is 2 + 2?"
+  if (answer !== correctAnswer) {
+    forgotError.textContent = "Incorrect captcha answer. Try again.";
+    return;
+  }
+  const newCode = newForgotAdminCode.value.trim();
+  if (!newCode) {
+    forgotError.textContent = "Please enter a new admin code.";
+    return;
+  }
+  const adminRef = doc(db, "users", currentUser.uid, "settings", "admin");
+  await setDoc(adminRef, { code: newCode }, { merge: true });
+  window.currentAdminCode = newCode;
+  alert("Admin code reset successfully!");
+  forgotAdminCodeModal.style.display = 'none';
+  captchaAnswer.value = '';
+  newForgotAdminCode.value = '';
+};
 
 <!-- VIEW MODAL -->
 <div id="viewModal" class="modal">
@@ -919,6 +960,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
