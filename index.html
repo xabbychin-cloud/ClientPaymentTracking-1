@@ -179,6 +179,8 @@ th { background:#eee }
 
 <input id="paymentBalance" readonly placeholder="Balance">
 <input id="paymentAmount" type="number" placeholder="Amount">
+<input id="paymentAdjustment" type="number" placeholder="Adjustment Amount (positive or negative)">
+<input id="adjustmentRemarks" placeholder="Adjustment Remarks">
 <select id="paymentType">
 <option>Cash</option>
 <option>Bank Transfer</option>
@@ -685,29 +687,34 @@ addPaymentBtn.onclick = async () => {
   if (!name || !paymentAmount.value) return;
   const clientId = cid(name);
   const amount = Number(paymentAmount.value);
+  const adjustment = Number(paymentAdjustment.value) || 0;
+  const totalCredit = amount + adjustment; // Assuming adjustment adds to credit (positive increases credit, negative decreases)
   const type = paymentType.value;
   const mode = paymentMode.value;
   const branch = paymentBranch.value;
   const remarks = paymentRemarks.value;
+  const adjRemarks = adjustmentRemarks.value;
+  const combinedRemarks = remarks + (adjRemarks ? ` (Adjustment: ${adjRemarks})` : '');
   const historyEntry = {
     date: new Date().toISOString(),
-    credit: amount,
+    credit: totalCredit,
     paymentType: type,
     branch,
-    remarks
+    remarks: combinedRemarks,
+    adjustment: adjustment // Store adjustment separately for tracking
   };
   const clientRef = doc(db, "users", currentUser.uid, "clients", clientId);
   const clientSnap = await getDoc(clientRef);
   if (clientSnap.exists()) {
     const data = clientSnap.data();
-    const newCredit = (data.credit || 0) + amount;
+    const newCredit = (data.credit || 0) + totalCredit;
     const newHistory = [...(data.history || []), historyEntry];
     await updateDoc(clientRef, { credit: newCredit, history: newHistory });
   } else {
     await setDoc(clientRef, {
       name,
       debit: 0,
-      credit: amount,
+      credit: totalCredit,
       history: [historyEntry]
     });
   }
@@ -720,6 +727,8 @@ addPaymentBtn.onclick = async () => {
   paymentSearch.value = '';
   paymentBalance.value = '';
   paymentAmount.value = '';
+  paymentAdjustment.value = '';
+  adjustmentRemarks.value = '';
   paymentType.value = 'Cash';
   paymentMode.value = 'Full';
   paymentBranch.value = '';
@@ -873,6 +882,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
