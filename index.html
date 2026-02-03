@@ -248,6 +248,7 @@ th { background:#eee }
 <input id="newAdminCode" type="password" placeholder="Enter new admin code">
 <button id="changeAdminCodeBtn">Change Code</button>
 <button id="forgotAdminCodeBtn">Forgot Admin Code?</button>
+<button id="forgotPasswordAdminBtn">Forgot Password?</button>
 
 <h3>Admin Report</h3>
 <input id="adminStart" type="date">
@@ -360,6 +361,25 @@ sendResetBtn.onclick = async () => {
     forgotEmail.value = '';
   } catch (error) {
     authError.textContent = `Error: ${error.message}`;
+  }
+};
+
+// ... existing code ...
+
+forgotPasswordAdminBtn.onclick = async () => {
+  // Simple text captcha
+  const captchaQuestion = "What is 3 + 5?";
+  const correctAnswer = "8";
+  const userAnswer = prompt(`${captchaQuestion} (Enter the number)`);
+  if (userAnswer !== correctAnswer) {
+    alert("Incorrect captcha. Please try again.");
+    return;
+  }
+  try {
+    await sendPasswordResetEmail(auth, currentUser.email);
+    alert("Password reset email sent to your email address! Check your inbox.");
+  } catch (error) {
+    alert(`Error: ${error.message}`);
   }
 };
 
@@ -933,6 +953,7 @@ window.generateDailySalesReport = () => {
 </script>
 </body>
 </html>
+
 
 
 
