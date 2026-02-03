@@ -310,7 +310,6 @@ th { background:#eee }
 
 <button id="changePasswordBtnTop">Change Password</button>
 <button id="logoutBtn">Logout</button>
-<button id="logoutBtn">Logout</button>
 </div>
 
 <script type="module">
@@ -457,7 +456,8 @@ window.showSection = id => {
 window.openAdmin = () => {
   adminCodeModal.style.display = 'block';
   adminCodeInput.focus();
-  
+};
+
 submitAdminCodeBtn.onclick = () => {
   const enteredCode = adminCodeInput.value;
   const userCode = window.currentAdminCode;
@@ -1005,6 +1005,7 @@ changePasswordBtn.onclick = async () => {
 </script>
 </body>
 </html>
+
 
 
 
