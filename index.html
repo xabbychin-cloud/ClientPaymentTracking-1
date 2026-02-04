@@ -395,29 +395,38 @@ forgotPasswordAdminBtn.onclick = async () => {
 };
 
 logoutBtn.onclick = () => signOut(auth);
+
 onAuthStateChanged(auth, async u => {
+  console.log("Auth state changed. User:", u ? u.email : "null");  // Add this line
   if (u) {
     currentUser = u;
+    console.log("Setting UI to appSection");  // Add this line
     authSection.style.display = "none";
     appSection.style.display = "block";
     loadClients();
     loadExpenses();
     
     const adminRef = doc(db, "users", currentUser.uid, "settings", "admin");
-    const adminSnap = await getDoc(adminRef);
-    if (adminSnap.exists()) {
-      const data = adminSnap.data();
-      adminNotes.value = data.notes || "";
-      window.currentAdminCode = data.code || null;
-    } else {
-      adminNotes.value = "";
-      window.currentAdminCode = null;
+    try {
+      const adminSnap = await getDoc(adminRef);
+      if (adminSnap.exists()) {
+        const data = adminSnap.data();
+        adminNotes.value = data.notes || "";
+        window.currentAdminCode = data.code || null;
+      } else {
+        adminNotes.value = "";
+        window.currentAdminCode = null;
+      }
+      
+      const displayName = currentUser.displayName || currentUser.email.split('@')[0];
+      userGreeting.textContent = `Hi ${displayName}! (user:${currentUser.email})`;
+      userGreeting.style.display = "block";
+    } catch (error) {
+      console.error("Error loading admin settings:", error);  // Add this line
+      // Optionally, alert or handle the error
     }
-    
-    const displayName = currentUser.displayName || currentUser.email.split('@')[0];
-    userGreeting.textContent = `Hi ${displayName}! (user:${currentUser.email})`;
-    userGreeting.style.display = "block";
   } else {
+    console.log("No user, showing authSection");  // Add this line
     authSection.style.display = "block";
     appSection.style.display = "none";
     userGreeting.style.display = "none";
@@ -1004,6 +1013,7 @@ changePasswordBtn.onclick = async () => {
 </script>
 </body>
 </html>
+
 
 
 
