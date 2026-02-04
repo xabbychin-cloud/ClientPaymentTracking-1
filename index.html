@@ -291,17 +291,17 @@ th { background:#eee }
 
 <!-- VIEW MODAL -->
 <div id="viewModal" class="modal">
-<div class="modal-content">
-<button onclick="viewModal.style.display='none'">Close</button>
-<h3 id="viewTitle"></h3>
-<div id="viewSummary"></div>
-<div style="overflow: auto; max-height: 70vh;">
-<table>
-<thead><tr><th>Date</th><th>Start Date</th><th>End Date</th><th>Debit</th><th>Credit</th><th>Branch</th><th>Business Type</th><th>Remarks</th></tr></thead>
-<tbody id="viewBody"></tbody>
-</table>
-</div>
-</div>
+  <div class="modal-content">
+    <button onclick="viewModal.style.display='none'">Close</button>
+    <h3 id="viewTitle"></h3>
+    <div id="viewSummary"></div>
+    <div style="overflow: auto; max-height: 70vh;">
+      <table>
+        <thead><tr><th>Date</th><th>Start Date</th><th>End Date</th><th>Debit</th><th>Credit</th><th>Branch</th><th>Business Type</th><th>Remarks</th></tr></thead>
+        <tbody id="viewBody"></tbody>
+      </table>
+    </div>
+  </div>
 </div>
 
 <!-- ADMIN CODE MODAL -->
@@ -530,17 +530,7 @@ window.viewClient = name => {
   viewTitle.textContent = name;
   const outstandingClass = outstanding > 0 ? 'debit-red' : '';
   viewSummary.innerHTML = `Outstanding Balance: <span class="${outstandingClass}">${outstanding}</span><br>Total Debit: ${c.debit || 0}<br>Total Credit: ${c.credit || 0}`;
-  viewBody.innerHTML += `
-<tr class="${rowClass}">
-  <td>${new Date(h.date).toLocaleString()}</td>
-  <td>${h.startDate || ""}</td>
-  <td>${h.endDate || ""}</td>
-  <td class="${debitClass}">${debitDisplay}</td>
-  <td class="${creditClass}">${h.credit || 0}</td>
-  <td>${h.branch || ""}</td>
-  <td>${h.businessType || ""}</td>  <!-- Add this line -->
-  <td>${remarksDisplay}</td>
-</tr>`;
+  viewBody.innerHTML = "";
 
   const sortedHistory = (c.history || []).sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -594,6 +584,7 @@ window.viewClient = name => {
       <td class="${debitClass}">${debitDisplay}</td>
       <td class="${creditClass}">${h.credit || 0}</td>
       <td>${h.branch || ""}</td>
+      <td>${h.businessType || ""}</td>  <!-- New Business Type column -->
       <td>${remarksDisplay}</td>
     </tr>`;
   }
@@ -1053,6 +1044,7 @@ changePasswordBtn.onclick = async () => {
 </script>
 </body>
 </html>
+
 
 
 
