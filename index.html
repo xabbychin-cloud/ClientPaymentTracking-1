@@ -168,6 +168,14 @@ th { background:#eee }
 <input id="endDate" type="date">
 </div>
 
+<select id="businessType">
+<option value="">Type of Business</option>
+<option value="Car Rental">Car Rental</option>
+<option value="Online Selling">Online Selling</option>
+<option value="Others">Others</option>
+</select>
+<div id="otherBusinessDiv" style="display:none"><input id="otherBusiness" placeholder="Specify Business"></div>
+
 <input id="chargeAmount" type="number" placeholder="Amount">
 <input id="chargeDiscount" type="number" placeholder="Discount Amount" value="0">
 <input id="discountRemarks" placeholder="Discount Remarks">
@@ -289,7 +297,7 @@ th { background:#eee }
 <div id="viewSummary"></div>
 <div style="overflow: auto; max-height: 70vh;">
 <table>
-<thead><tr><th>Date</th><th>Start Date</th><th>End Date</th><th>Debit</th><th>Credit</th><th>Branch</th><th>Remarks</th></tr></thead>
+<thead><tr><th>Date</th><th>Start Date</th><th>End Date</th><th>Debit</th><th>Credit</th><th>Branch</th><th>Business Type</th><th>Remarks</th></tr></thead>
 <tbody id="viewBody"></tbody>
 </table>
 </div>
@@ -522,7 +530,17 @@ window.viewClient = name => {
   viewTitle.textContent = name;
   const outstandingClass = outstanding > 0 ? 'debit-red' : '';
   viewSummary.innerHTML = `Outstanding Balance: <span class="${outstandingClass}">${outstanding}</span><br>Total Debit: ${c.debit || 0}<br>Total Credit: ${c.credit || 0}`;
-  viewBody.innerHTML = "";
+  viewBody.innerHTML += `
+<tr class="${rowClass}">
+  <td>${new Date(h.date).toLocaleString()}</td>
+  <td>${h.startDate || ""}</td>
+  <td>${h.endDate || ""}</td>
+  <td class="${debitClass}">${debitDisplay}</td>
+  <td class="${creditClass}">${h.credit || 0}</td>
+  <td>${h.branch || ""}</td>
+  <td>${h.businessType || ""}</td>  <!-- Add this line -->
+  <td>${remarksDisplay}</td>
+</tr>`;
 
   const sortedHistory = (c.history || []).sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -702,6 +720,15 @@ bookingType.onchange = () => {
   if (bookingType.value === "multi") multiDay.style.display = "block";
 };
 
+businessType.onchange = () => {
+  if (businessType.value === "Others") {
+    otherBusinessDiv.style.display = "block";
+  } else {
+    otherBusinessDiv.style.display = "none";
+    otherBusiness.value = "";  // Clear the field if not "Others"
+  }
+};
+
 /* ---------- ADD CHARGE ---------- */
 addChargeBtn.onclick = async () => {
   const name = chargeName.value.trim();
@@ -747,6 +774,22 @@ addChargeBtn.onclick = async () => {
       credit: 0,
       history: [historyEntry]
     });
+
+  let businessTypeValue = businessType.value;
+if (businessTypeValue === "Others") {
+  businessTypeValue = `Others: ${otherBusiness.value.trim()}`;
+}
+const historyEntry = {
+  date: new Date().toISOString(),
+  debit: amount,
+  discount: discount,
+  discountRemarks: discountRemarksValue,
+  remarks,
+  startDate,
+  endDate,
+  businessType: businessTypeValue  // Add this line
+};
+    
   }
   // Clear fields
   chargeName.value = '';
@@ -760,6 +803,9 @@ addChargeBtn.onclick = async () => {
   chargeRemarks.value = '';
   singleDay.style.display = 'none';
   multiDay.style.display = 'none';
+  businessType.value = '';
+otherBusiness.value = '';
+otherBusinessDiv.style.display = 'none';
 };
 
 /* ---------- ADD PAYMENT ---------- */
@@ -1007,6 +1053,7 @@ changePasswordBtn.onclick = async () => {
 </script>
 </body>
 </html>
+
 
 
 
