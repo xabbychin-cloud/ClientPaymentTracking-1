@@ -308,7 +308,7 @@ th { background:#eee }
 </div>
 </div>
 
-<button id="changePasswordBtnTop">Change Password</button>
+<button id="changePasswordBtnTop" style="display:none">Change Password</button>
 <button id="logoutBtn">Logout</button>
 </div>
 
@@ -411,11 +411,10 @@ logoutBtn.onclick = () => signOut(auth);
 onAuthStateChanged(auth, async u => {
   console.log("onAuthStateChanged fired. User:", u ? u.email : "null");
   if (u) {
-    console.log("User is signed in, attempting UI update...");
     currentUser = u;
     authSection.style.display = "none";
     appSection.style.display = "block";
-    console.log("UI updated: authSection hidden, appSection shown");
+    changePasswordBtnTop.style.display = "block";  // Show button only on login
     loadClients();
     loadExpenses();
     
@@ -434,15 +433,14 @@ onAuthStateChanged(auth, async u => {
       const displayName = currentUser.displayName || currentUser.email.split('@')[0];
       userGreeting.textContent = `Hi ${displayName}! (user:${currentUser.email})`;
       userGreeting.style.display = "block";
-      console.log("Greeting and admin settings loaded");
     } catch (error) {
       console.error("Error loading admin settings:", error);
     }
   } else {
-    console.log("No user signed in, showing authSection");
     authSection.style.display = "block";
     appSection.style.display = "none";
     userGreeting.style.display = "none";
+    changePasswordBtnTop.style.display = "none";  // Hide button when logged out
   }
 });
   
@@ -466,6 +464,7 @@ document.querySelectorAll("#toolbar button[data-sec]").forEach(btn => {
     document.querySelectorAll("#toolbar button").forEach(b => b.classList.remove("active"));
     btn.classList.add("active");
     showSection(btn.dataset.sec);
+    changePasswordBtnTop.style.display = "none";  // Hide button when clicking toolbar
   };
 });
 
@@ -1026,6 +1025,7 @@ changePasswordBtn.onclick = async () => {
 </script>
 </body>
 </html>
+
 
 
 
