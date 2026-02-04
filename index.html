@@ -113,6 +113,7 @@ th { background:#eee }
 <input id="loginPassword" type="password" placeholder="Password">
 <button id="loginBtn">Login</button>
 <button id="signupBtn">Sign Up</button>
+<button id="forgotPasswordBtn">Forgot Password?</button>
 <div id="forgotPasswordSection" style="display:none; margin-top:10px;">
 <input id="forgotEmail" placeholder="Enter your email address">
 <button id="sendResetBtn">Send Reset Email</button>
@@ -334,11 +335,13 @@ loginBtn.onclick = async () => {
     await signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
     console.log("Login API succeeded, checking auth state...");
     alert("Login successful!");
-    // Force a manual check (shouldn't be needed, but for debugging)
+    // Temporary: Force UI update manually
     setTimeout(() => {
-      console.log("Manual auth check: currentUser =", auth.currentUser);
+      console.log("Manual UI force: currentUser =", auth.currentUser);
       if (auth.currentUser) {
-        console.log("User is authenticated, but UI may not have updated");
+        authSection.style.display = "none";
+        appSection.style.display = "block";
+        console.log("Manual UI update applied");
       }
     }, 1000);
   } catch (error) {
@@ -442,7 +445,7 @@ onAuthStateChanged(auth, async u => {
     userGreeting.style.display = "none";
   }
 });
-
+  
 // Initialize notes as visible on load
 adminNotes.style.display = 'block';
 toggleNotesBtn.textContent = 'Hide Notes';
@@ -1023,6 +1026,7 @@ changePasswordBtn.onclick = async () => {
 </script>
 </body>
 </html>
+
 
 
 
