@@ -388,23 +388,6 @@ sendResetBtn.onclick = async () => {
   }
 };
 
-forgotPasswordAdminBtn.onclick = async () => {
-  // Simple text captcha
-  const captchaQuestion = "What is 3 + 5?";
-  const correctAnswer = "8";
-  const userAnswer = prompt(`${captchaQuestion} (Enter the number)`);
-  if (userAnswer !== correctAnswer) {
-    alert("Incorrect captcha. Please try again.");
-    return;
-  }
-  try {
-    await sendPasswordResetEmail(auth, currentUser.email);
-    alert("Password reset email sent to your email address! Check your inbox.");
-  } catch (error) {
-    alert(`Error: ${error.message}`);
-  }
-};
-
 logoutBtn.onclick = () => signOut(auth);
 
 onAuthStateChanged(auth, async u => {
@@ -1024,6 +1007,7 @@ changePasswordBtn.onclick = async () => {
 </script>
 </body>
 </html>
+
 
 
 
