@@ -332,9 +332,14 @@ const cid = n => n.toLowerCase().replace(/\s+/g, '_');
 loginBtn.onclick = async () => {
   try {
     await signInWithEmailAndPassword(auth, loginEmail.value, loginPassword.value);
+    console.log("Login API call succeeded");  // Add this line
     alert("Login successful!");
+    // Force a check (though onAuthStateChanged should handle it)
+    // If still not redirecting, uncomment below for debugging:
+    // setTimeout(() => { console.log("Manual check: currentUser =", auth.currentUser); }, 1000);
   } catch (error) {
     authError.textContent = `Login failed: ${error.message}`;
+    console.error("Login error:", error);  // Add this line
   }
 };
 
@@ -1013,6 +1018,7 @@ changePasswordBtn.onclick = async () => {
 </script>
 </body>
 </html>
+
 
 
 
